@@ -422,9 +422,9 @@ function resolveRepairFocus({ passReport, acceptanceThresholds, regressionEvent 
   if (regressionEvent) {
     return {
       mode: 'regression-recovery',
-      artifactPreference: 'vision-css-addition',
+      artifactPreference: 'coordinated-repair-bundle',
       reason: `Candidate pass ${regressionEvent.pass} regressed from best score ${regressionEvent.bestScore} to ${regressionEvent.rejectedScore}. Ignore that candidate and repair from best pass ${regressionEvent.bestPass}.`,
-      instruction: 'Make one narrow CSS addition that targets the remaining visible drift from the best pass. Do not rewrite the block tree unless the screenshots show visible literal markup, missing content, wrong content order, or broken editable structure.',
+      instruction: 'Restart from the best pass and choose a different high-leverage repair bundle. If prior CSS caused a visible loss or bad component scale, replace the vision CSS instead of stacking another narrow addition.',
     };
   }
 
@@ -434,9 +434,9 @@ function resolveRepairFocus({ passReport, acceptanceThresholds, regressionEvent 
   if (heightIsClose && pixelsStillDrift) {
     return {
       mode: 'styling-refinement',
-      artifactPreference: 'vision-css-addition',
-      reason: 'The rendered page height is close to the mockup, so remaining drift is likely typography, spacing, color, sizing, or responsive CSS rather than block composition.',
-      instruction: 'Prefer one narrow CSS addition scoped to existing rendered classes/selectors. Preserve the block tree and any layout that already matches.',
+      artifactPreference: 'coordinated-repair-bundle',
+      reason: 'The rendered page height is close to the mockup, but pixel drift can still be caused by missing visible elements, wrong flex/grid geometry, component scale, or prior CSS that hid content.',
+      instruction: 'Audit the whole viewport before choosing repairs. Use CSS additions for genuinely local polish, but use block-tree or full vision-css replacement when the mismatch is structural, repeated across components, or caused by prior repair CSS.',
     };
   }
 
@@ -580,8 +580,9 @@ function buildOpenAiVisionRepairRequest(context) {
       'Use screenshots and diffs to diagnose visual drift between a source HTML mockup and rendered WordPress block HTML.',
       'Repair from large to small: semantic/content failures, macro layout, responsive structure, component scale/selector failures, then fine spacing/color/typography polish.',
       'Do not spend a pass on fine spacing while an obvious structural problem remains, such as the wrong grid symmetry, escaped markup, missing form semantics, missing content, or a giant mislabeled component.',
-      'Choose the highest-leverage repair artifact. Return complete artifacts for block-tree, vision-css, and rendered-html; return only additive scoped CSS for vision-css-addition.',
-      'When the prompt asks for focused styling refinement, prefer a small additive vision CSS artifact that cannot disturb unrelated working regions.',
+      'Return an ordered repair bundle when several coordinated changes are needed. A pass may include block-tree plus vision-css, or a full vision-css replacement plus additive CSS, rather than only one local patch.',
+      'Return complete artifacts for block-tree, vision-css, and rendered-html; return only additive scoped CSS for vision-css-addition.',
+      'Prefer a full vision-css replacement when prior repair CSS appears to hide content, distort component scale, or conflict with the mockup across multiple areas.',
       'Prefer a complete block-tree replacement when structure, content, wrappers, editability, forms, or custom-block choices are wrong.',
       'Use a complete vision-css replacement only when the block structure is already semantically right and the drift is purely cascade, layout, spacing, typography, or color.',
       'Use a vision-css-addition when the current block structure and most layout are already close and only small styling corrections are needed.',
@@ -651,14 +652,17 @@ function buildVisionRepairPrompt({ passReport, appliedRepairs, currentHtmlPath, 
     '- Work large to small. First inspect: (1) missing/extra/escaped content and semantic failures, especially forms that are not real forms; (2) macro section layout and grid geometry; (3) responsive column behavior; (4) component scale, selector, and wrapper failures; (5) fine spacing, color, and typography.',
     '- Do not choose a fine spacing/color repair while a more visible issue remains, such as an asymmetric source grid becoming symmetric, a label or note rendering as an oversized black blob, escaped markup, missing content, broken form semantics, or a collapsed/expanded section at the wrong scale.',
     '- Treat form-like custom blocks that render action/method/label/placeholder metadata as visible text as a block-tree/custom-block-contract failure, not a CSS polishing problem.',
-    '- Choose one repair artifact that matches the cause: block-tree, vision-css-addition, vision-css, or rendered-html.',
-    '- If Repair focus artifactPreference is vision-css-addition, default to vision-css-addition and make one narrow CSS addition.',
+    '- Return an ordered repair bundle of up to four repairs when the visual mismatch has several causes. Do not spend a pass fixing only one local issue when multiple obvious issues are visible.',
+    '- Choose repair artifacts that match the causes: block-tree, vision-css-addition, vision-css, or rendered-html.',
+    '- Treat Repair focus artifactPreference as a hint, not a restriction. If the hint conflicts with visible screenshots, follow the screenshots.',
     '- Prefer block-tree when block composition, block attributes, core block choice, custom block choice, wrappers, content, forms, links, or editability are wrong.',
     '- Use vision-css-addition when the structure is semantically correct and the remaining drift is a small visual styling refinement.',
-    '- Use vision-css only when the structure is semantically correct and the prior vision CSS needs complete replacement.',
+    '- Use vision-css when the structure is semantically correct and the prior vision CSS needs complete replacement, especially if an earlier repair hid a source element or distorted multiple components.',
     '- Use rendered-html only as an escape hatch when neither block-tree nor vision CSS can express the repair in this POC, and explain why.',
-    '- If the current pass is mostly better and remaining issues are ambiguous or low-confidence, prefer a smaller vision-css-addition over a broad rewrite.',
-    '- Do not repair just because deterministic thresholds are not yet met. Return a repair only when there is an actionable visible discrepancy.',
+    '- If a visible source element is missing or hidden in the rendered screenshot, repair that before any spacing or color changes. Do not assume header CTAs, hero CTAs, marquee text, or form controls may be hidden unless the source screenshot hides them too.',
+    '- If source buttons are horizontal and rendered buttons are stacked, repair flex/grid direction and button sizing before minor spacing polish.',
+    '- If a source marquee, card grid, or repeated component has a distinctive layout, repair the repeated component as a whole rather than making one-off local tweaks.',
+    '- Do not repair just because deterministic thresholds are not yet met. Return repairs only for actionable visible discrepancies.',
     '- For block-tree, return the complete replacement simplified block tree JSON array. Do not return a patch. Preserve all editable text, links, form labels, placeholders, repeated items, and inspector-style attributes.',
     '- For block-tree, each node must use {"name":"namespace/block","attributes":{},"innerBlocks":[]}. Do not use markdown code fences.',
     '- For block-tree, prefer core block structure, block attributes, and block supports before custom blocks or CSS.',
@@ -696,7 +700,7 @@ function visionRepairSchema() {
       likelyCause: { type: 'string' },
       repairs: {
         type: 'array',
-        maxItems: 1,
+        maxItems: 4,
         items: {
           type: 'object',
           additionalProperties: false,
@@ -1664,7 +1668,7 @@ function buildVisionReport({ passReports, repairProposals, repairProvider, maxRe
   const last = passReports.at(-1);
   const final = finalPassReport || last;
   return {
-    version: 4,
+    version: 5,
     source: {
       mockup: 'mockup/index.html',
       initialRendered: 'rendered/rendered-blocks.base.html',
@@ -1805,9 +1809,9 @@ ${observations}
 ## Comparator Notes
 
 - PNG diff is the score and regression gate.
-- LLM vision regenerates one complete repair artifact per pass when \`POC_VISION_REPAIR_PROVIDER=openai\`.
+- LLM vision can regenerate an ordered repair bundle per pass when \`POC_VISION_REPAIR_PROVIDER=openai\`.
 - The final rendered HTML is selected from the best-scoring measured pass, not necessarily the last measured pass.
-- Regressed candidates are rejected; the next repair starts from the best measured state with a focused CSS-first prompt when passes remain.
+- Regressed candidates are rejected; the next repair starts from the best measured state with instructions to choose a different high-leverage bundle.
 - Full-page screenshots are captured with Playwright.
 - Animations and transitions are disabled before capture to reduce noisy marquee diffs.
 - Pixelmatch compares the shared cropped area and reports page-size deltas separately.
@@ -1852,13 +1856,13 @@ The OpenAI API key is read from the process environment or local env files such 
 
 Interpret the visual differences between the mockup screenshot, rendered block screenshot, and PNG diff. The PNG diff is a measurement signal, not the diagnosis.
 
-The current POC asks the LLM to choose one repair artifact per pass: a full simplified block tree, a small additive vision CSS stylesheet, a complete replacement vision CSS stylesheet, or a full rendered HTML document as a rare escape hatch. The deterministic proxy still supports older local patch actions for cheap debugging.
+The current POC asks the LLM to choose an ordered repair bundle per pass: a full simplified block tree, a small additive vision CSS stylesheet, a complete replacement vision CSS stylesheet, or a full rendered HTML document as a rare escape hatch. A bundle can contain multiple artifacts when the visual mismatch needs coordinated structure and styling changes. The deterministic proxy still supports older local patch actions for cheap debugging.
 
 ## Repair Rules
 
 - Work large to small: semantic/content failures, macro section layout and grid geometry, responsive structure, component scale/selector failures, then fine spacing/color/typography polish.
 - Do not spend a pass on fine spacing while an obvious issue remains, such as an asymmetric source grid becoming symmetric, escaped markup, missing form semantics, missing content, or a giant mislabeled component.
-- Choose one repair artifact: \`block-tree\`, \`vision-css-addition\`, \`vision-css\`, or \`rendered-html\`.
+- Choose up to four ordered repair artifacts: \`block-tree\`, \`vision-css-addition\`, \`vision-css\`, or \`rendered-html\`.
 - Prefer \`block-tree\` when composition, editable content, wrappers, core/custom block choices, forms, or escaped markup are wrong.
 - Use \`vision-css-addition\` when the block structure is semantically correct and the remaining discrepancy is a small styling refinement.
 - Use \`vision-css\` only when the block structure is semantically correct and prior vision CSS needs complete replacement.
@@ -1870,7 +1874,7 @@ The current POC asks the LLM to choose one repair artifact per pass: a full simp
 - If escaped markup is visible in the browser, repair the block tree or block attributes rather than styling the text to look less wrong.
 - Keep regenerated artifacts scoped to the observed discrepancy.
 - Treat the repair pass limit as a ceiling, not a target.
-- Regressed candidates are rejected. When passes remain, the next repair should restart from the best measured pass with a focused CSS-first instruction.
+- Regressed candidates are rejected. When passes remain, the next repair should restart from the best measured pass and choose a different high-leverage bundle.
 - Stop after the configured repair pass limit or earlier when visual drift is acceptable.
 
 ## Output

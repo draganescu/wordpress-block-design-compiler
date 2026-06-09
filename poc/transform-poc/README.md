@@ -87,7 +87,7 @@ The intended production split is hybrid:
 
 - PNG diff is the score, regression signal, and trigger.
 - LLM vision is the diagnosis and artifact repair generator.
-- OpenAI vision repair returns one repair artifact per pass: `block-tree`, `vision-css-addition`, `vision-css`, or the rare `rendered-html` escape hatch. `vision-css-addition` is used for focused styling refinements; `vision-css` remains a complete replacement stylesheet. The deterministic proxy still uses older local CSS patch actions for cheap debugging.
+- OpenAI vision repair returns an ordered repair bundle per pass. A bundle can include `block-tree`, `vision-css-addition`, `vision-css`, or the rare `rendered-html` escape hatch. `vision-css-addition` is used for focused styling refinements; `vision-css` remains a complete replacement stylesheet and should be used when earlier repair CSS hides content or distorts multiple components. The deterministic proxy still uses older local CSS patch actions for cheap debugging.
 
 Vision repair is ordered from large to small. A pass should address semantic/content failures first, then macro section layout and grid geometry, responsive structure, component scale/selector failures, and only then fine spacing/color/typography polish. The LLM should not spend a pass on minor spacing while obvious issues remain, such as an asymmetric source grid becoming symmetric, escaped markup, missing form semantics, missing content, or a giant mislabeled component.
 
@@ -95,7 +95,7 @@ By default, this POC runs up to three repair passes with OpenAI vision repair. P
 
 The repair pass count is a ceiling, not a target. Each pass is measured as a candidate final artifact, and the POC copies the best measured pass to `rendered/rendered-blocks.html` and `rendered/rendered-blocks.final.html`. Passes that satisfy the acceptance gate are preferred over passes that do not; otherwise, the score is `maxMismatchPercent + maxHeightDelta / 100`, so height drift influences selection without overwhelming the screenshot mismatch percentage.
 
-Regressions are treated as rejected candidates, not expected progress. When a candidate pass clearly regresses against the best pass and more pass budget remains, the POC rolls the repair state back to the best pass and asks the next repair from that state with a focused CSS-first prompt. This is meant to catch the common case where pass 0 or pass 1 is structurally close and remaining differences are better handled as narrow typography, spacing, color, or responsive CSS refinements instead of another broad block-tree rewrite.
+Regressions are treated as rejected candidates, not expected progress. When a candidate pass clearly regresses against the best pass and more pass budget remains, the POC rolls the repair state back to the best pass and asks the next repair from that state with a different high-leverage bundle. The model is allowed to coordinate structure and styling in one pass instead of being forced into a narrow CSS-only follow-up.
 
 The visual acceptance gate is also configurable. A pass is accepted only when both values are within the configured thresholds:
 
