@@ -42,6 +42,7 @@
     "mockup": "mockup/index.html",
     "plan": "plan/block-implementation-plan.json",
     "blockMarkup": "wordpress/content.html",
-    "renderedHtml": "rendered/rendered-blocks.html"
+    "renderedHtml": "rendered/rendered-blocks.html",
+    "visionReport": "vision/visual-report.md"
   }
 }

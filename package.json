@@ -11,7 +11,9 @@
     "build": "tsc -p tsconfig.json",
     "analyze-fixture": "npm run build && node dist/src/cli.js analyze artifacts/simple-landing/mockup --out artifacts/simple-landing/analysis",
     "doctor": "npm run build && node dist/src/cli.js doctor",
-    "poc:transform": "node poc/transform-poc/run.cjs",
+    "poc:transform": "node poc/transform-poc/run.cjs && node poc/transform-poc/vision.cjs",
+    "poc:transform:html": "node poc/transform-poc/run.cjs",
+    "poc:vision": "node poc/transform-poc/vision.cjs",
     "run-fixture": "npm run build && node dist/src/cli.js run-fixture fixtures/simple-landing --out artifacts/simple-landing",
     "test": "npm run build && node --test dist/tests/*.test.js"
   },
@@ -24,6 +26,9 @@
   "devDependencies": {
     "@types/css-tree": "^2.3.11",
     "@types/node": "^24.0.0",
+    "pixelmatch": "^7.2.0",
+    "playwright": "^1.60.0",
+    "pngjs": "^7.0.0",
     "typescript": "^5.8.3"
   }
 }

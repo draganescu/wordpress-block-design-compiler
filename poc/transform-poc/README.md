@@ -12,6 +12,7 @@ prompt
   -> core/custom block tree
   -> WordPress package serialization/render
   -> rendered HTML output for comparison
+  -> Playwright screenshot comparison at desktop/mobile
 ```
 
 Run it from the repo root:
@@ -22,6 +23,16 @@ npm run poc:transform
 
 It writes deterministic output under `poc/transform-poc/output/`.
 
+The command also writes vision artifacts under `poc/transform-poc/output/vision/`:
+
+- `mockup-desktop.png` and `rendered-desktop.png`
+- `mockup-mobile.png` and `rendered-mobile.png`
+- `diff-desktop.png` and `diff-mobile.png`
+- `visual-report.md` and `visual-report.json`
+- `llm-vision-brief.md`
+
+Repair pass HTML snapshots are written under `poc/transform-poc/output/rendered/iterations/`, and the best current result is copied to both `rendered/rendered-blocks.html` and `rendered/rendered-blocks.final.html`.
+
 ## What This POC Proves
 
 - The HTML mockup can be the source of truth.
@@ -29,6 +40,7 @@ It writes deterministic output under `poc/transform-poc/output/`.
 - A block tree can mix styled core blocks and custom static blocks.
 - `@wordpress/blocks` can serialize registered static blocks into block markup.
 - The serialized block output can be rendered into `rendered/rendered-blocks.html` for visual comparison against the original mockup.
+- A Playwright-based vision loop can immediately expose desktop/mobile drift, including responsive layout regressions that are hard to catch from markup alone.
 
 ## Theme JSON Is Deliberately Omitted
 
@@ -38,4 +50,15 @@ This POC keeps styling as page CSS plus custom-block scoped CSS. That is intenti
 
 The script registers a minimal subset of core block save implementations directly with `@wordpress/blocks` instead of loading the full browser-oriented `@wordpress/block-library` package. The production renderer should move this into a browser/jsdom-backed package renderer so it can use fuller WordPress package behavior.
 
-The first POC run exposed a useful transform lesson: custom-block bridge CSS can accidentally override responsive rules from the original mockup because it is appended later. Vision/screenshot comparison should catch this class of drift immediately, especially desktop/mobile layout differences. The inquiry block now renders a `wp-block-columns`/`wp-block-column` structure internally so the custom block can keep a purpose-built editor model while leaning on WordPress column semantics for layout.
+The first POC run exposed a useful transform lesson: custom-block bridge CSS can accidentally override responsive rules from the original mockup because it is appended later. Vision/screenshot comparison now catches this class of drift immediately, especially desktop/mobile layout differences. The inquiry block renders a `wp-block-columns`/`wp-block-column` structure internally so the custom block can keep a purpose-built editor model while leaning on WordPress column semantics for layout.
+
+## Vision Comparison
+
+The vision loop uses Playwright to render both HTML files in desktop and mobile viewports, disables animations/transitions, saves full-page screenshots, and compares the shared cropped area with Pixelmatch.
+
+The intended production split is hybrid:
+
+- PNG diff is the score, regression signal, and trigger.
+- LLM vision is the diagnosis and repair planner.
+
+This POC runs one to three repair passes with a deterministic proxy for the LLM vision call. The proxy applies scoped CSS repairs for known wrapper/layout drift, but the real implementation should ask the LLM to decide whether the fix belongs in the block tree, core block attributes/supports, custom block source, or narrow bridge CSS.

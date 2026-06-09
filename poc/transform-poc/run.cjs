@@ -626,6 +626,7 @@ function buildReport({ prompt, analysis, plan, assembly }) {
       plan: 'plan/block-implementation-plan.json',
       blockMarkup: 'wordpress/content.html',
       renderedHtml: 'rendered/rendered-blocks.html',
+      visionReport: 'vision/visual-report.md',
     },
   };
 }
@@ -651,6 +652,7 @@ ${report.sectionStrategies
 - Plan: \`${report.outputs.plan}\`
 - Block markup: \`${report.outputs.blockMarkup}\`
 - Rendered HTML: \`${report.outputs.renderedHtml}\`
+- Vision report: \`${report.outputs.visionReport}\`
 `;
 }
 
@@ -731,7 +733,7 @@ function indent(value, spaces) {
   const pad = ' '.repeat(spaces);
   return value
     .split('\n')
-    .map((line) => `${pad}${line}`)
+    .map((line) => (line.length ? `${pad}${line}` : ''))
     .join('\n');
 }
 

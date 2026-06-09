@@ -25,3 +25,4 @@
 - Plan: `plan/block-implementation-plan.json`
 - Block markup: `wordpress/content.html`
 - Rendered HTML: `rendered/rendered-blocks.html`
+- Vision report: `vision/visual-report.md`

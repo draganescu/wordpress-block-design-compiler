@@ -1,0 +1,505 @@
+{
+  "version": 2,
+  "source": {
+    "mockup": "mockup/index.html",
+    "initialRendered": "rendered/rendered-blocks.base.html",
+    "finalRendered": "rendered/rendered-blocks.html",
+    "finalRenderedCopy": "rendered/rendered-blocks.final.html"
+  },
+  "comparator": {
+    "tool": "playwright + pixelmatch",
+    "screenshotMode": "fullPage",
+    "animations": "disabled",
+    "maxRepairPasses": 3,
+    "acceptance": {
+      "maxMismatchPercent": 8,
+      "maxHeightDelta": 80
+    },
+    "note": "Images are compared across the shared cropped area. Full-page dimension deltas are reported separately."
+  },
+  "strategy": {
+    "measurement": "PNG diff is used as the deterministic score and regression signal.",
+    "interpretation": "LLM vision should inspect screenshots and diffs to identify the visual cause, then propose the smallest block-tree, block-attribute, or scoped-CSS repair.",
+    "pocMode": "This POC uses a deterministic repair proxy so the iteration mechanics can be exercised without an external LLM call."
+  },
+  "passes": [
+    {
+      "pass": 0,
+      "html": "rendered/iterations/pass-0.html",
+      "repairsApplied": [],
+      "viewports": [
+        {
+          "name": "desktop",
+          "viewport": {
+            "width": 1440,
+            "height": 1200,
+            "deviceScaleFactor": 1
+          },
+          "screenshots": {
+            "mockup": "vision/mockup-desktop.png",
+            "rendered": "vision/pass-0/rendered-desktop.png",
+            "diff": "vision/pass-0/diff-desktop.png"
+          },
+          "comparison": {
+            "mismatchedPixels": 1739133,
+            "comparedPixels": 4004640,
+            "mismatchPercent": 43.43,
+            "comparedSize": {
+              "width": 1440,
+              "height": 2781
+            },
+            "mockupSize": {
+              "width": 1440,
+              "height": 2781
+            },
+            "renderedSize": {
+              "width": 1440,
+              "height": 3814
+            },
+            "dimensionDelta": {
+              "width": 0,
+              "height": 1033
+            }
+          }
+        },
+        {
+          "name": "mobile",
+          "viewport": {
+            "width": 390,
+            "height": 1200,
+            "deviceScaleFactor": 1
+          },
+          "screenshots": {
+            "mockup": "vision/mockup-mobile.png",
+            "rendered": "vision/pass-0/rendered-mobile.png",
+            "diff": "vision/pass-0/diff-mobile.png"
+          },
+          "comparison": {
+            "mismatchedPixels": 496025,
+            "comparedPixels": 1433250,
+            "mismatchPercent": 34.61,
+            "comparedSize": {
+              "width": 390,
+              "height": 3675
+            },
+            "mockupSize": {
+              "width": 390,
+              "height": 3675
+            },
+            "renderedSize": {
+              "width": 390,
+              "height": 4008
+            },
+            "dimensionDelta": {
+              "width": 0,
+              "height": 333
+            }
+          }
+        }
+      ],
+      "aggregate": {
+        "maxMismatchPercent": 43.43,
+        "maxHeightDelta": 1033
+      }
+    },
+    {
+      "pass": 1,
+      "html": "rendered/iterations/pass-1.html",
+      "repairsApplied": [
+        "core-layout-selector-bridges"
+      ],
+      "viewports": [
+        {
+          "name": "desktop",
+          "viewport": {
+            "width": 1440,
+            "height": 1200,
+            "deviceScaleFactor": 1
+          },
+          "screenshots": {
+            "mockup": "vision/mockup-desktop.png",
+            "rendered": "vision/pass-1/rendered-desktop.png",
+            "diff": "vision/pass-1/diff-desktop.png"
+          },
+          "comparison": {
+            "mismatchedPixels": 1217535,
+            "comparedPixels": 4004640,
+            "mismatchPercent": 30.4,
+            "comparedSize": {
+              "width": 1440,
+              "height": 2781
+            },
+            "mockupSize": {
+              "width": 1440,
+              "height": 2781
+            },
+            "renderedSize": {
+              "width": 1440,
+              "height": 2992
+            },
+            "dimensionDelta": {
+              "width": 0,
+              "height": 211
+            }
+          }
+        },
+        {
+          "name": "mobile",
+          "viewport": {
+            "width": 390,
+            "height": 1200,
+            "deviceScaleFactor": 1
+          },
+          "screenshots": {
+            "mockup": "vision/mockup-mobile.png",
+            "rendered": "vision/pass-1/rendered-mobile.png",
+            "diff": "vision/pass-1/diff-mobile.png"
+          },
+          "comparison": {
+            "mismatchedPixels": 507600,
+            "comparedPixels": 1433250,
+            "mismatchPercent": 35.42,
+            "comparedSize": {
+              "width": 390,
+              "height": 3675
+            },
+            "mockupSize": {
+              "width": 390,
+              "height": 3675
+            },
+            "renderedSize": {
+              "width": 390,
+              "height": 3948
+            },
+            "dimensionDelta": {
+              "width": 0,
+              "height": 273
+            }
+          }
+        }
+      ],
+      "aggregate": {
+        "maxMismatchPercent": 35.42,
+        "maxHeightDelta": 273
+      }
+    },
+    {
+      "pass": 2,
+      "html": "rendered/iterations/pass-2.html",
+      "repairsApplied": [
+        "core-layout-selector-bridges",
+        "core-block-spacing-reset"
+      ],
+      "viewports": [
+        {
+          "name": "desktop",
+          "viewport": {
+            "width": 1440,
+            "height": 1200,
+            "deviceScaleFactor": 1
+          },
+          "screenshots": {
+            "mockup": "vision/mockup-desktop.png",
+            "rendered": "vision/pass-2/rendered-desktop.png",
+            "diff": "vision/pass-2/diff-desktop.png"
+          },
+          "comparison": {
+            "mismatchedPixels": 1074757,
+            "comparedPixels": 4004640,
+            "mismatchPercent": 26.84,
+            "comparedSize": {
+              "width": 1440,
+              "height": 2781
+            },
+            "mockupSize": {
+              "width": 1440,
+              "height": 2781
+            },
+            "renderedSize": {
+              "width": 1440,
+              "height": 2959
+            },
+            "dimensionDelta": {
+              "width": 0,
+              "height": 178
+            }
+          }
+        },
+        {
+          "name": "mobile",
+          "viewport": {
+            "width": 390,
+            "height": 1200,
+            "deviceScaleFactor": 1
+          },
+          "screenshots": {
+            "mockup": "vision/mockup-mobile.png",
+            "rendered": "vision/pass-2/rendered-mobile.png",
+            "diff": "vision/pass-2/diff-mobile.png"
+          },
+          "comparison": {
+            "mismatchedPixels": 507608,
+            "comparedPixels": 1433250,
+            "mismatchPercent": 35.42,
+            "comparedSize": {
+              "width": 390,
+              "height": 3675
+            },
+            "mockupSize": {
+              "width": 390,
+              "height": 3675
+            },
+            "renderedSize": {
+              "width": 390,
+              "height": 3879
+            },
+            "dimensionDelta": {
+              "width": 0,
+              "height": 204
+            }
+          }
+        }
+      ],
+      "aggregate": {
+        "maxMismatchPercent": 35.42,
+        "maxHeightDelta": 204
+      }
+    },
+    {
+      "pass": 3,
+      "html": "rendered/iterations/pass-3.html",
+      "repairsApplied": [
+        "core-layout-selector-bridges",
+        "core-block-spacing-reset",
+        "semantic-form-width-lock"
+      ],
+      "viewports": [
+        {
+          "name": "desktop",
+          "viewport": {
+            "width": 1440,
+            "height": 1200,
+            "deviceScaleFactor": 1
+          },
+          "screenshots": {
+            "mockup": "vision/mockup-desktop.png",
+            "rendered": "vision/pass-3/rendered-desktop.png",
+            "diff": "vision/pass-3/diff-desktop.png"
+          },
+          "comparison": {
+            "mismatchedPixels": 1074757,
+            "comparedPixels": 4004640,
+            "mismatchPercent": 26.84,
+            "comparedSize": {
+              "width": 1440,
+              "height": 2781
+            },
+            "mockupSize": {
+              "width": 1440,
+              "height": 2781
+            },
+            "renderedSize": {
+              "width": 1440,
+              "height": 2959
+            },
+            "dimensionDelta": {
+              "width": 0,
+              "height": 178
+            }
+          }
+        },
+        {
+          "name": "mobile",
+          "viewport": {
+            "width": 390,
+            "height": 1200,
+            "deviceScaleFactor": 1
+          },
+          "screenshots": {
+            "mockup": "vision/mockup-mobile.png",
+            "rendered": "vision/pass-3/rendered-mobile.png",
+            "diff": "vision/pass-3/diff-mobile.png"
+          },
+          "comparison": {
+            "mismatchedPixels": 507608,
+            "comparedPixels": 1433250,
+            "mismatchPercent": 35.42,
+            "comparedSize": {
+              "width": 390,
+              "height": 3675
+            },
+            "mockupSize": {
+              "width": 390,
+              "height": 3675
+            },
+            "renderedSize": {
+              "width": 390,
+              "height": 3879
+            },
+            "dimensionDelta": {
+              "width": 0,
+              "height": 204
+            }
+          }
+        }
+      ],
+      "aggregate": {
+        "maxMismatchPercent": 35.42,
+        "maxHeightDelta": 204
+      }
+    }
+  ],
+  "repairProposals": [
+    {
+      "afterPass": 0,
+      "nextPass": 1,
+      "mode": "deterministic-poc-vision-proxy",
+      "trigger": {
+        "maxMismatchPercent": 43.43,
+        "maxHeightDelta": 1033
+      },
+      "repairs": [
+        {
+          "id": "core-layout-selector-bridges",
+          "source": "deterministic-poc-vision-proxy",
+          "reason": "The diff shows large structural drift. The block tree uses core wrappers, so selectors from the mockup no longer map cleanly to the rendered block DOM.",
+          "preferredRealAction": "Ask the LLM to revise the block plan with explicit core wrapper mapping before adding new custom blocks.",
+          "css": ".wp-block-group.hero.alignwide > .eyebrow,\n.wp-block-group.hero.alignwide > h1,\n.wp-block-group.hero.alignwide > .lede,\n.wp-block-group.hero.alignwide > .wp-block-buttons {\n  grid-column: 1;\n}\n.wp-block-group.hero.alignwide > .hero-object {\n  grid-column: 2;\n  grid-row: 1 / 5;\n  width: 100%;\n  align-self: end;\n}\n.wp-block-columns.product-grid {\n  grid-template-columns: repeat(3, 1fr);\n  gap: 18px;\n}\n.wp-block-poc-studio-inquiry .inquiry-columns {\n  grid-template-columns: 1fr 420px;\n}\n@media (max-width: 760px) {\n  .wp-block-group.hero.alignwide > .eyebrow,\n  .wp-block-group.hero.alignwide > h1,\n  .wp-block-group.hero.alignwide > .lede,\n  .wp-block-group.hero.alignwide > .wp-block-buttons,\n  .wp-block-group.hero.alignwide > .hero-object {\n    grid-column: 1;\n    grid-row: auto;\n  }\n  .wp-block-columns.product-grid,\n  .wp-block-poc-studio-inquiry .inquiry-columns {\n    grid-template-columns: 1fr;\n  }\n}"
+        }
+      ]
+    },
+    {
+      "afterPass": 1,
+      "nextPass": 2,
+      "mode": "deterministic-poc-vision-proxy",
+      "trigger": {
+        "maxMismatchPercent": 35.42,
+        "maxHeightDelta": 273
+      },
+      "repairs": [
+        {
+          "id": "core-block-spacing-reset",
+          "source": "deterministic-poc-vision-proxy",
+          "reason": "The first structural repair still leaves block-library wrapper spacing that changes the page height and rhythm.",
+          "preferredRealAction": "Ask the LLM to preserve the source spacing model through block supports, spacing attributes, or scoped CSS on the smallest affected wrapper.",
+          "css": ".wp-block-group.hero.alignwide > * {\n  margin-top: 0;\n}\n.wp-block-buttons {\n  margin-top: 22px;\n}\n.wp-block-column > :first-child {\n  margin-top: 0;\n}\n.wp-block-column > :last-child {\n  margin-bottom: 0;\n}\n.wp-block-poc-studio-inquiry .inquiry-columns {\n  gap: 48px;\n}"
+        }
+      ]
+    },
+    {
+      "afterPass": 2,
+      "nextPass": 3,
+      "mode": "deterministic-poc-vision-proxy",
+      "trigger": {
+        "maxMismatchPercent": 35.42,
+        "maxHeightDelta": 204
+      },
+      "repairs": [
+        {
+          "id": "semantic-form-width-lock",
+          "source": "deterministic-poc-vision-proxy",
+          "reason": "The remaining drift is concentrated around the custom form panel width and block wrapper behavior.",
+          "preferredRealAction": "Ask the LLM whether the custom inquiry block should expose a form width control or use a core column width attribute.",
+          "css": ".wp-block-poc-studio-inquiry .inquiry-panel {\n  max-width: 420px;\n}\n@media (max-width: 760px) {\n  .wp-block-poc-studio-inquiry .inquiry-panel {\n    max-width: none;\n  }\n}"
+        }
+      ]
+    }
+  ],
+  "final": {
+    "pass": 3,
+    "html": "rendered/iterations/pass-3.html",
+    "repairsApplied": [
+      "core-layout-selector-bridges",
+      "core-block-spacing-reset",
+      "semantic-form-width-lock"
+    ],
+    "viewports": [
+      {
+        "name": "desktop",
+        "viewport": {
+          "width": 1440,
+          "height": 1200,
+          "deviceScaleFactor": 1
+        },
+        "screenshots": {
+          "mockup": "vision/mockup-desktop.png",
+          "rendered": "vision/pass-3/rendered-desktop.png",
+          "diff": "vision/pass-3/diff-desktop.png"
+        },
+        "comparison": {
+          "mismatchedPixels": 1074757,
+          "comparedPixels": 4004640,
+          "mismatchPercent": 26.84,
+          "comparedSize": {
+            "width": 1440,
+            "height": 2781
+          },
+          "mockupSize": {
+            "width": 1440,
+            "height": 2781
+          },
+          "renderedSize": {
+            "width": 1440,
+            "height": 2959
+          },
+          "dimensionDelta": {
+            "width": 0,
+            "height": 178
+          }
+        }
+      },
+      {
+        "name": "mobile",
+        "viewport": {
+          "width": 390,
+          "height": 1200,
+          "deviceScaleFactor": 1
+        },
+        "screenshots": {
+          "mockup": "vision/mockup-mobile.png",
+          "rendered": "vision/pass-3/rendered-mobile.png",
+          "diff": "vision/pass-3/diff-mobile.png"
+        },
+        "comparison": {
+          "mismatchedPixels": 507608,
+          "comparedPixels": 1433250,
+          "mismatchPercent": 35.42,
+          "comparedSize": {
+            "width": 390,
+            "height": 3675
+          },
+          "mockupSize": {
+            "width": 390,
+            "height": 3675
+          },
+          "renderedSize": {
+            "width": 390,
+            "height": 3879
+          },
+          "dimensionDelta": {
+            "width": 0,
+            "height": 204
+          }
+        }
+      }
+    ],
+    "aggregate": {
+      "maxMismatchPercent": 35.42,
+      "maxHeightDelta": 204
+    }
+  },
+  "observations": [
+    {
+      "viewport": "desktop",
+      "severity": "high",
+      "issue": "Rendered page height still diverges from the mockup.",
+      "promptImplication": "The transform planner should re-check layout primitives, responsive behavior, and spacing before choosing or styling blocks."
+    },
+    {
+      "viewport": "mobile",
+      "severity": "high",
+      "issue": "Rendered page height still diverges from the mockup.",
+      "promptImplication": "The transform planner should re-check layout primitives, responsive behavior, and spacing before choosing or styling blocks."
+    }
+  ]
+}
