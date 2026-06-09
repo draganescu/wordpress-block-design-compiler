@@ -89,12 +89,14 @@ The intended production split is hybrid:
 
 By default, this POC runs up to three repair passes with OpenAI vision repair. PNG diff remains the deterministic score and trigger. Override the limit with `--max-repair-passes=N` or `POC_VISION_MAX_REPAIR_PASSES=N`; use `0` to capture comparison screenshots without applying repair passes.
 
+The repair pass count is a ceiling, not a target. Each pass is measured as a candidate final artifact, and the POC copies the best measured pass to `rendered/rendered-blocks.html` and `rendered/rendered-blocks.final.html`. Passes that satisfy the acceptance gate are preferred over passes that do not; otherwise, the score is `maxMismatchPercent + maxHeightDelta / 100`, so height drift influences selection without overwhelming the screenshot mismatch percentage. If a later pass clearly regresses against the best pass, the loop stops early and keeps the better earlier artifact.
+
 The visual acceptance gate is also configurable. A pass is accepted only when both values are within the configured thresholds:
 
 - `POC_VISION_MAX_MISMATCH_PERCENT=8`, or `--max-mismatch-percent=8`: maximum allowed Pixelmatch mismatch percentage, using the shared cropped screenshot area. The report aggregates this as the maximum value across desktop and mobile.
 - `POC_VISION_MAX_HEIGHT_DELTA=80`, or `--max-height-delta=80`: maximum allowed absolute full-page height difference in pixels between the source mockup and rendered block HTML. The report aggregates this as the maximum value across desktop and mobile.
 
-Lower values make the loop stricter and can trigger more repair passes. Width delta is reported for diagnosis but is not currently part of the acceptance gate.
+Lower values make the loop stricter and can trigger more repair passes, but the best-pass selector can still keep an earlier pass if further LLM rewrites make the artifact worse. Width delta is reported for diagnosis but is not currently part of the acceptance gate.
 
 To run the older local fixture/debug path without API credentials:
 

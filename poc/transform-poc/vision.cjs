@@ -29,6 +29,9 @@ const DEFAULT_OPENAI_VISION_MODEL = 'gpt-4.1';
 const OPENAI_RESPONSES_URL = `${process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1'}/responses`;
 const CONTEXT_CHAR_LIMIT = 18000;
 const MAX_REPAIR_CSS_CHARS = 60000;
+const HEIGHT_DELTA_SCORE_DIVISOR = 100;
+const REGRESSION_SCORE_RELATIVE_THRESHOLD = 1.15;
+const REGRESSION_SCORE_ABSOLUTE_THRESHOLD = 2;
 const DEFAULT_MAX_MISMATCH_PERCENT = 8;
 const DEFAULT_MAX_HEIGHT_DELTA = 80;
 
@@ -65,6 +68,8 @@ async function main() {
   const appliedRepairs = [];
   let stopReason = null;
   let currentHtmlPath = path.join(ITERATIONS_OUT, 'pass-0.html');
+  let bestPassReport = null;
+  let bestHtmlPath = currentHtmlPath;
 
   try {
     const mockupScreenshots = await captureMockupScreenshots(browser);
@@ -75,14 +80,27 @@ async function main() {
         viewports.push(await compareViewport(browser, currentHtmlPath, pass, viewport, mockupScreenshots[viewport.name], pixelmatch));
       }
 
+      const aggregate = aggregateViewportResults(viewports);
       const passReport = {
         pass,
         html: relativeToOutput(currentHtmlPath),
         repairsApplied: appliedRepairs.map((repair) => repair.id),
         viewports,
-        aggregate: aggregateViewportResults(viewports),
+        aggregate,
       };
       passReports.push(passReport);
+
+      if (!bestPassReport || isBetterPass(passReport, bestPassReport, acceptanceThresholds)) {
+        bestPassReport = passReport;
+        bestHtmlPath = currentHtmlPath;
+      } else if (isSignificantRegression(passReport, bestPassReport, acceptanceThresholds)) {
+        stopReason = {
+          reason: 'regressed',
+          pass,
+          detail: `Pass ${pass} scored worse than best pass ${bestPassReport.pass} (${passReport.aggregate.visualScore} vs ${bestPassReport.aggregate.visualScore}), so the loop kept the best pass instead of continuing repairs.`,
+        };
+        break;
+      }
 
       if (isAcceptable(passReport, acceptanceThresholds)) {
         stopReason = {
@@ -133,11 +151,13 @@ async function main() {
     await browser.close();
   }
 
-  fs.copyFileSync(currentHtmlPath, RENDERED_HTML);
-  fs.copyFileSync(currentHtmlPath, FINAL_RENDERED_HTML);
-  copyFinalScreenshots(passReports.at(-1));
+  const finalPassReport = bestPassReport || passReports.at(-1);
+  const finalHtmlPath = bestHtmlPath || currentHtmlPath;
+  fs.copyFileSync(finalHtmlPath, RENDERED_HTML);
+  fs.copyFileSync(finalHtmlPath, FINAL_RENDERED_HTML);
+  copyFinalScreenshots(finalPassReport);
 
-  const report = buildVisionReport({ passReports, repairProposals, repairProvider, maxRepairPasses, acceptanceThresholds, stopReason });
+  const report = buildVisionReport({ passReports, repairProposals, repairProvider, maxRepairPasses, acceptanceThresholds, stopReason, finalPassReport });
   writeJson('visual-report.json', report);
   write('visual-report.md', renderMarkdownReport(report));
   write('llm-vision-brief.md', renderLlmVisionBrief(report));
@@ -148,6 +168,8 @@ async function main() {
         visionReport: path.join(VISION_OUT, 'visual-report.md'),
         finalRenderedHtml: FINAL_RENDERED_HTML,
         finalPass: report.final.pass,
+        lastPass: report.last ? report.last.pass : report.final.pass,
+        finalVisualScore: report.final.aggregate.visualScore,
         maxRepairPasses: report.comparator.maxRepairPasses,
         acceptance: report.comparator.acceptance,
         stopReason: report.stop.reason,
@@ -294,10 +316,38 @@ function cropPng(source, width, height) {
 }
 
 function aggregateViewportResults(viewports) {
-  return {
+  const aggregate = {
     maxMismatchPercent: Math.max(...viewports.map((viewport) => viewport.comparison.mismatchPercent)),
     maxHeightDelta: Math.max(...viewports.map((viewport) => viewport.comparison.dimensionDelta.height)),
   };
+  aggregate.visualScore = visualScore(aggregate);
+  return aggregate;
+}
+
+function visualScore(aggregate) {
+  return Number((aggregate.maxMismatchPercent + aggregate.maxHeightDelta / HEIGHT_DELTA_SCORE_DIVISOR).toFixed(2));
+}
+
+function isBetterPass(candidate, currentBest, acceptanceThresholds) {
+  const candidateAcceptable = isAcceptable(candidate, acceptanceThresholds);
+  const currentBestAcceptable = isAcceptable(currentBest, acceptanceThresholds);
+  if (candidateAcceptable !== currentBestAcceptable) {
+    return candidateAcceptable;
+  }
+
+  return candidate.aggregate.visualScore < currentBest.aggregate.visualScore;
+}
+
+function isSignificantRegression(candidate, currentBest, acceptanceThresholds) {
+  const candidateAcceptable = isAcceptable(candidate, acceptanceThresholds);
+  const currentBestAcceptable = isAcceptable(currentBest, acceptanceThresholds);
+  if (candidateAcceptable && !currentBestAcceptable) {
+    return false;
+  }
+
+  const relativeLimit = currentBest.aggregate.visualScore * REGRESSION_SCORE_RELATIVE_THRESHOLD;
+  const absoluteLimit = currentBest.aggregate.visualScore + REGRESSION_SCORE_ABSOLUTE_THRESHOLD;
+  return candidate.aggregate.visualScore > relativeLimit && candidate.aggregate.visualScore > absoluteLimit;
 }
 
 function isAcceptable(passReport, acceptanceThresholds) {
@@ -502,6 +552,8 @@ function buildVisionRepairPrompt({ passReport, appliedRepairs, currentHtmlPath, 
     '- Prefer block-tree when block composition, block attributes, core block choice, custom block choice, wrappers, content, forms, links, or editability are wrong.',
     '- Use vision-css only when the structure is semantically correct and the remaining drift is purely visual styling.',
     '- Use rendered-html only as an escape hatch when neither block-tree nor vision-css can express the repair in this POC, and explain why.',
+    '- If the current pass is mostly better and remaining issues are ambiguous, low-confidence, or likely to cause artifact churn, set stop=true and repairs=[].',
+    '- Do not repair just because deterministic thresholds are not yet met. Regenerate an artifact only when the diagnosis is clear and expected improvement outweighs regression risk.',
     '- For block-tree, return the complete replacement simplified block tree JSON array. Do not return a patch. Preserve all editable text, links, form labels, placeholders, repeated items, and inspector-style attributes.',
     '- For block-tree, each node must use {"name":"namespace/block","attributes":{},"innerBlocks":[]}. Do not use markdown code fences.',
     '- For block-tree, prefer core block structure, block attributes, and block supports before custom blocks or CSS.',
@@ -1468,8 +1520,9 @@ function copyFinalScreenshots(finalPass) {
   }
 }
 
-function buildVisionReport({ passReports, repairProposals, repairProvider, maxRepairPasses, acceptanceThresholds, stopReason }) {
-  const final = passReports.at(-1);
+function buildVisionReport({ passReports, repairProposals, repairProvider, maxRepairPasses, acceptanceThresholds, stopReason, finalPassReport }) {
+  const last = passReports.at(-1);
+  const final = finalPassReport || last;
   return {
     version: 3,
     source: {
@@ -1497,8 +1550,9 @@ function buildVisionReport({ passReports, repairProposals, repairProvider, maxRe
     },
     passes: passReports,
     repairProposals,
+    last,
     final,
-    stop: stopReason || { reason: 'unknown', pass: final ? final.pass : null, detail: 'The loop ended without recording a stop reason.' },
+    stop: stopReason || { reason: 'unknown', pass: last ? last.pass : null, detail: 'The loop ended without recording a stop reason.' },
     observations: buildObservations(final, acceptanceThresholds),
   };
 }
@@ -1539,7 +1593,7 @@ function renderMarkdownReport(report) {
     .flatMap((pass) =>
       pass.viewports.map(
         (viewport) =>
-          `| ${pass.pass} | ${viewport.name} | ${viewport.viewport.width}x${viewport.viewport.height} | ${viewport.comparison.mismatchPercent}% | ${viewport.comparison.dimensionDelta.width}px / ${viewport.comparison.dimensionDelta.height}px | \`${viewport.screenshots.diff}\` |`
+          `| ${pass.pass} | ${viewport.name} | ${pass.aggregate.visualScore} | ${viewport.viewport.width}x${viewport.viewport.height} | ${viewport.comparison.mismatchPercent}% | ${viewport.comparison.dimensionDelta.width}px / ${viewport.comparison.dimensionDelta.height}px | \`${viewport.screenshots.diff}\` |`
       )
     )
     .join('\n');
@@ -1566,13 +1620,15 @@ function renderMarkdownReport(report) {
 
 ## Summary
 
-Final pass: ${report.final.pass} of max ${report.comparator.maxRepairPasses}
+Final selected pass: ${report.final.pass} of max ${report.comparator.maxRepairPasses}
+Last measured pass: ${report.last ? report.last.pass : report.final.pass}
+Selected visual score: ${report.final.aggregate.visualScore}
 Repair provider: ${report.strategy.repairProvider}
 Acceptance gate: <= ${report.comparator.acceptance.maxMismatchPercent}% max mismatch and <= ${report.comparator.acceptance.maxHeightDelta}px max height delta
 Stop reason: ${report.stop.reason} - ${report.stop.detail}
 
-| Pass | Viewport | Size | Pixel mismatch | Width / height delta | Diff |
-| ---: | --- | ---: | ---: | ---: | --- |
+| Pass | Viewport | Score | Size | Pixel mismatch | Width / height delta | Diff |
+| ---: | --- | ---: | ---: | ---: | ---: | --- |
 ${rows}
 
 ## Repairs
@@ -1599,6 +1655,7 @@ ${observations}
 
 - PNG diff is the score and regression gate.
 - LLM vision regenerates one complete repair artifact per pass when \`POC_VISION_REPAIR_PROVIDER=openai\`.
+- The final rendered HTML is selected from the best-scoring measured pass, not necessarily the last measured pass.
 - Full-page screenshots are captured with Playwright.
 - Animations and transitions are disabled before capture to reduce noisy marquee diffs.
 - Pixelmatch compares the shared cropped area and reports page-size deltas separately.
@@ -1654,7 +1711,8 @@ The current POC asks the LLM to choose and regenerate one complete repair artifa
 - Do not use raw HTML blocks unless the plan explains why core/custom static blocks cannot preserve both fidelity and editability.
 - If escaped markup is visible in the browser, repair the block tree or block attributes rather than styling the text to look less wrong.
 - Keep regenerated artifacts scoped to the observed discrepancy.
-- Stop after the configured repair pass limit, or earlier when visual drift is acceptable.
+- Treat the repair pass limit as a ceiling, not a target. If the current artifact is mostly better and the remaining issues are ambiguous or high-risk, stop rather than forcing another rewrite.
+- Stop after the configured repair pass limit, earlier when visual drift is acceptable, or earlier when another repair is more likely to regress than improve the artifact.
 
 ## Output
 
