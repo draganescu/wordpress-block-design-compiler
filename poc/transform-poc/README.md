@@ -91,6 +91,8 @@ The intended production split is hybrid:
 
 Vision repair is ordered from large to small. A pass should address semantic/content failures first, then macro section layout and grid geometry, responsive structure, component scale/selector failures, and only then fine spacing/color/typography polish. The LLM should not spend a pass on minor spacing while obvious issues remain, such as an asymmetric source grid becoming symmetric, escaped markup, missing form semantics, missing content, or a giant mislabeled component.
 
+Every OpenAI vision repair response must include a concrete task list. Each task names the visible issue, target area, chosen repair artifact, exact fix, and verification check, so the report reads like implementation work instead of a high-level diagnosis.
+
 By default, this POC runs up to three repair passes with OpenAI vision repair. PNG diff remains the deterministic score and trigger. Override the limit with `--max-repair-passes=N` or `POC_VISION_MAX_REPAIR_PASSES=N`; use `0` to capture comparison screenshots without applying repair passes.
 
 The repair pass count is a ceiling, not a target. Each pass is measured as a candidate final artifact, and the POC copies the best measured pass to `rendered/rendered-blocks.html` and `rendered/rendered-blocks.final.html`. Passes that satisfy the acceptance gate are preferred over passes that do not; otherwise, the score is `maxMismatchPercent + maxHeightDelta / 100`, so height drift influences selection without overwhelming the screenshot mismatch percentage.

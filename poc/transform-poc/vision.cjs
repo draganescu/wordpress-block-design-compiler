@@ -521,6 +521,7 @@ async function proposeRepairPass(context) {
       stop: true,
       trigger: triggerForPass(context.passReport),
       focus: context.repairFocus || null,
+      tasks: [],
       repairs: [],
     };
   }
@@ -653,6 +654,7 @@ function buildVisionRepairPrompt({ passReport, appliedRepairs, currentHtmlPath, 
     '- Do not choose a fine spacing/color repair while a more visible issue remains, such as an asymmetric source grid becoming symmetric, a label or note rendering as an oversized black blob, escaped markup, missing content, broken form semantics, or a collapsed/expanded section at the wrong scale.',
     '- Treat form-like custom blocks that render action/method/label/placeholder metadata as visible text as a block-tree/custom-block-contract failure, not a CSS polishing problem.',
     '- Return an ordered repair bundle of up to four repairs when the visual mismatch has several causes. Do not spend a pass fixing only one local issue when multiple obvious issues are visible.',
+    '- Return a concrete task list. Each task must name the visible issue, target area, repair artifact, exact fix, and verification check. The task list should read like implementation work, not a high-level summary.',
     '- Choose repair artifacts that match the causes: block-tree, vision-css-addition, vision-css, or rendered-html.',
     '- Treat Repair focus artifactPreference as a hint, not a restriction. If the hint conflicts with visible screenshots, follow the screenshots.',
     '- Prefer block-tree when block composition, block attributes, core block choice, custom block choice, wrappers, content, forms, links, or editability are wrong.',
@@ -692,12 +694,30 @@ function visionRepairSchema() {
   return {
     type: 'object',
     additionalProperties: false,
-    required: ['stop', 'confidence', 'observedDiscrepancy', 'likelyCause', 'repairs'],
+    required: ['stop', 'confidence', 'observedDiscrepancy', 'likelyCause', 'tasks', 'repairs'],
     properties: {
       stop: { type: 'boolean' },
       confidence: { type: 'string', enum: ['low', 'medium', 'high'] },
       observedDiscrepancy: { type: 'string' },
       likelyCause: { type: 'string' },
+      tasks: {
+        type: 'array',
+        maxItems: 8,
+        items: {
+          type: 'object',
+          additionalProperties: false,
+          required: ['id', 'priority', 'issue', 'target', 'repairArtifact', 'fix', 'verification'],
+          properties: {
+            id: { type: 'string' },
+            priority: { type: 'string', enum: ['high', 'medium', 'low'] },
+            issue: { type: 'string' },
+            target: { type: 'string' },
+            repairArtifact: { type: 'string', enum: ['block-tree', 'vision-css-addition', 'vision-css', 'rendered-html'] },
+            fix: { type: 'string' },
+            verification: { type: 'string' },
+          },
+        },
+      },
       repairs: {
         type: 'array',
         maxItems: 4,
@@ -725,6 +745,7 @@ function normalizeOpenAiRepairProposal(raw, context, proposalPath) {
   const repairs = normalizedRepairs.map((result) => result.repair).filter(Boolean);
   const rejectedRepairs = normalizedRepairs.map((result) => result.rejection).filter(Boolean);
   const repairPass = context.repairPass ?? context.passReport.pass;
+  const tasks = normalizeRepairTasks(raw.tasks, repairs);
   return {
     afterPass: context.passReport.pass,
     repairPass,
@@ -741,8 +762,41 @@ function normalizeOpenAiRepairProposal(raw, context, proposalPath) {
     likelyCause: raw.likelyCause,
     confidence: raw.confidence,
     stop: Boolean(raw.stop),
+    tasks,
     repairs,
     rejectedRepairs,
+  };
+}
+
+function normalizeRepairTasks(tasks, repairs) {
+  const normalized = (Array.isArray(tasks) ? tasks : [])
+    .map((task) => normalizeRepairTask(task))
+    .filter(Boolean);
+  if (normalized.length) return normalized;
+
+  return repairs.map((repair) => ({
+    id: repair.id,
+    priority: 'medium',
+    issue: repair.reason,
+    target: repair.layer || repair.artifact,
+    repairArtifact: repair.artifact || 'vision-css-addition',
+    fix: repair.preferredRealAction || 'Apply the proposed repair artifact.',
+    verification: repair.expectedVisualEffect || 'Re-run screenshot comparison and inspect the target area.',
+  }));
+}
+
+function normalizeRepairTask(task) {
+  if (!task || typeof task !== 'object') return null;
+  const artifact = ['block-tree', 'vision-css-addition', 'vision-css', 'rendered-html'].includes(task.repairArtifact) ? task.repairArtifact : 'vision-css-addition';
+  const priority = ['high', 'medium', 'low'].includes(task.priority) ? task.priority : 'medium';
+  return {
+    id: slug(task.id || task.target || task.issue || 'repair-task'),
+    priority,
+    issue: String(task.issue || '').trim(),
+    target: String(task.target || '').trim(),
+    repairArtifact: artifact,
+    fix: String(task.fix || '').trim(),
+    verification: String(task.verification || '').trim(),
   };
 }
 
@@ -1066,9 +1120,18 @@ function proposeDeterministicRepairPass({ passReport, appliedRepairs, repairPass
     stop: repairs.length === 0,
     trigger: triggerForPass(passReport),
     focus: repairFocus || null,
-    repairs,
-  };
-}
+      repairs,
+      tasks: repairs.map((repair) => ({
+        id: repair.id,
+        priority: 'medium',
+        issue: repair.reason,
+        target: repair.layer || 'css',
+        repairArtifact: repair.artifact || repair.layer || 'css',
+        fix: repair.preferredRealAction || 'Apply deterministic repair.',
+        verification: 'Re-run the screenshot comparison and verify mismatch and page-height deltas improve.',
+      })),
+    };
+  }
 
 function applyRepairProposal(state, proposal) {
   let appliedActionCount = 0;
@@ -1668,7 +1731,7 @@ function buildVisionReport({ passReports, repairProposals, repairProvider, maxRe
   const last = passReports.at(-1);
   const final = finalPassReport || last;
   return {
-    version: 5,
+    version: 6,
     source: {
       mockup: 'mockup/index.html',
       initialRendered: 'rendered/rendered-blocks.base.html',
@@ -1753,6 +1816,13 @@ function renderMarkdownReport(report) {
     })
   );
   const repairs = repairLines.length ? repairLines.join('\n') : '- No repairs proposed.';
+  const taskLines = report.repairProposals.flatMap((proposal) =>
+    (proposal.tasks || []).map(
+      (task) =>
+        `- after pass ${proposal.afterPass}, repair slot ${proposal.repairPass ?? proposal.afterPass}, \`${task.id}\` (${task.priority}, ${task.repairArtifact}): ${task.issue} Target: ${task.target}. Fix: ${task.fix} Verification: ${task.verification}`
+    )
+  );
+  const tasks = taskLines.length ? taskLines.join('\n') : '- No repair tasks proposed.';
   const rejectedLines = report.repairProposals.flatMap((proposal) =>
     (proposal.rejectedRepairs || []).map((repair) => `- after pass ${proposal.afterPass}, rejected \`${repair.id}\` (${repair.artifact || 'unknown'}): ${repair.reason}`)
   );
@@ -1785,6 +1855,10 @@ ${rows}
 ## Repairs
 
 ${repairs}
+
+## Repair Tasks
+
+${tasks}
 
 ## Rejected Repairs
 
@@ -1883,6 +1957,7 @@ Return a repair proposal with:
 
 - observed discrepancy
 - likely cause in block tree, block wrapper DOM, CSS cascade, responsive behavior, or missing custom block
+- tasks: concrete ordered task list, each with issue, target, repair artifact, exact fix, and verification check
 - artifact: \`block-tree\`, \`vision-css-addition\`, \`vision-css\`, or \`rendered-html\`
 - content: full replacement artifact for block-tree, vision-css, and rendered-html; additive scoped CSS for vision-css-addition
 - preferred production repair location
