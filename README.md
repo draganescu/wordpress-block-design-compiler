@@ -15,6 +15,8 @@ This project breaks the problem apart:
 
 The block strategy is core-first, not core-only. The LLM should extensively style and assemble core blocks before escalating to custom blocks. Custom blocks are for sections where core blocks plus CSS cannot preserve the design or editor model cleanly, such as editable marquees, carousels, structured forms, unusual interactive elements, or repeated card systems that need constrained controls.
 
+The validation loop should render the generated static blocks through WordPress packages into a new HTML artifact, then compare that rendered output against the original mockup and feed any validation or visual drift back into targeted LLM repairs.
+
 ## Goal
 
 Build a pipeline that can:

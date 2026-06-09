@@ -200,13 +200,15 @@ Acceptance:
 
 ## Iteration 6: Preview Without WordPress V1
 
-Goal: preview generated static block content without a WordPress install.
+Goal: render and preview generated static block content without a WordPress install.
 
 Build:
 
 - local preview app;
 - core block registration;
+- custom block registration from generated `block.json` and source;
 - block markup parser;
+- WordPress-package render pass that writes `preview/rendered-blocks.html`;
 - front-end-like render surface;
 - editor-like render surface if feasible in first pass;
 - screenshot capture of generated block output.
@@ -220,16 +222,18 @@ wp-block-compiler preview artifacts/jazz/wordpress --out artifacts/jazz/preview
 Acceptance:
 
 - Preview opens from static files or a local dev server.
+- `preview/rendered-blocks.html` is produced from parsed registered blocks, not copied from the original mockup.
 - Generated block output renders nonblank.
 - Preview screenshot is saved.
 - Parser failures are visible in `reports/validation.json`.
 
 ## Iteration 7: Visual Diff Harness
 
-Goal: compare mockup output against block preview output.
+Goal: compare mockup output against WordPress-package-rendered block output.
 
 Build:
 
+- render original mockup and `preview/rendered-blocks.html` in the same browser harness;
 - screenshot normalizer;
 - desktop/mobile pixel diff;
 - section-level crop diff;
@@ -246,6 +250,7 @@ Acceptance:
 
 - Writes `reports/visual-diff.json`.
 - Reports total and section-level differences.
+- Uses `preview/rendered-blocks.html` as the block-side comparison target.
 - Flags unacceptable drift without blocking inspection of artifacts.
 
 ## Iteration 8: HTML Block Policy Gate
@@ -343,6 +348,7 @@ wp-block-compiler repair artifacts/jazz --out artifacts/jazz-repaired
 Acceptance:
 
 - Repair consumes validation and visual-diff reports.
+- Repair consumes `preview/rendered-blocks.html` alongside the original mockup.
 - Writes a new implementation plan and regenerated block output, not silent edits.
 - Keeps old and new artifacts available for comparison.
 
