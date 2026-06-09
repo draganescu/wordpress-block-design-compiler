@@ -201,6 +201,13 @@ function extractOpenAiOutputText(responseJson) {
   throw new Error('OpenAI response did not include output_text.');
 }
 
+function truncateMiddle(value, limit) {
+  if (value.length <= limit) return value;
+
+  const half = Math.floor((limit - 80) / 2);
+  return `${value.slice(0, half)}\n\n[... ${value.length - half * 2} characters omitted ...]\n\n${value.slice(-half)}`;
+}
+
 function stripOptions(args, names) {
   const stripped = [];
   for (let index = 0; index < args.length; index += 1) {
@@ -227,4 +234,5 @@ module.exports = {
   resolvePrompt,
   resolveProvider,
   stripOptions,
+  truncateMiddle,
 };

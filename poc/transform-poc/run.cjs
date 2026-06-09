@@ -4,7 +4,7 @@ const path = require('node:path');
 const { createRequire } = require('node:module');
 const parse5 = require('parse5');
 const csstree = require('css-tree');
-const { assertOpenAiReady, callOpenAiJson, loadEnvFiles, resolvePrompt, resolveProvider } = require('./runtime.cjs');
+const { assertOpenAiReady, callOpenAiJson, loadEnvFiles, resolvePrompt, resolveProvider, truncateMiddle } = require('./runtime.cjs');
 
 const requireFromRoot = createRequire(path.join(process.cwd(), 'package.json'));
 const blocks = requireFromRoot('@wordpress/blocks');
