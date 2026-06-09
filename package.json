@@ -9,11 +9,17 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
+    "analyze-fixture": "npm run build && node dist/src/cli.js analyze artifacts/simple-landing/mockup --out artifacts/simple-landing/analysis",
     "doctor": "npm run build && node dist/src/cli.js doctor",
     "run-fixture": "npm run build && node dist/src/cli.js run-fixture fixtures/simple-landing --out artifacts/simple-landing",
     "test": "npm run build && node --test dist/tests/*.test.js"
   },
+  "dependencies": {
+    "css-tree": "^3.2.1",
+    "parse5": "^8.0.1"
+  },
   "devDependencies": {
+    "@types/css-tree": "^2.3.11",
     "@types/node": "^24.0.0",
     "typescript": "^5.8.3"
   }

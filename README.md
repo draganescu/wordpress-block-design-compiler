@@ -12,6 +12,17 @@ Build a pipeline that can:
 4. Convert the design into valid WordPress block structure.
 5. Return reusable block markup that can be pasted into, imported into, or programmatically inserted by WordPress.
 
+## Current Commands
+
+```bash
+npm test
+npm run doctor
+npm run run-fixture
+npm run analyze-fixture
+```
+
+The current vertical slice is fixture-driven. It copies a known mockup into an artifact directory, then analyzes the mockup into DOM, CSS, content, section, and interaction JSON files.
+
 ## Early Architecture
 
 - `prompt -> design`: generate the HTML/CSS/JS prototype.

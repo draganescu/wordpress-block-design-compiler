@@ -4,7 +4,7 @@
     "hero",
     "story",
     "collection",
-    "workshop",
+    "workshops",
     "visit"
   ],
   "expectedInitialStrategy": "core-blocks-first",

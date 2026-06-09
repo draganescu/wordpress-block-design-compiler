@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import process from 'node:process';
+import { analyzeMockup } from './analyzer.js';
 import { runFixture } from './fixtures.js';
 
 const HELP = `wp-block-compiler
@@ -9,6 +10,7 @@ A staged design-to-WordPress-block compiler.
 Usage:
   wp-block-compiler doctor
   wp-block-compiler run-fixture <fixture-path> --out <artifact-dir>
+  wp-block-compiler analyze <mockup-dir> --out <analysis-dir>
   wp-block-compiler --help
 `;
 
@@ -75,6 +77,32 @@ cwd: ${process.cwd()}
           artifactRoot: result.artifactRoot,
           events: result.events.length,
           files: result.files.length,
+        },
+        null,
+        2
+      )
+    );
+    process.stdout.write('\n');
+    return;
+  }
+
+  if (args.command === 'analyze') {
+    const mockupDir = args.positional[0];
+    const outDir = args.flags.get('out');
+
+    if (!mockupDir || typeof outDir !== 'string') {
+      throw new Error('Usage: wp-block-compiler analyze <mockup-dir> --out <analysis-dir>');
+    }
+
+    const result = await analyzeMockup({ mockupDir, outDir });
+    process.stdout.write(
+      JSON.stringify(
+        {
+          title: result.dom.title,
+          sections: result.sections.length,
+          contentItems: result.content.length,
+          links: result.interactions.links.length,
+          cssRules: result.css.ruleCount,
         },
         null,
         2
