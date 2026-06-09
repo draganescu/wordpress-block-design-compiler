@@ -578,6 +578,8 @@ function buildOpenAiVisionRepairRequest(context) {
     instructions: [
       'You are the vision repair artifact generator for a WordPress block design compiler POC.',
       'Use screenshots and diffs to diagnose visual drift between a source HTML mockup and rendered WordPress block HTML.',
+      'Repair from large to small: semantic/content failures, macro layout, responsive structure, component scale/selector failures, then fine spacing/color/typography polish.',
+      'Do not spend a pass on fine spacing while an obvious structural problem remains, such as the wrong grid symmetry, escaped markup, missing form semantics, missing content, or a giant mislabeled component.',
       'Choose the highest-leverage repair artifact. Return complete artifacts for block-tree, vision-css, and rendered-html; return only additive scoped CSS for vision-css-addition.',
       'When the prompt asks for focused styling refinement, prefer a small additive vision CSS artifact that cannot disturb unrelated working regions.',
       'Prefer a complete block-tree replacement when structure, content, wrappers, editability, forms, or custom-block choices are wrong.',
@@ -646,6 +648,9 @@ function buildVisionRepairPrompt({ passReport, appliedRepairs, currentHtmlPath, 
     `Already applied repairs: ${JSON.stringify(appliedRepairs.map((repair) => ({ id: repair.id, artifact: repair.artifact || repair.layer, reason: repair.reason })), null, 2)}`,
     '',
     'Repair constraints:',
+    '- Work large to small. First inspect: (1) missing/extra/escaped content and semantic failures, especially forms that are not real forms; (2) macro section layout and grid geometry; (3) responsive column behavior; (4) component scale, selector, and wrapper failures; (5) fine spacing, color, and typography.',
+    '- Do not choose a fine spacing/color repair while a more visible issue remains, such as an asymmetric source grid becoming symmetric, a label or note rendering as an oversized black blob, escaped markup, missing content, broken form semantics, or a collapsed/expanded section at the wrong scale.',
+    '- Treat form-like custom blocks that render action/method/label/placeholder metadata as visible text as a block-tree/custom-block-contract failure, not a CSS polishing problem.',
     '- Choose one repair artifact that matches the cause: block-tree, vision-css-addition, vision-css, or rendered-html.',
     '- If Repair focus artifactPreference is vision-css-addition, default to vision-css-addition and make one narrow CSS addition.',
     '- Prefer block-tree when block composition, block attributes, core block choice, custom block choice, wrappers, content, forms, links, or editability are wrong.',
@@ -1851,6 +1856,8 @@ The current POC asks the LLM to choose one repair artifact per pass: a full simp
 
 ## Repair Rules
 
+- Work large to small: semantic/content failures, macro section layout and grid geometry, responsive structure, component scale/selector failures, then fine spacing/color/typography polish.
+- Do not spend a pass on fine spacing while an obvious issue remains, such as an asymmetric source grid becoming symmetric, escaped markup, missing form semantics, missing content, or a giant mislabeled component.
 - Choose one repair artifact: \`block-tree\`, \`vision-css-addition\`, \`vision-css\`, or \`rendered-html\`.
 - Prefer \`block-tree\` when composition, editable content, wrappers, core/custom block choices, forms, or escaped markup are wrong.
 - Use \`vision-css-addition\` when the block structure is semantically correct and the remaining discrepancy is a small styling refinement.

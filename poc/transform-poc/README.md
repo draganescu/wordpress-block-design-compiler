@@ -65,7 +65,9 @@ Repair pass HTML snapshots are written under `poc/transform-poc/output/rendered/
 - The serialized block output can be rendered into `rendered/rendered-blocks.html` for visual comparison against the original mockup.
 - A Playwright-based vision loop can immediately expose desktop/mobile drift, including responsive layout regressions that are hard to catch from markup alone.
 
-Generated custom blocks are contract-based, not disguised HTML blocks. The plan must define typed editable attributes and a semantic save template for each generated custom block. The assembly step strips opaque generated-block attributes such as `html`, `sourceHtml`, `markup`, `innerHTML`, `editableFields`, and `sourceSelector`, then fills the declared attributes from the parsed content inventory where possible.
+Generated custom blocks are contract-based, not disguised HTML blocks. The plan must define typed editable attributes, native block supports, inline RichText-editable visible copy, inspector controls for non-inline settings, and a semantic save template for each generated custom block. The assembly step strips opaque generated-block attributes such as `html`, `sourceHtml`, `markup`, `innerHTML`, `editableFields`, and `sourceSelector`, then fills the declared attributes from the parsed content inventory where possible.
+
+Form-like custom blocks have a stricter contract. Email subscriptions, search boxes, booking widgets, contact forms, and inquiry forms must render real semantic `<form>` markup with labels, inputs/selects/textareas, placeholders, submit buttons, action, and method. Action/method/inputName/placeholder/required metadata must not become visible paragraphs. In the editor, visible copy is edited inline with RichText; behavior, style variants, and field metadata belong in InspectorControls or block supports.
 
 ## Theme JSON Is Deliberately Omitted
 
@@ -86,6 +88,8 @@ The intended production split is hybrid:
 - PNG diff is the score, regression signal, and trigger.
 - LLM vision is the diagnosis and artifact repair generator.
 - OpenAI vision repair returns one repair artifact per pass: `block-tree`, `vision-css-addition`, `vision-css`, or the rare `rendered-html` escape hatch. `vision-css-addition` is used for focused styling refinements; `vision-css` remains a complete replacement stylesheet. The deterministic proxy still uses older local CSS patch actions for cheap debugging.
+
+Vision repair is ordered from large to small. A pass should address semantic/content failures first, then macro section layout and grid geometry, responsive structure, component scale/selector failures, and only then fine spacing/color/typography polish. The LLM should not spend a pass on minor spacing while obvious issues remain, such as an asymmetric source grid becoming symmetric, escaped markup, missing form semantics, missing content, or a giant mislabeled component.
 
 By default, this POC runs up to three repair passes with OpenAI vision repair. PNG diff remains the deterministic score and trigger. Override the limit with `--max-repair-passes=N` or `POC_VISION_MAX_REPAIR_PASSES=N`; use `0` to capture comparison screenshots without applying repair passes.
 

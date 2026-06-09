@@ -166,7 +166,9 @@ async function planBlocksWithOpenAi({ prompt, mockup, analysis, contentInventory
       'Prefer core WordPress blocks and block supports before custom blocks.',
       'Use custom static blocks only for the smallest subtree needing custom editor fields, behavior, or a semantic markup contract.',
       'Do not make a whole hero, collection, or contact section custom only because it has decorative SVG, gradients, backgrounds, overlays, or exact CSS layout. Keep editable text/layout in core blocks and isolate the decorative fragment if needed.',
-      'A planned custom block must define typed editable attributes and a semantic save template. It must not be a wrapper around an html, sourceHtml, markup, innerHTML, or editableFields blob.',
+      'A planned custom block must define typed editable attributes, block supports, inline RichText-editable visible copy, inspector controls for non-inline settings, and a semantic save template. It must not be a wrapper around an html, sourceHtml, markup, innerHTML, or editableFields blob.',
+      'If the mockup element is a form, search box, booking widget, email subscription, contact form, or inquiry form, the custom block save template must render a real semantic <form> with labels, fields, placeholders, button, action, and method. Never render form metadata as paragraphs.',
+      'Do not plan TextControl/TextareaControl as the primary editing surface for visible text. Visible block content should be editable in canvas with RichText; action URLs, method, required flags, style variants, speed, and other settings belong in InspectorControls or BlockControls.',
       'If the only viable implementation is opaque raw HTML, do not call it a custom block. Use core/html for the smallest decorative fragment only and explain why.',
       'The plan should optimize for rendered visual fidelity while preserving editable text, links, repeated items, and form labels/placeholders.',
     ].join(' '),
@@ -265,8 +267,7 @@ function normalizeCustomBlockPlan(block) {
   const name = canonicalBlockName(rawName.includes('/') ? rawName : blockSlug, blockSlug);
   const reason = String(block.reason || 'OpenAI planned custom block.');
   const controls = Array.isArray(block.controls) ? block.controls.map(String) : [];
-
-  return {
+  const normalized = {
     name,
     slug: blockSlugFromName(name),
     reason,
@@ -274,6 +275,66 @@ function normalizeCustomBlockPlan(block) {
     attributes: normalizeCustomBlockAttributes(block.attributes, { name, slug: blockSlugFromName(name), reason, controls }),
     template: normalizeCustomBlockTemplate(block.template, { slug: blockSlugFromName(name) }),
   };
+  return enhanceCustomBlockPlan(normalized);
+}
+
+function enhanceCustomBlockPlan(customBlock) {
+  if (!customBlockLooksFormLike(customBlock)) {
+    return customBlock;
+  }
+
+  customBlock.attributes = customBlock.attributes.map((attribute) => ({
+    ...attribute,
+    role: normalizeFormAttributeRole(attribute),
+  }));
+
+  if (!customBlock.attributes.some((attribute) => /form-fields|fields/.test(`${attribute.role} ${attribute.name}`.toLowerCase()))) {
+    customBlock.attributes.push({
+      name: 'fields',
+      type: 'array',
+      role: 'form-fields',
+      source: 'form labels, types, names, placeholders, required state, and select options',
+    });
+  }
+
+  customBlock.controls = [
+    ...new Set([
+      ...customBlock.controls,
+      'RichText labels and button text in canvas',
+      'InspectorControls for action, method, required state, placeholder, and behavior settings',
+      'Block supports for spacing, color, border, typography, alignment, and className',
+    ]),
+  ];
+  customBlock.template.structure = `${customBlock.template.structure} Render a real semantic form in save output; never expose action, method, inputName, placeholder, required, or other form metadata as visible paragraphs.`.trim();
+  return customBlock;
+}
+
+function customBlockLooksFormLike(customBlock) {
+  const text = [
+    customBlock.name,
+    customBlock.slug,
+    customBlock.reason,
+    customBlock.template && customBlock.template.structure,
+    ...(customBlock.attributes || []).map((attribute) => `${attribute.name} ${attribute.role} ${attribute.source}`),
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase();
+  return /\b(form|forms|subscribe|subscription|signup|newsletter|search|booking|inquiry|contact|email|dispatch)\b/.test(text);
+}
+
+function normalizeFormAttributeRole(attribute) {
+  const text = `${attribute.role || ''} ${attribute.name || ''} ${attribute.source || ''}`.toLowerCase();
+  if (/action/.test(text)) return 'form-action';
+  if (/method/.test(text)) return 'form-method';
+  if (/input.*name|field.*name/.test(text)) return 'form-input-name';
+  if (/placeholder/.test(text)) return 'form-placeholder';
+  if (/required/.test(text)) return 'form-required';
+  if (/button|submit|cta/.test(text)) return 'button-text';
+  if (/note|privacy|disclaimer|help/.test(text)) return 'form-note';
+  if (/fields?|form-fields|options/.test(text)) return 'form-fields';
+  if (/label/.test(text)) return 'form-label';
+  return attribute.role || roleFromAttributeName(attribute.name);
 }
 
 function normalizeSectionCustomBlockName(value, customBlocksBySlug) {
@@ -426,6 +487,12 @@ function toAttributeName(value) {
 }
 
 function roleFromAttributeName(name) {
+  if (/action/i.test(name)) return 'form-action';
+  if (/method/i.test(name)) return 'form-method';
+  if (/input.*name|field.*name/i.test(name)) return 'form-input-name';
+  if (/placeholder/i.test(name)) return 'form-placeholder';
+  if (/required/i.test(name)) return 'form-required';
+  if (/note|privacy|disclaimer|help/i.test(name)) return 'form-note';
   if (/eyebrow|kicker|label/.test(name)) return 'eyebrow';
   if (/heading|title|headline/.test(name)) return 'heading';
   if (/body|text|description|intro|lede|copy|subtitle/.test(name)) return 'body';
@@ -534,6 +601,7 @@ async function assembleBlocksWithOpenAi({ prompt, mockup, analysis, plan, conten
       'Prefer core blocks for layout/text/buttons/columns. Use planned custom blocks for sections the plan marked custom-block. Use core/html sparingly for visual fragments that cannot fit core blocks or a planned custom block.',
       'When using a planned custom block, attributesJson must contain only attributes declared in that custom block contract, plus optional className. Fill those typed attributes from the content inventory.',
       'Never put html, sourceHtml, markup, innerHTML, editableFields, or sourceSelector into a generated custom block. A custom block is not a disguised HTML block.',
+      'For custom blocks that represent forms, populate form fields as structured field objects whenever the contract has a fields attribute. Preserve action/method as behavior attributes and label/placeholder/button text as editable field content. Do not flatten action, method, label, inputName, placeholder, or required into visible paragraphs.',
       'Use core/html only for the smallest decorative fragment, such as an isolated SVG or background element, and never for headings, paragraphs, links, repeated cards, or forms that should remain editable.',
       'For every block, attributesJson must be a valid JSON object string containing the attributes for that block. Use "{}" when there are no attributes.',
       'Return a block tree that can render a close visual approximation using the generated CSS and the POC custom block CSS.',
@@ -1529,6 +1597,11 @@ function renderGeneratedCustomBlock(customBlock, attributes) {
   ]
     .filter(Boolean)
     .join(' ');
+
+  if (customBlockLooksFormLike(customBlock)) {
+    return renderGeneratedFormCustomBlock(customBlock, attributes, rootTag, rootClassName);
+  }
+
   const children = [];
 
   for (const attribute of customBlock.attributes) {
@@ -1539,6 +1612,126 @@ function renderGeneratedCustomBlock(customBlock, attributes) {
   }
 
   return element.createElement(rootTag, { className: rootClassName }, ...children);
+}
+
+function renderGeneratedFormCustomBlock(customBlock, attributes, rootTag, rootClassName) {
+  const introChildren = [];
+  const noteChildren = [];
+
+  for (const attribute of customBlock.attributes) {
+    const value = attributes[attribute.name];
+    if (!hasAttributeValue(value)) continue;
+    const role = `${attribute.role || ''} ${attribute.name}`.toLowerCase();
+
+    if (/form-note|note|privacy|disclaimer/.test(role)) {
+      noteChildren.push(element.createElement('p', { key: attribute.name, className: `${customBlock.slug}__note` }, element.createElement(element.RawHTML, null, value)));
+      continue;
+    }
+
+    if (isFormBehaviorAttribute(attribute) || /form-label|form-fields|fields|button/.test(role)) {
+      continue;
+    }
+
+    const rendered = renderGeneratedCustomBlockAttribute(customBlock, attribute, value, attributes);
+    if (rendered) introChildren.push(rendered);
+  }
+
+  const formModel = generatedFormModel(customBlock, attributes);
+  const form = element.createElement(
+    'form',
+    {
+      key: 'form',
+      className: `${customBlock.slug}__form`,
+      action: formModel.action,
+      method: formModel.method,
+    },
+    formModel.fields.map((field) => renderField(field)),
+    element.createElement('button', { type: 'submit' }, formModel.buttonText)
+  );
+
+  return element.createElement(rootTag, { className: rootClassName }, ...introChildren, form, ...noteChildren);
+}
+
+function generatedFormModel(customBlock, attributes) {
+  const fields = normalizeGeneratedFormFields(customBlock, attributes);
+  return {
+    action: stringAttribute(attributes.action || attributes.formAction || '#'),
+    method: stringAttribute(attributes.method || attributes.formMethod || 'post').toLowerCase() === 'get' ? 'get' : 'post',
+    fields,
+    buttonText: stringAttribute(attributes.buttonText || attributes.submitText || attributes.ctaText || inferFormSubmitText(customBlock)),
+  };
+}
+
+function normalizeGeneratedFormFields(customBlock, attributes) {
+  if (Array.isArray(attributes.fields) && attributes.fields.length) {
+    return attributes.fields.map((field, index) => normalizeGeneratedFormField(customBlock, field, index));
+  }
+
+  const label = stringAttribute(attributes.label || attributes.fieldLabel || attributes.emailLabel || inferFormFieldLabel(customBlock));
+  const inputName = stringAttribute(attributes.inputName || attributes.fieldName || slug(label));
+  const type = stringAttribute(attributes.inputType || attributes.type || inferFormFieldType(customBlock, inputName, label));
+  return [
+    normalizeGeneratedFormField(customBlock, {
+      label,
+      type,
+      name: inputName,
+      placeholder: attributes.placeholder || attributes.emailPlaceholder || '',
+      required: attributes.required,
+      options: attributes.options || [],
+    }),
+  ];
+}
+
+function normalizeGeneratedFormField(customBlock, field, index = 0) {
+  if (!field || typeof field !== 'object') {
+    const label = String(field || inferFormFieldLabel(customBlock));
+    return {
+      label,
+      type: inferFormFieldType(customBlock, '', label),
+      name: slug(label || `field-${index + 1}`),
+      placeholder: '',
+      required: false,
+      options: [],
+    };
+  }
+
+  const label = stringAttribute(field.label || field.name || inferFormFieldLabel(customBlock));
+  const name = stringAttribute(field.name || field.inputName || slug(label || `field-${index + 1}`));
+  const type = stringAttribute(field.type || inferFormFieldType(customBlock, name, label)).toLowerCase();
+  return {
+    label,
+    type: ['email', 'search', 'tel', 'url', 'number', 'date', 'textarea', 'select', 'text'].includes(type) ? type : 'text',
+    name,
+    placeholder: stringAttribute(field.placeholder || ''),
+    required: Boolean(field.required),
+    options: Array.isArray(field.options) ? field.options.map(String) : [],
+  };
+}
+
+function inferFormSubmitText(customBlock) {
+  const text = `${customBlock.name} ${customBlock.slug}`.toLowerCase();
+  if (/search/.test(text)) return 'Search';
+  if (/book|booking|reserve/.test(text)) return 'Book';
+  if (/subscribe|signup|newsletter|email|dispatch/.test(text)) return 'Subscribe';
+  return 'Submit';
+}
+
+function inferFormFieldLabel(customBlock) {
+  const text = `${customBlock.name} ${customBlock.slug}`.toLowerCase();
+  if (/search/.test(text)) return 'Search';
+  if (/email|subscribe|signup|newsletter|dispatch/.test(text)) return 'Email address';
+  return 'Name';
+}
+
+function inferFormFieldType(customBlock, name, label) {
+  const text = `${customBlock.name} ${customBlock.slug} ${name} ${label}`.toLowerCase();
+  if (/search/.test(text)) return 'search';
+  if (/email|subscribe|signup|newsletter|dispatch/.test(text)) return 'email';
+  return 'text';
+}
+
+function stringAttribute(value) {
+  return typeof value === 'string' ? value : value === undefined || value === null ? '' : String(value);
 }
 
 function renderGeneratedCustomBlockAttribute(customBlock, attribute, value, attributes) {
@@ -1584,6 +1777,11 @@ function renderGeneratedCustomBlockAttribute(customBlock, attribute, value, attr
   return element.createElement('p', { key: attribute.name, className }, element.createElement(element.RawHTML, null, value));
 }
 
+function isFormBehaviorAttribute(attribute) {
+  const role = `${attribute.role || ''} ${attribute.name || ''}`.toLowerCase();
+  return /form-action|form-method|form-input-name|form-placeholder|form-required|input-name|placeholder|required|action|method/.test(role);
+}
+
 function renderGeneratedCustomBlockItem(customBlock, attribute, item, index) {
   const className = `${customBlock.slug}__item`;
   if (typeof item === 'string') {
@@ -1613,14 +1811,18 @@ function renderField(field) {
     return element.createElement('label', { key: String(field || 'field') }, String(field || 'Field'), element.createElement('input', { type: 'text', name: slug(field || 'field') }));
   }
 
+  const id = field.name || slug(field.label || 'field');
+  const required = Boolean(field.required);
+
   if (field.type === 'textarea') {
     return element.createElement(
       'label',
-      { key: field.label },
+      { key: id },
       field.label,
       element.createElement('textarea', {
-        name: slug(field.label),
+        name: id,
         placeholder: field.placeholder,
+        required,
       })
     );
   }
@@ -1628,11 +1830,11 @@ function renderField(field) {
   if (field.type === 'select') {
     return element.createElement(
       'label',
-      { key: field.label },
+      { key: id },
       field.label,
       element.createElement(
         'select',
-        { name: slug(field.label) },
+        { name: id, required },
         (field.options || []).map((option) => element.createElement('option', { key: option }, option))
       )
     );
@@ -1640,12 +1842,13 @@ function renderField(field) {
 
   return element.createElement(
     'label',
-    { key: field.label },
+    { key: id },
     field.label,
     element.createElement('input', {
       type: field.type,
-      name: slug(field.label),
+      name: id,
       placeholder: field.placeholder,
+      required,
     })
   );
 }
@@ -1664,8 +1867,9 @@ function writeCustomBlockSource(plan) {
       apiVersion: 3,
       name: customBlock.name,
       title: titleCase(customBlock.slug),
-      category: customBlock.name.includes('inquiry') ? 'forms' : 'design',
+      category: customBlockCategory(customBlock),
       attributes,
+      supports: generatedCustomBlockSupports(customBlock),
     });
     write(
       `${base}/edit.js`,
@@ -1676,6 +1880,40 @@ function writeCustomBlockSource(plan) {
     write(`${base}/save.js`, FIXED_CUSTOM_BLOCKS.includes(customBlock.name) ? fixedCustomBlockSaveSource(customBlock) : generatedCustomBlockSaveSource(customBlock));
     write(`${base}/style.css`, FIXED_CUSTOM_BLOCKS.includes(customBlock.name) ? customBlockCss() : generatedCustomBlockCss(customBlock));
   }
+}
+
+function customBlockCategory(customBlock) {
+  return customBlockLooksFormLike(customBlock) ? 'forms' : 'design';
+}
+
+function generatedCustomBlockSupports(customBlock) {
+  return {
+    anchor: true,
+    align: ['wide', 'full'],
+    className: true,
+    color: {
+      text: true,
+      background: true,
+      gradients: true,
+    },
+    spacing: {
+      margin: true,
+      padding: true,
+      blockGap: true,
+    },
+    typography: {
+      fontSize: true,
+      lineHeight: true,
+    },
+    border: {
+      color: true,
+      radius: true,
+      style: true,
+      width: true,
+    },
+    html: false,
+    reusable: true,
+  };
 }
 
 function customBlockAttributes(name, customBlock = null) {
@@ -1721,41 +1959,45 @@ function fixedCustomBlockSaveSource(customBlock) {
 function generatedCustomBlockEditSource(customBlock) {
   const rootTag = customBlock.template.rootTag || 'section';
   const rootClassName = [wpBlockClassName(customBlock.name), customBlock.template.rootClass, customBlock.sourceClassName].filter(Boolean).join(' ');
-  const controls = customBlock.attributes.map((attribute) => generatedEditControlSource(attribute)).join('\n\n');
+  const inspectorControls = customBlock.attributes.map((attribute) => generatedInspectorControlSource(attribute)).filter(Boolean).join('\n\n');
+  const canvas = customBlockLooksFormLike(customBlock)
+    ? generatedFormEditCanvasSource(customBlock)
+    : customBlock.attributes.map((attribute) => generatedCanvasEditElementSource(customBlock, attribute)).filter(Boolean).join('\n\n');
 
-  return `import { useBlockProps, RichText } from '@wordpress/block-editor';
-import { TextControl, TextareaControl, ToggleControl } from '@wordpress/components';
+  return `import { InspectorControls, useBlockProps, RichText } from '@wordpress/block-editor';
+import { PanelBody, TextControl, ToggleControl } from '@wordpress/components';
 
 export default function Edit({ attributes, setAttributes }) {
   const blockProps = useBlockProps({ className: ${jsString(rootClassName)} });
-  const updateJsonAttribute = (name, value) => {
-    try {
-      setAttributes({ [name]: JSON.parse(value) });
-    } catch (error) {
-      // Keep the prior valid value while the editor input contains incomplete JSON.
-    }
+  const fields = attributes.fields?.length ? attributes.fields : [{ label: attributes.label || ${jsString(inferFormFieldLabel(customBlock))}, type: attributes.inputType || ${jsString(inferFormFieldType(customBlock, '', ''))}, name: attributes.inputName || ${jsString(slug(inferFormFieldLabel(customBlock)))}, placeholder: attributes.placeholder || '', required: !!attributes.required }];
+  const updateField = (index, key, value) => {
+    const next = [...fields];
+    next[index] = { ...next[index], [key]: value };
+    setAttributes({ fields: next });
   };
 
   return (
-    <${rootTag} {...blockProps}>
-${indent(controls, 6)}
-    </${rootTag}>
+    <>
+      ${inspectorControls ? `<InspectorControls>
+        <PanelBody title="Settings">
+${indent(inspectorControls, 10)}
+        </PanelBody>
+      </InspectorControls>` : ''}
+      <${rootTag} {...blockProps}>
+${indent(canvas || '<div />', 8)}
+      </${rootTag}>
+    </>
   );
 }
 `;
 }
 
-function generatedEditControlSource(attribute) {
+function generatedInspectorControlSource(attribute) {
   const label = titleCase(slug(attribute.name));
-  const tagName = editorTagNameForAttribute(attribute);
+  const role = `${attribute.role || ''} ${attribute.name}`.toLowerCase();
 
-  if (attribute.type === 'array' || attribute.type === 'object') {
-    return `<TextareaControl
-  label=${jsString(`${label} JSON`)}
-  value={JSON.stringify(attributes.${attribute.name} || ${attribute.type === 'array' ? '[]' : '{}'}, null, 2)}
-  onChange={(value) => updateJsonAttribute(${jsString(attribute.name)}, value)}
-/>`;
-  }
+  if (attribute.type === 'array' || attribute.type === 'object') return '';
+  if (editorTagNameForAttribute(attribute) && !/url|href|link|action|method|placeholder|required|input-name|style-variant|control|speed|tone/.test(role)) return '';
 
   if (attribute.type === 'boolean') {
     return `<ToggleControl
@@ -1774,17 +2016,6 @@ function generatedEditControlSource(attribute) {
 />`;
   }
 
-  if (tagName) {
-    return `<RichText
-  tagName=${jsString(tagName)}
-  className=${jsString(slug(attribute.name))}
-  value={attributes.${attribute.name} || ''}
-  allowedFormats={['core/bold', 'core/italic', 'core/link']}
-  placeholder=${jsString(label)}
-  onChange={(value) => setAttributes({ ${attribute.name}: value })}
-/>`;
-  }
-
   return `<TextControl
   label=${jsString(label)}
   value={attributes.${attribute.name} || ''}
@@ -1792,7 +2023,115 @@ function generatedEditControlSource(attribute) {
 />`;
 }
 
+function generatedCanvasEditElementSource(customBlock, attribute) {
+  const role = `${attribute.role || ''} ${attribute.name}`.toLowerCase();
+  const className = `${customBlock.slug}__${slug(attribute.name)}`;
+  const tagName = editorTagNameForAttribute(attribute);
+
+  if (/inspector|style-variant|control|speed|tone|url|href|link|action|method|placeholder|required|input-name/.test(role)) return '';
+
+  if (attribute.type === 'array') {
+    return `{(attributes.${attribute.name} || []).length > 0 && (
+  <div className=${jsString(className)}>
+    {(attributes.${attribute.name} || []).map((item, index) => (
+      <article key={index} className=${jsString(`${customBlock.slug}__item`)}>
+        {typeof item === 'string' ? (
+          <RichText tagName="span" value={item} allowedFormats={['core/bold', 'core/italic', 'core/link']} onChange={(value) => {
+            const next = [...(attributes.${attribute.name} || [])];
+            next[index] = value;
+            setAttributes({ ${attribute.name}: next });
+          }} />
+        ) : (
+          <>
+            <RichText tagName="h3" value={item?.title || item?.heading || ''} allowedFormats={['core/bold', 'core/italic', 'core/link']} onChange={(value) => {
+              const next = [...(attributes.${attribute.name} || [])];
+              next[index] = { ...item, title: value };
+              setAttributes({ ${attribute.name}: next });
+            }} />
+            <RichText tagName="p" value={item?.text || item?.description || item?.body || ''} allowedFormats={['core/bold', 'core/italic', 'core/link']} onChange={(value) => {
+              const next = [...(attributes.${attribute.name} || [])];
+              next[index] = { ...item, text: value };
+              setAttributes({ ${attribute.name}: next });
+            }} />
+          </>
+        )}
+      </article>
+    ))}
+  </div>
+)}`;
+  }
+
+  if (!tagName) return '';
+
+  return `<RichText
+  tagName=${jsString(tagName)}
+  className=${jsString(className)}
+  value={attributes.${attribute.name} || ''}
+  allowedFormats={['core/bold', 'core/italic', 'core/link']}
+  placeholder=${jsString(titleCase(slug(attribute.name)))}
+  onChange={(value) => setAttributes({ ${attribute.name}: value })}
+/>`;
+}
+
+function generatedFormEditCanvasSource(customBlock) {
+  const intro = customBlock.attributes
+    .filter((attribute) => !isFormBehaviorAttribute(attribute) && !/form-label|form-fields|fields|button|submit|form-note|note|privacy|disclaimer/.test(`${attribute.role || ''} ${attribute.name}`.toLowerCase()))
+    .map((attribute) => generatedCanvasEditElementSource(customBlock, attribute))
+    .filter(Boolean)
+    .join('\n\n');
+  const noteAttribute = customBlock.attributes.find((attribute) => /form-note|note|privacy|disclaimer/.test(`${attribute.role || ''} ${attribute.name}`.toLowerCase()));
+  const note = noteAttribute
+    ? `<RichText
+  tagName="p"
+  className=${jsString(`${customBlock.slug}__note`)}
+  value={attributes.${noteAttribute.name} || ''}
+  allowedFormats={['core/bold', 'core/italic', 'core/link']}
+  placeholder="Note"
+  onChange={(value) => setAttributes({ ${noteAttribute.name}: value })}
+/>`
+    : '';
+
+  return `${intro}
+<form className=${jsString(`${customBlock.slug}__form`)}>
+  {fields.map((field, index) => (
+    <label key={field.name || index}>
+      <RichText
+        tagName="span"
+        className=${jsString(`${customBlock.slug}__field-label`)}
+        value={field.label || ''}
+        allowedFormats={['core/bold', 'core/italic']}
+        placeholder="Field label"
+        onChange={(value) => updateField(index, 'label', value)}
+      />
+      {field.type === 'textarea' ? (
+        <textarea name={field.name || ''} placeholder={field.placeholder || ''} required={!!field.required} disabled />
+      ) : field.type === 'select' ? (
+        <select name={field.name || ''} required={!!field.required} disabled>
+          {(field.options || []).map((option) => <option key={option}>{option}</option>)}
+        </select>
+      ) : (
+        <input type={field.type || 'text'} name={field.name || ''} placeholder={field.placeholder || ''} required={!!field.required} disabled />
+      )}
+    </label>
+  ))}
+  <button type="button" disabled>
+    <RichText
+      tagName="span"
+      value={attributes.buttonText || attributes.submitText || attributes.ctaText || ${jsString(inferFormSubmitText(customBlock))}}
+      allowedFormats={['core/bold', 'core/italic']}
+      placeholder="Button text"
+      onChange={(value) => setAttributes({ buttonText: value })}
+    />
+  </button>
+</form>
+${note}`.trim();
+}
+
 function generatedCustomBlockSaveSource(customBlock) {
+  if (customBlockLooksFormLike(customBlock)) {
+    return generatedFormCustomBlockSaveSource(customBlock);
+  }
+
   const rootTag = customBlock.template.rootTag || 'section';
   const rootClassName = [wpBlockClassName(customBlock.name), customBlock.template.rootClass, customBlock.sourceClassName].filter(Boolean).join(' ');
   const children = customBlock.attributes.map((attribute) => generatedSaveElementSource(customBlock, attribute)).filter(Boolean).join('\n\n');
@@ -1841,9 +2180,68 @@ ${indent(children, 6)}
 `;
 }
 
+function generatedFormCustomBlockSaveSource(customBlock) {
+  const rootTag = customBlock.template.rootTag || 'section';
+  const rootClassName = [wpBlockClassName(customBlock.name), customBlock.template.rootClass, customBlock.sourceClassName].filter(Boolean).join(' ');
+  const intro = customBlock.attributes
+    .filter((attribute) => !isFormBehaviorAttribute(attribute) && !/form-label|form-fields|fields|button|submit|form-note|note|privacy|disclaimer/.test(`${attribute.role || ''} ${attribute.name}`.toLowerCase()))
+    .map((attribute) => generatedSaveElementSource(customBlock, attribute))
+    .filter(Boolean)
+    .join('\n\n');
+  const noteAttribute = customBlock.attributes.find((attribute) => /form-note|note|privacy|disclaimer/.test(`${attribute.role || ''} ${attribute.name}`.toLowerCase()));
+  const note = noteAttribute ? `{attributes.${noteAttribute.name} && <p className=${jsString(`${customBlock.slug}__note`)}>{attributes.${noteAttribute.name}}</p>}` : '';
+
+  return `import { useBlockProps, RichText } from '@wordpress/block-editor';
+
+function fieldName(field, index) {
+  return field?.name || field?.inputName || String(field?.label || \`field-\${index + 1}\`).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || \`field-\${index + 1}\`;
+}
+
+function renderField(field, index) {
+  const name = fieldName(field, index);
+  const label = field?.label || name;
+  if (field?.type === 'textarea') {
+    return <label key={name}>{label}<textarea name={name} placeholder={field?.placeholder || ''} required={!!field?.required} /></label>;
+  }
+  if (field?.type === 'select') {
+    return (
+      <label key={name}>{label}<select name={name} required={!!field?.required}>{(field?.options || []).map((option) => <option key={option}>{option}</option>)}</select></label>
+    );
+  }
+  return <label key={name}>{label}<input type={field?.type || 'text'} name={name} placeholder={field?.placeholder || ''} required={!!field?.required} /></label>;
+}
+
+export default function save({ attributes }) {
+  const blockProps = useBlockProps.save({ className: ${jsString(rootClassName)} });
+  const fields = attributes.fields?.length ? attributes.fields : [{
+    label: attributes.label || ${jsString(inferFormFieldLabel(customBlock))},
+    type: attributes.inputType || ${jsString(inferFormFieldType(customBlock, '', ''))},
+    name: attributes.inputName || ${jsString(slug(inferFormFieldLabel(customBlock)))},
+    placeholder: attributes.placeholder || '',
+    required: !!attributes.required,
+  }];
+
+  return (
+    <${rootTag} {...blockProps}>
+${indent(intro, 6)}
+      <form className=${jsString(`${customBlock.slug}__form`)} action={attributes.action || attributes.formAction || '#'} method={attributes.method || attributes.formMethod || 'post'}>
+        {fields.map(renderField)}
+        <button type="submit">{attributes.buttonText || attributes.submitText || attributes.ctaText || ${jsString(inferFormSubmitText(customBlock))}}</button>
+      </form>
+${indent(note, 6)}
+    </${rootTag}>
+  );
+}
+`;
+}
+
 function generatedSaveElementSource(customBlock, attribute) {
   const role = `${attribute.role || ''} ${attribute.name}`.toLowerCase();
   const className = `${customBlock.slug}__${slug(attribute.name)}`;
+
+  if (customBlockLooksFormLike(customBlock) && (isFormBehaviorAttribute(attribute) || /form-label|form-fields|fields|form-note|note|privacy|disclaimer/.test(role))) {
+    return '';
+  }
 
   if (attribute.type === 'array') {
     if (/fields?|form/.test(role)) {
@@ -1897,6 +2295,22 @@ function generatedCustomBlockCss(customBlock) {
 
 .${rootClassName} [class$="__item"] {
   min-width: 0;
+}
+
+.${rootClassName} [class$="__form"] {
+  display: grid;
+  gap: 1rem;
+}
+
+.${rootClassName} [class$="__form"] label {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.${rootClassName} [class$="__form"] input,
+.${rootClassName} [class$="__form"] select,
+.${rootClassName} [class$="__form"] textarea {
+  font: inherit;
 }
 `;
 }
