@@ -65,6 +65,8 @@ Repair pass HTML snapshots are written under `poc/transform-poc/output/rendered/
 - The serialized block output can be rendered into `rendered/rendered-blocks.html` for visual comparison against the original mockup.
 - A Playwright-based vision loop can immediately expose desktop/mobile drift, including responsive layout regressions that are hard to catch from markup alone.
 
+Generated custom blocks are contract-based, not disguised HTML blocks. The plan must define typed editable attributes and a semantic save template for each generated custom block. The assembly step strips opaque generated-block attributes such as `html`, `sourceHtml`, `markup`, `innerHTML`, `editableFields`, and `sourceSelector`, then fills the declared attributes from the parsed content inventory where possible.
+
 ## Theme JSON Is Deliberately Omitted
 
 This POC keeps styling as page CSS plus custom-block scoped CSS. That is intentional. `theme.json` should come after several pages have good block styling, so shared palette, spacing, typography, layout, and block variation decisions can be inferred from repeated successful transforms instead of guessed upfront.

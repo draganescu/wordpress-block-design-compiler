@@ -29,6 +29,8 @@ const FIXED_CUSTOM_BLOCKS = [
   'poc/studio-inquiry',
 ];
 const BASE_ASSEMBLY_BLOCKS = [...CORE_ASSEMBLY_BLOCKS, ...FIXED_CUSTOM_BLOCKS];
+const OPAQUE_CUSTOM_BLOCK_ATTRIBUTES = new Set(['html', 'sourceHtml', 'sourceHTML', 'markup', 'innerHTML', 'editableFields', 'sourceSelector']);
+const GENERATED_CUSTOM_BLOCK_ATTRIBUTE_TYPES = new Set(['string', 'number', 'boolean', 'array', 'object']);
 
 loadEnvFiles();
 
@@ -50,7 +52,7 @@ async function main() {
   writeJson('analysis/analysis.json', analysis);
   writeJson('analysis/content-inventory.json', contentInventory);
 
-  const plan = providers.plan === 'openai' ? await planBlocksWithOpenAi({ prompt, mockup, analysis }) : planBlocks(analysis);
+  const plan = providers.plan === 'openai' ? await planBlocksWithOpenAi({ prompt, mockup, analysis, contentInventory }) : planBlocks(analysis);
   writeJson('plan/block-implementation-plan.json', plan);
 
   registerPlannedCustomBlocks(plan);
@@ -59,6 +61,7 @@ async function main() {
     providers.assembly === 'openai'
       ? await assembleBlocksWithOpenAi({ prompt, mockup, analysis, plan, contentInventory, supportedBlockNames })
       : assembleBlocks(plan);
+  const customContractRepair = enforceCustomBlockContracts(assembly.blockTree, plan, contentInventory);
   const contentRepair = repairMissingAssemblyContent(assembly.blockTree, contentInventory, { plan });
   assembly.blockMarkup = blocks.serialize(assembly.blockTree);
   writeJson('wordpress/block-tree.json', simplifyBlocks(assembly.blockTree));
@@ -68,13 +71,13 @@ async function main() {
   const renderedFragment = stripBlockComments(assembly.blockMarkup);
   const renderedHtml = renderFullHtml({
     title: `Rendered Blocks - ${analysis.title || 'POC'}`,
-    css: [mockup.css, customBlockCss()].join('\n\n'),
+    css: [mockup.css, customBlockCss(plan)].join('\n\n'),
     body: renderedFragment,
   });
   write('rendered/rendered-fragment.html', renderedFragment);
   write('rendered/rendered-blocks.html', renderedHtml);
 
-  const report = buildReport({ prompt, analysis, plan, assembly, providers, contentRepair });
+  const report = buildReport({ prompt, analysis, plan, assembly, providers, contentRepair, customContractRepair });
   writeJson('reports/summary.json', report);
   write('reports/summary.md', renderMarkdownReport(report));
 
@@ -153,7 +156,7 @@ function htmlMockupSchema() {
   };
 }
 
-async function planBlocksWithOpenAi({ prompt, mockup, analysis }) {
+async function planBlocksWithOpenAi({ prompt, mockup, analysis, contentInventory }) {
   const plan = await callOpenAiJson({
     schemaName: 'block_implementation_plan',
     schema: blockPlanSchema(),
@@ -161,13 +164,16 @@ async function planBlocksWithOpenAi({ prompt, mockup, analysis }) {
     instructions: [
       'You plan how to convert an HTML/CSS mockup into editable WordPress blocks.',
       'Prefer core WordPress blocks and block supports before custom blocks.',
-      'Use custom static blocks only for the smallest subtree needing custom editor fields, behavior, or a markup contract.',
-      'Use core/html only when neither core nor custom static blocks can preserve both fidelity and editability, and explain why.',
+      'Use custom static blocks only for the smallest subtree needing custom editor fields, behavior, or a semantic markup contract.',
+      'Do not make a whole hero, collection, or contact section custom only because it has decorative SVG, gradients, backgrounds, overlays, or exact CSS layout. Keep editable text/layout in core blocks and isolate the decorative fragment if needed.',
+      'A planned custom block must define typed editable attributes and a semantic save template. It must not be a wrapper around an html, sourceHtml, markup, innerHTML, or editableFields blob.',
+      'If the only viable implementation is opaque raw HTML, do not call it a custom block. Use core/html for the smallest decorative fragment only and explain why.',
       'The plan should optimize for rendered visual fidelity while preserving editable text, links, repeated items, and form labels/placeholders.',
     ].join(' '),
     inputText: [
       `User prompt:\n${prompt}`,
       `Analysis:\n${JSON.stringify(analysis, null, 2)}`,
+      `Content inventory:\n${JSON.stringify(contentInventory, null, 2)}`,
       `HTML:\n${truncateMiddle(mockup.html, CONTEXT_CHAR_LIMIT)}`,
       `CSS:\n${truncateMiddle(mockup.css, CONTEXT_CHAR_LIMIT)}`,
     ].join('\n\n'),
@@ -178,13 +184,8 @@ async function planBlocksWithOpenAi({ prompt, mockup, analysis }) {
 function normalizePlan(plan, analysis) {
   const sections = Array.isArray(plan.sections) && plan.sections.length ? plan.sections : planBlocks(analysis).sections;
   const customBlocks = Array.isArray(plan.customBlocks) ? plan.customBlocks : [];
-  const customBlocksByName = new Map(
-    customBlocks.map((block) => {
-      const normalized = normalizeCustomBlockPlan(block);
-      return [normalized.name, normalized];
-    })
-  );
-  const customBlocksBySlug = new Map([...customBlocksByName.values()].map((block) => [block.slug, block]));
+  const customBlocksByName = normalizeCustomBlockPlanList(customBlocks);
+  const customBlocksBySlug = customBlockSlugIndex(customBlocksByName.values());
   const normalizedSections = sections.map((section) => {
     const customBlockName = normalizeSectionCustomBlockName(section.customBlock, customBlocksBySlug);
     if (customBlockName && !customBlocksByName.has(customBlockName)) {
@@ -194,7 +195,10 @@ function normalizePlan(plan, analysis) {
         slug: blockSlug,
         reason: `Custom static block planned for ${section.id || blockSlug}.`,
         controls: Array.isArray(section.editableFields) ? section.editableFields.map(String) : [],
+        attributes: inferCustomBlockAttributes({ name: customBlockName, slug: blockSlug, reason: '', controls: section.editableFields || [] }),
+        template: normalizeCustomBlockTemplate(null, { slug: blockSlug, sourceClassName: sourceClassNameFromSelector(section.sourceSelector) }),
       });
+      for (const key of customBlockSlugKeys(blockSlug)) customBlocksBySlug.set(key, customBlocksByName.get(customBlockName));
     }
 
     return {
@@ -209,6 +213,7 @@ function normalizePlan(plan, analysis) {
       editableFields: Array.isArray(section.editableFields) ? section.editableFields.map(String) : [],
     };
   });
+  attachCustomBlockSectionMetadata(customBlocksByName, normalizedSections);
 
   return {
     version: Number(plan.version || 1),
@@ -219,16 +224,55 @@ function normalizePlan(plan, analysis) {
   };
 }
 
+function normalizeCustomBlockPlanList(customBlocks) {
+  const byName = new Map();
+  const byCompactSlug = new Map();
+
+  for (const block of customBlocks) {
+    const normalized = normalizeCustomBlockPlan(block);
+    const compactKey = compactSlugKey(normalized.slug);
+    const existing = byCompactSlug.get(compactKey);
+    if (existing) {
+      mergeCustomBlockPlan(existing, normalized);
+      continue;
+    }
+
+    byName.set(normalized.name, normalized);
+    byCompactSlug.set(compactKey, normalized);
+  }
+
+  return byName;
+}
+
+function mergeCustomBlockPlan(target, incoming) {
+  target.controls = [...new Set([...target.controls, ...incoming.controls])];
+  const attributesByName = new Map(target.attributes.map((attribute) => [attribute.name, attribute]));
+  for (const attribute of incoming.attributes) {
+    if (!attributesByName.has(attribute.name)) {
+      target.attributes.push(attribute);
+      attributesByName.set(attribute.name, attribute);
+    }
+  }
+  if (!target.reason.includes(incoming.reason)) target.reason = `${target.reason} ${incoming.reason}`.trim();
+  if (!target.template.structure.includes(incoming.template.structure)) {
+    target.template.structure = `${target.template.structure} ${incoming.template.structure}`.trim();
+  }
+}
+
 function normalizeCustomBlockPlan(block) {
   const blockSlug = slug(String(block.slug || block.name || 'custom-static')) || 'custom-static';
   const rawName = String(block.name || '').trim();
   const name = canonicalBlockName(rawName.includes('/') ? rawName : blockSlug, blockSlug);
+  const reason = String(block.reason || 'OpenAI planned custom block.');
+  const controls = Array.isArray(block.controls) ? block.controls.map(String) : [];
 
   return {
     name,
     slug: blockSlugFromName(name),
-    reason: String(block.reason || 'OpenAI planned custom block.'),
-    controls: Array.isArray(block.controls) ? block.controls.map(String) : [],
+    reason,
+    controls,
+    attributes: normalizeCustomBlockAttributes(block.attributes, { name, slug: blockSlugFromName(name), reason, controls }),
+    template: normalizeCustomBlockTemplate(block.template, { slug: blockSlugFromName(name) }),
   };
 }
 
@@ -236,11 +280,45 @@ function normalizeSectionCustomBlockName(value, customBlocksBySlug) {
   if (!value) return null;
 
   const candidateSlug = slug(String(value).includes('/') ? String(value).split('/').pop() : String(value));
-  if (candidateSlug && customBlocksBySlug.has(candidateSlug)) {
-    return customBlocksBySlug.get(candidateSlug).name;
+  for (const key of customBlockSlugKeys(candidateSlug)) {
+    if (key && customBlocksBySlug.has(key)) {
+      return customBlocksBySlug.get(key).name;
+    }
   }
 
   return canonicalBlockName(value, candidateSlug || 'custom-static');
+}
+
+function customBlockSlugIndex(customBlocks) {
+  const index = new Map();
+  for (const block of customBlocks) {
+    for (const key of customBlockSlugKeys(block.slug)) {
+      if (key && !index.has(key)) index.set(key, block);
+    }
+  }
+  return index;
+}
+
+function customBlockSlugKeys(value) {
+  const slugValue = slug(value || '');
+  const compact = compactSlugKey(slugValue);
+  return [...new Set([slugValue, compact].filter(Boolean))];
+}
+
+function compactSlugKey(value) {
+  return slug(value || '').replace(/-/g, '');
+}
+
+function attachCustomBlockSectionMetadata(customBlocksByName, sections) {
+  for (const section of sections) {
+    if (!section.customBlock || !customBlocksByName.has(section.customBlock)) continue;
+    const customBlock = customBlocksByName.get(section.customBlock);
+    if (!customBlock.sourceSelector) customBlock.sourceSelector = section.sourceSelector;
+    if (!customBlock.sourceClassName) customBlock.sourceClassName = sourceClassNameFromSelector(section.sourceSelector);
+    if (!customBlock.template.rootClass && customBlock.sourceClassName) {
+      customBlock.template.rootClass = customBlock.sourceClassName;
+    }
+  }
 }
 
 function canonicalBlockName(value, fallbackSlug) {
@@ -255,6 +333,113 @@ function canonicalBlockName(value, fallbackSlug) {
 
 function blockSlugFromName(name) {
   return slug(String(name).split('/').pop() || 'custom-static') || 'custom-static';
+}
+
+function normalizeCustomBlockAttributes(attributes, context) {
+  const normalized = [];
+  const seen = new Set();
+
+  for (const attribute of Array.isArray(attributes) ? attributes : []) {
+    const item = normalizeCustomBlockAttribute(attribute);
+    if (!item || seen.has(item.name)) continue;
+    normalized.push(item);
+    seen.add(item.name);
+  }
+
+  if (normalized.length) return normalized;
+  return inferCustomBlockAttributes(context);
+}
+
+function normalizeCustomBlockAttribute(attribute) {
+  const rawName = String(attribute && attribute.name ? attribute.name : '').trim();
+  const name = toAttributeName(rawName);
+  if (!name || OPAQUE_CUSTOM_BLOCK_ATTRIBUTES.has(name)) return null;
+
+  const requestedType = String(attribute.type || '').toLowerCase();
+  const type = GENERATED_CUSTOM_BLOCK_ATTRIBUTE_TYPES.has(requestedType) ? requestedType : 'string';
+  return {
+    name,
+    type,
+    role: String(attribute.role || roleFromAttributeName(name)).trim() || roleFromAttributeName(name),
+    source: String(attribute.source || 'extracted editable content').trim(),
+  };
+}
+
+function inferCustomBlockAttributes({ name, slug: blockSlug, reason = '', controls = [] }) {
+  const text = `${name || ''} ${blockSlug || ''} ${reason} ${controls.join(' ')}`.toLowerCase();
+
+  if (/marquee|ticker/.test(text)) {
+    return [
+      { name: 'items', type: 'array', role: 'repeater', source: 'marquee item text' },
+      { name: 'speedSeconds', type: 'number', role: 'inspector-control', source: 'animation speed' },
+      { name: 'tone', type: 'string', role: 'style-variant', source: 'visual tone' },
+    ];
+  }
+
+  if (/form|contact|inquiry|signup|newsletter/.test(text)) {
+    return [
+      { name: 'eyebrow', type: 'string', role: 'eyebrow', source: 'section eyebrow or label' },
+      { name: 'heading', type: 'string', role: 'heading', source: 'section heading' },
+      { name: 'body', type: 'string', role: 'body', source: 'supporting paragraph' },
+      { name: 'fields', type: 'array', role: 'form-fields', source: 'form labels, types, placeholders, and options' },
+      { name: 'buttonText', type: 'string', role: 'button-text', source: 'form submit button text' },
+    ];
+  }
+
+  if (/collection|grid|card|product|work|portfolio|gallery|menu/.test(text)) {
+    return [
+      { name: 'eyebrow', type: 'string', role: 'eyebrow', source: 'section eyebrow or label' },
+      { name: 'heading', type: 'string', role: 'heading', source: 'section heading' },
+      { name: 'intro', type: 'string', role: 'body', source: 'section intro paragraph' },
+      { name: 'items', type: 'array', role: 'cards', source: 'repeated card title, text, link, and visual metadata' },
+    ];
+  }
+
+  return [
+    { name: 'eyebrow', type: 'string', role: 'eyebrow', source: 'section eyebrow or label' },
+    { name: 'heading', type: 'string', role: 'heading', source: 'section heading' },
+    { name: 'body', type: 'string', role: 'body', source: 'supporting paragraph' },
+    { name: 'ctaText', type: 'string', role: 'button-text', source: 'primary link text' },
+    { name: 'ctaUrl', type: 'string', role: 'button-url', source: 'primary link href' },
+  ];
+}
+
+function normalizeCustomBlockTemplate(template, { slug: blockSlug, sourceClassName = '' }) {
+  const rootTag = ['section', 'div', 'article', 'aside', 'header', 'footer', 'nav'].includes(template && template.rootTag) ? template.rootTag : 'section';
+  return {
+    rootTag,
+    rootClass: String((template && template.rootClass) || sourceClassName || blockSlug || '').trim(),
+    structure: String((template && template.structure) || 'Render semantic editable attributes with stable class names.').trim(),
+  };
+}
+
+function toAttributeName(value) {
+  const parts = String(value)
+    .trim()
+    .replace(/([a-z0-9])([A-Z])/g, '$1-$2')
+    .toLowerCase()
+    .split(/[^a-z0-9]+/)
+    .filter(Boolean);
+  if (!parts.length) return '';
+  const name = parts[0] + parts.slice(1).map((part) => part.charAt(0).toUpperCase() + part.slice(1)).join('');
+  return /^[A-Za-z_]/.test(name) ? name : `field${name.charAt(0).toUpperCase()}${name.slice(1)}`;
+}
+
+function roleFromAttributeName(name) {
+  if (/eyebrow|kicker|label/.test(name)) return 'eyebrow';
+  if (/heading|title|headline/.test(name)) return 'heading';
+  if (/body|text|description|intro|lede|copy|subtitle/.test(name)) return 'body';
+  if (/fields?/.test(name)) return 'form-fields';
+  if (/items?|cards?|products?|entries?/.test(name)) return 'repeater';
+  if (/button.*text|cta.*text/.test(name)) return 'button-text';
+  if (/url|href|link/.test(name)) return 'url';
+  return 'content';
+}
+
+function sourceClassNameFromSelector(value) {
+  const selectorValue = String(value || '');
+  const classMatches = [...selectorValue.matchAll(/\.([A-Za-z0-9_-]+)/g)].map((match) => match[1]);
+  return classMatches.join(' ');
 }
 
 function blockPlanSchema() {
@@ -298,12 +483,36 @@ function blockPlanSchema() {
         items: {
           type: 'object',
           additionalProperties: false,
-          required: ['name', 'slug', 'reason', 'controls'],
+          required: ['name', 'slug', 'reason', 'controls', 'attributes', 'template'],
           properties: {
             name: { type: 'string' },
             slug: { type: 'string' },
             reason: { type: 'string' },
             controls: { type: 'array', items: { type: 'string' } },
+            attributes: {
+              type: 'array',
+              items: {
+                type: 'object',
+                additionalProperties: false,
+                required: ['name', 'type', 'role', 'source'],
+                properties: {
+                  name: { type: 'string' },
+                  type: { type: 'string', enum: ['string', 'number', 'boolean', 'array', 'object'] },
+                  role: { type: 'string' },
+                  source: { type: 'string' },
+                },
+              },
+            },
+            template: {
+              type: 'object',
+              additionalProperties: false,
+              required: ['rootTag', 'rootClass', 'structure'],
+              properties: {
+                rootTag: { type: 'string' },
+                rootClass: { type: 'string' },
+                structure: { type: 'string' },
+              },
+            },
           },
         },
       },
@@ -312,9 +521,7 @@ function blockPlanSchema() {
 }
 
 async function assembleBlocksWithOpenAi({ prompt, mockup, analysis, plan, contentInventory, supportedBlockNames }) {
-  const plannedCustomBlocks = plan.customBlocks
-    .map((block) => `- ${block.name}: ${block.reason} Controls: ${block.controls.join(', ') || 'source html plus editable field inventory'}`)
-    .join('\n');
+  const plannedCustomBlocks = renderCustomBlockContracts(plan.customBlocks);
   const result = await callOpenAiJson({
     schemaName: 'block_tree_assembly',
     schema: blockTreeAssemblySchema(supportedBlockNames),
@@ -325,7 +532,9 @@ async function assembleBlocksWithOpenAi({ prompt, mockup, analysis, plan, conten
       'Extract real text, links, repeated items, and form fields from the HTML mockup.',
       'Every heading and paragraph from the content inventory must appear in a block attribute. Never leave core/heading content, core/paragraph content, core/button text, or core/html html empty when source content exists.',
       'Prefer core blocks for layout/text/buttons/columns. Use planned custom blocks for sections the plan marked custom-block. Use core/html sparingly for visual fragments that cannot fit core blocks or a planned custom block.',
-      'When using a planned custom block, attributesJson must include sourceSelector, html with the exact source subtree for this static POC render, and editableFields with extracted text/link/control values.',
+      'When using a planned custom block, attributesJson must contain only attributes declared in that custom block contract, plus optional className. Fill those typed attributes from the content inventory.',
+      'Never put html, sourceHtml, markup, innerHTML, editableFields, or sourceSelector into a generated custom block. A custom block is not a disguised HTML block.',
+      'Use core/html only for the smallest decorative fragment, such as an isolated SVG or background element, and never for headings, paragraphs, links, repeated cards, or forms that should remain editable.',
       'For every block, attributesJson must be a valid JSON object string containing the attributes for that block. Use "{}" when there are no attributes.',
       'Return a block tree that can render a close visual approximation using the generated CSS and the POC custom block CSS.',
     ].join(' '),
@@ -333,7 +542,7 @@ async function assembleBlocksWithOpenAi({ prompt, mockup, analysis, plan, conten
       `User prompt:\n${prompt}`,
       `Analysis:\n${JSON.stringify(analysis, null, 2)}`,
       `Plan:\n${JSON.stringify(plan, null, 2)}`,
-      `Planned custom static blocks:\n${plannedCustomBlocks || '(none)'}`,
+      `Planned custom static block contracts:\n${plannedCustomBlocks || '(none)'}`,
       `Content inventory that must be preserved:\n${JSON.stringify(contentInventory, null, 2)}`,
       `HTML:\n${truncateMiddle(mockup.html, CONTEXT_CHAR_LIMIT)}`,
       `CSS selectors and variables:\n${JSON.stringify(analysis.css, null, 2)}`,
@@ -360,6 +569,20 @@ function blockTreeAssemblySchema(supportedBlockNames = BASE_ASSEMBLY_BLOCKS) {
       },
     },
   };
+}
+
+function renderCustomBlockContracts(customBlocks) {
+  return customBlocks
+    .map((block) =>
+      [
+        `- ${block.name}`,
+        `  Reason: ${block.reason}`,
+        `  Controls: ${block.controls.join(', ') || 'typed attributes only'}`,
+        `  Template: ${block.template.rootTag}.${block.template.rootClass || block.slug} - ${block.template.structure}`,
+        `  Allowed attributes: ${block.attributes.map((attribute) => `${attribute.name}:${attribute.type}:${attribute.role}`).join(', ')}`,
+      ].join('\n')
+    )
+    .join('\n');
 }
 
 function blockNodeSchema(depth, supportedBlockNames) {
@@ -606,6 +829,8 @@ function extractContentInventory(html) {
         url: attr(node, 'href') || '',
       }))
       .filter((item) => item.text || item.url),
+    cards: extractCards(document),
+    forms: extractForms(document),
     htmlFragments: findHtmlFragments(document),
   };
 }
@@ -640,7 +865,55 @@ function editableFieldsForNode(node) {
         url: attr(child, 'href') || '',
       }))
       .filter((item) => item.text || item.url),
+    cards: extractCards(node),
+    forms: extractForms(node),
   };
+}
+
+function extractCards(root) {
+  return findElements(root, 'article')
+    .map((node) => {
+      const heading = findElements(node).find((child) => /^h[1-6]$/.test(child.tagName));
+      const paragraph = findElements(node, 'p')[0];
+      const link = findElements(node, 'a')[0];
+      return {
+        className: attr(node, 'class') || '',
+        title: heading ? clean(text(heading)) : '',
+        text: paragraph ? clean(text(paragraph)) : '',
+        url: link ? attr(link, 'href') || '' : '',
+        linkText: link ? clean(text(link)) : '',
+      };
+    })
+    .filter((item) => item.title || item.text || item.linkText);
+}
+
+function extractForms(root) {
+  return findElements(root, 'form')
+    .map((form) => ({
+      className: attr(form, 'class') || '',
+      fields: findElements(form, 'label')
+        .map((label) => {
+          const control = findElements(label).find((child) => ['input', 'select', 'textarea'].includes(child.tagName));
+          if (!control) return null;
+          return {
+            label: clean(directText(label)) || clean(text(label)).replace(clean(text(control)), '').trim(),
+            type: control.tagName === 'input' ? attr(control, 'type') || 'text' : control.tagName,
+            name: attr(control, 'name') || slug(clean(directText(label))),
+            placeholder: attr(control, 'placeholder') || '',
+            options: control.tagName === 'select' ? findElements(control, 'option').map((option) => clean(text(option))).filter(Boolean) : [],
+          };
+        })
+        .filter(Boolean),
+      buttonText: clean(text(findElements(form, 'button')[0])),
+    }))
+    .filter((form) => form.fields.length || form.buttonText);
+}
+
+function directText(node) {
+  return (node.childNodes || [])
+    .filter((child) => typeof child.value === 'string')
+    .map((child) => child.value)
+    .join(' ');
 }
 
 function findHtmlFragments(root) {
@@ -688,15 +961,7 @@ function outerHtml(node) {
 }
 
 function repairMissingAssemblyContent(blockTree, inventory, { plan = null } = {}) {
-  const customBlockSources = new Map();
-  for (const section of (plan && plan.sections) || []) {
-    if (section.customBlock) {
-      customBlockSources.set(section.customBlock, section.sourceSelector || section.id);
-    }
-  }
-
   const state = {
-    sections: new Set(),
     headings: new Set(),
     paragraphs: new Set(),
     links: new Set(),
@@ -706,17 +971,6 @@ function repairMissingAssemblyContent(blockTree, inventory, { plan = null } = {}
 
   visitBlocks(blockTree, (block) => {
     const attributes = block.attributes || {};
-
-    if (customBlockSources.has(block.name) && !hasText(attributes.html)) {
-      const expectedSource = attributes.sourceSelector || customBlockSources.get(block.name);
-      const item = takeInventoryItem(inventory.sections, state.sections, (candidate) => matchesSection(candidate, expectedSource));
-      if (item) {
-        attributes.sourceSelector = attributes.sourceSelector || item.selector;
-        attributes.html = item.html;
-        attributes.editableFields = attributes.editableFields || item.editableFields;
-        state.repairs.push({ block: block.name, field: 'html', selector: item.selector });
-      }
-    }
 
     if (block.name === 'core/heading' && !hasText(attributes.content)) {
       const item = takeInventoryItem(inventory.headings, state.headings, (candidate) => {
@@ -765,6 +1019,132 @@ function repairMissingAssemblyContent(blockTree, inventory, { plan = null } = {}
     repairedBlocks: state.repairs.length,
     repairs: state.repairs,
   };
+}
+
+function enforceCustomBlockContracts(blockTree, plan, inventory) {
+  const customBlocksByName = new Map(plan.customBlocks.map((block) => [block.name, block]));
+  const sectionsByBlockName = new Map((plan.sections || []).filter((section) => section.customBlock).map((section) => [section.customBlock, section]));
+  const repairs = [];
+
+  visitBlocks(blockTree, (block) => {
+    const customBlock = customBlocksByName.get(block.name);
+    if (!customBlock || FIXED_CUSTOM_BLOCKS.includes(block.name)) return;
+
+    const section = sectionsByBlockName.get(block.name);
+    const sectionInventory = section ? findInventorySection(inventory, section.sourceSelector || section.id) : null;
+    const before = JSON.stringify(block.attributes || {});
+    block.attributes = sanitizeGeneratedCustomBlockAttributes(block.attributes || {}, customBlock, sectionInventory);
+    const after = JSON.stringify(block.attributes || {});
+    if (before !== after) {
+      repairs.push({
+        block: block.name,
+        action: 'enforced-custom-block-contract',
+        removedOpaqueAttributes: opaqueCustomBlockAttributesInObject(JSON.parse(before || '{}')),
+        allowedAttributes: customBlock.attributes.map((attribute) => attribute.name),
+      });
+    }
+  });
+
+  return {
+    repairedBlocks: repairs.length,
+    repairs,
+  };
+}
+
+function sanitizeGeneratedCustomBlockAttributes(attributes, customBlock, sectionInventory) {
+  const allowedAttributes = new Map(customBlock.attributes.map((attribute) => [attribute.name, attribute]));
+  const sanitized = {};
+
+  for (const [name, value] of Object.entries(attributes || {})) {
+    if (name === 'className') {
+      sanitized.className = value;
+      continue;
+    }
+    if (!allowedAttributes.has(name) || OPAQUE_CUSTOM_BLOCK_ATTRIBUTES.has(name)) continue;
+    sanitized[name] = value;
+  }
+
+  for (const attribute of customBlock.attributes) {
+    if (hasAttributeValue(sanitized[attribute.name])) continue;
+    const value = deriveAttributeValue(attribute, sectionInventory, customBlock);
+    if (hasAttributeValue(value)) sanitized[attribute.name] = value;
+  }
+
+  return sanitized;
+}
+
+function opaqueCustomBlockAttributesInObject(attributes) {
+  return Object.keys(attributes || {}).filter((name) => OPAQUE_CUSTOM_BLOCK_ATTRIBUTES.has(name));
+}
+
+function hasAttributeValue(value) {
+  if (value === null || value === undefined) return false;
+  if (typeof value === 'string') return value.trim().length > 0;
+  if (Array.isArray(value)) return value.length > 0;
+  if (typeof value === 'object') return Object.keys(value).length > 0;
+  return true;
+}
+
+function deriveAttributeValue(attribute, sectionInventory, customBlock) {
+  const role = `${attribute.role || ''} ${attribute.name}`.toLowerCase();
+  const fields = sectionInventory ? sectionInventory.editableFields || {} : {};
+  const headings = fields.headings || [];
+  const paragraphs = fields.paragraphs || [];
+  const links = fields.links || [];
+  const cards = fields.cards || [];
+  const forms = fields.forms || [];
+
+  if (attribute.type === 'array') {
+    if (/fields?|form/.test(role)) return forms[0] ? forms[0].fields : [];
+    if (/cards?|items?|products?|entries?|repeater|grid|collection/.test(role)) {
+      if (cards.length) return cards;
+      if (links.length) return links.map((link) => ({ title: link.text, url: link.url }));
+      return paragraphs.map((paragraph) => paragraph.content);
+    }
+    return paragraphs.map((paragraph) => paragraph.content);
+  }
+
+  if (attribute.type === 'object') {
+    if (/form/.test(role)) return forms[0] || {};
+    return {};
+  }
+
+  if (attribute.type === 'number') {
+    if (/speed|duration|seconds/.test(role)) return 18;
+    return 0;
+  }
+
+  if (attribute.type === 'boolean') return false;
+
+  if (/eyebrow|kicker|label/.test(role)) {
+    const eyebrow = paragraphs.find((paragraph) => /eyebrow|kicker|label/i.test(paragraph.className));
+    return eyebrow ? eyebrow.content : '';
+  }
+
+  if (/heading|title|headline/.test(role)) {
+    return headings[0] ? headings[0].content : '';
+  }
+
+  if (/button.*text|cta.*text|submit/.test(role)) {
+    if (links[0]) return links[0].text;
+    if (forms[0]) return forms[0].buttonText;
+    return '';
+  }
+
+  if (/url|href|link/.test(role)) {
+    return links[0] ? links[0].url : '';
+  }
+
+  if (/class/.test(role)) {
+    return [customBlock.template.rootClass, customBlock.sourceClassName].filter(Boolean).join(' ');
+  }
+
+  const bodyParagraph = paragraphs.find((paragraph) => !/eyebrow|kicker|label/i.test(paragraph.className));
+  return bodyParagraph ? bodyParagraph.content : '';
+}
+
+function findInventorySection(inventory, expectedSource) {
+  return (inventory.sections || []).find((candidate) => matchesSection(candidate, expectedSource));
 }
 
 function matchesSection(candidate, expectedSource) {
@@ -861,12 +1241,33 @@ function planBlocks(analysis) {
         slug: 'kind-marquee',
         reason: 'Editable repeated marquee items and speed/tone controls are cleaner as a custom static block than a brittle core group.',
         controls: ['RichText-like repeated item text fields', 'Inspector speedSeconds', 'Inspector tone'],
+        attributes: [
+          { name: 'items', type: 'array', role: 'repeater', source: 'marquee item text' },
+          { name: 'speedSeconds', type: 'number', role: 'inspector-control', source: 'animation speed in seconds' },
+          { name: 'tone', type: 'string', role: 'style-variant', source: 'visual tone' },
+        ],
+        template: {
+          rootTag: 'section',
+          rootClass: 'values-marquee',
+          structure: 'Render duplicated editable item text inside a marquee track with speed and tone controls.',
+        },
       },
       {
         name: 'poc/studio-inquiry',
         slug: 'studio-inquiry',
-    reason: 'Structured form fields, labels, placeholders, and submit button need a coherent editor UI.',
+        reason: 'Structured form fields, labels, placeholders, and submit button need a coherent editor UI.',
         controls: ['RichText heading fields', 'field list controls', 'button text control', 'core columns layout wrapper'],
+        attributes: [
+          { name: 'eyebrow', type: 'string', role: 'eyebrow', source: 'section eyebrow' },
+          { name: 'heading', type: 'string', role: 'heading', source: 'section heading' },
+          { name: 'fields', type: 'array', role: 'form-fields', source: 'field labels, types, placeholders, and options' },
+          { name: 'buttonText', type: 'string', role: 'button-text', source: 'submit button text' },
+        ],
+        template: {
+          rootTag: 'section',
+          rootClass: 'inquiry',
+          structure: 'Render editable intro copy and structured form fields inside a responsive columns layout.',
+        },
       },
     ],
   };
@@ -1108,13 +1509,8 @@ function registerPlannedCustomBlocks(plan) {
       apiVersion: 3,
       title: titleCase(customBlock.slug),
       category: 'design',
-      attributes: {
-        sourceSelector: { type: 'string' },
-        html: { type: 'string' },
-        editableFields: { type: 'object' },
-        className: { type: 'string' },
-      },
-      save: ({ attributes }) => element.createElement(element.RawHTML, null, attributes.html || ''),
+      attributes: customBlockAttributes(customBlock.name, customBlock),
+      save: ({ attributes }) => renderGeneratedCustomBlock(customBlock, attributes),
     });
   }
 }
@@ -1123,7 +1519,100 @@ function supportedAssemblyBlockNames(plan) {
   return [...new Set([...BASE_ASSEMBLY_BLOCKS, ...plan.customBlocks.map((block) => block.name)])];
 }
 
+function renderGeneratedCustomBlock(customBlock, attributes) {
+  const rootTag = customBlock.template.rootTag || 'section';
+  const rootClassName = [
+    wpBlockClassName(customBlock.name),
+    customBlock.template.rootClass,
+    customBlock.sourceClassName,
+    attributes.className,
+  ]
+    .filter(Boolean)
+    .join(' ');
+  const children = [];
+
+  for (const attribute of customBlock.attributes) {
+    const value = attributes[attribute.name];
+    if (!hasAttributeValue(value)) continue;
+    const rendered = renderGeneratedCustomBlockAttribute(customBlock, attribute, value, attributes);
+    if (rendered) children.push(rendered);
+  }
+
+  return element.createElement(rootTag, { className: rootClassName }, ...children);
+}
+
+function renderGeneratedCustomBlockAttribute(customBlock, attribute, value, attributes) {
+  const role = `${attribute.role || ''} ${attribute.name}`.toLowerCase();
+  const className = `${customBlock.slug}__${slug(attribute.name)}`;
+
+  if (attribute.type === 'array') {
+    if (/fields?|form/.test(role)) {
+      return element.createElement(
+        'form',
+        { key: attribute.name, className },
+        value.map((field) => renderField(field)),
+        element.createElement('button', { type: 'submit' }, attributes.buttonText || attributes.ctaText || 'Submit')
+      );
+    }
+
+    return element.createElement(
+      'div',
+      { key: attribute.name, className },
+      value.map((item, index) => renderGeneratedCustomBlockItem(customBlock, attribute, item, index))
+    );
+  }
+
+  if (/inspector|style-variant|control|speed|tone/.test(role)) return null;
+
+  if (/eyebrow|kicker|label/.test(role)) {
+    return element.createElement('p', { key: attribute.name, className: ['eyebrow', className].join(' ') }, value);
+  }
+
+  if (/heading|title|headline/.test(role)) {
+    const level = /hero/.test(customBlock.slug) ? 'h1' : 'h2';
+    return element.createElement(level, { key: attribute.name, className }, element.createElement(element.RawHTML, null, value));
+  }
+
+  if (/button.*text|cta.*text/.test(role)) {
+    if (customBlockHasFormFields(customBlock)) return null;
+    const url = attributes.ctaUrl || attributes.buttonUrl || attributes.url || '#';
+    return element.createElement('a', { key: attribute.name, className: ['button', className].join(' '), href: url }, value);
+  }
+
+  if (/url|href|link/.test(role)) return null;
+
+  return element.createElement('p', { key: attribute.name, className }, element.createElement(element.RawHTML, null, value));
+}
+
+function renderGeneratedCustomBlockItem(customBlock, attribute, item, index) {
+  const className = `${customBlock.slug}__item`;
+  if (typeof item === 'string') {
+    return element.createElement('span', { key: `${attribute.name}-${index}`, className }, item);
+  }
+
+  if (!item || typeof item !== 'object') {
+    return null;
+  }
+
+  const title = item.title || item.heading || item.name || item.label || '';
+  const body = item.text || item.description || item.body || item.content || '';
+  const url = item.url || item.href || '';
+  const linkText = item.linkText || item.ctaText || '';
+
+  return element.createElement(
+    'article',
+    { key: `${attribute.name}-${index}`, className },
+    title ? element.createElement('h3', null, title) : null,
+    body ? element.createElement('p', null, body) : null,
+    url && linkText ? element.createElement('a', { href: url }, linkText) : null
+  );
+}
+
 function renderField(field) {
+  if (!field || typeof field !== 'object') {
+    return element.createElement('label', { key: String(field || 'field') }, String(field || 'Field'), element.createElement('input', { type: 'text', name: slug(field || 'field') }));
+  }
+
   if (field.type === 'textarea') {
     return element.createElement(
       'label',
@@ -1170,7 +1659,7 @@ function safeRegister(name, settings) {
 function writeCustomBlockSource(plan) {
   for (const customBlock of plan.customBlocks) {
     const base = `wordpress/blocks/${customBlock.slug}`;
-    const attributes = customBlockAttributes(customBlock.name);
+    const attributes = customBlockAttributes(customBlock.name, customBlock);
     writeJson(`${base}/block.json`, {
       apiVersion: 3,
       name: customBlock.name,
@@ -1180,14 +1669,16 @@ function writeCustomBlockSource(plan) {
     });
     write(
       `${base}/edit.js`,
-      `// POC edit component sketch.\n// Planned controls: ${customBlock.controls.join(', ') || 'source html plus editable field inventory'}\n`
+      FIXED_CUSTOM_BLOCKS.includes(customBlock.name)
+        ? fixedCustomBlockEditSource(customBlock)
+        : generatedCustomBlockEditSource(customBlock)
     );
-    write(`${base}/save.js`, `// POC save implementation lives in run.cjs for executable comparison.\n`);
-    write(`${base}/style.css`, FIXED_CUSTOM_BLOCKS.includes(customBlock.name) ? customBlockCss() : '/* Generated static block CSS is currently supplied by the page mockup stylesheet. */\n');
+    write(`${base}/save.js`, FIXED_CUSTOM_BLOCKS.includes(customBlock.name) ? fixedCustomBlockSaveSource(customBlock) : generatedCustomBlockSaveSource(customBlock));
+    write(`${base}/style.css`, FIXED_CUSTOM_BLOCKS.includes(customBlock.name) ? customBlockCss() : generatedCustomBlockCss(customBlock));
   }
 }
 
-function customBlockAttributes(name) {
+function customBlockAttributes(name, customBlock = null) {
   if (name === 'poc/kind-marquee') {
     return {
       items: { type: 'array', default: [] },
@@ -1205,12 +1696,222 @@ function customBlockAttributes(name) {
     };
   }
 
-  return {
-    sourceSelector: { type: 'string' },
-    html: { type: 'string' },
-    editableFields: { type: 'object' },
+  const attributes = {
     className: { type: 'string' },
   };
+
+  for (const attribute of (customBlock && customBlock.attributes) || []) {
+    if (OPAQUE_CUSTOM_BLOCK_ATTRIBUTES.has(attribute.name)) continue;
+    attributes[attribute.name] = { type: attribute.type };
+    if (attribute.type === 'array') attributes[attribute.name].default = [];
+    if (attribute.type === 'object') attributes[attribute.name].default = {};
+  }
+
+  return attributes;
+}
+
+function fixedCustomBlockEditSource(customBlock) {
+  return generatedCustomBlockEditSource(customBlock);
+}
+
+function fixedCustomBlockSaveSource(customBlock) {
+  return generatedCustomBlockSaveSource(customBlock);
+}
+
+function generatedCustomBlockEditSource(customBlock) {
+  const rootTag = customBlock.template.rootTag || 'section';
+  const rootClassName = [wpBlockClassName(customBlock.name), customBlock.template.rootClass, customBlock.sourceClassName].filter(Boolean).join(' ');
+  const controls = customBlock.attributes.map((attribute) => generatedEditControlSource(attribute)).join('\n\n');
+
+  return `import { useBlockProps, RichText } from '@wordpress/block-editor';
+import { TextControl, TextareaControl, ToggleControl } from '@wordpress/components';
+
+export default function Edit({ attributes, setAttributes }) {
+  const blockProps = useBlockProps({ className: ${jsString(rootClassName)} });
+  const updateJsonAttribute = (name, value) => {
+    try {
+      setAttributes({ [name]: JSON.parse(value) });
+    } catch (error) {
+      // Keep the prior valid value while the editor input contains incomplete JSON.
+    }
+  };
+
+  return (
+    <${rootTag} {...blockProps}>
+${indent(controls, 6)}
+    </${rootTag}>
+  );
+}
+`;
+}
+
+function generatedEditControlSource(attribute) {
+  const label = titleCase(slug(attribute.name));
+  const tagName = editorTagNameForAttribute(attribute);
+
+  if (attribute.type === 'array' || attribute.type === 'object') {
+    return `<TextareaControl
+  label=${jsString(`${label} JSON`)}
+  value={JSON.stringify(attributes.${attribute.name} || ${attribute.type === 'array' ? '[]' : '{}'}, null, 2)}
+  onChange={(value) => updateJsonAttribute(${jsString(attribute.name)}, value)}
+/>`;
+  }
+
+  if (attribute.type === 'boolean') {
+    return `<ToggleControl
+  label=${jsString(label)}
+  checked={!!attributes.${attribute.name}}
+  onChange={(value) => setAttributes({ ${attribute.name}: value })}
+/>`;
+  }
+
+  if (attribute.type === 'number') {
+    return `<TextControl
+  type="number"
+  label=${jsString(label)}
+  value={attributes.${attribute.name} ?? ''}
+  onChange={(value) => setAttributes({ ${attribute.name}: Number(value) })}
+/>`;
+  }
+
+  if (tagName) {
+    return `<RichText
+  tagName=${jsString(tagName)}
+  className=${jsString(slug(attribute.name))}
+  value={attributes.${attribute.name} || ''}
+  allowedFormats={['core/bold', 'core/italic', 'core/link']}
+  placeholder=${jsString(label)}
+  onChange={(value) => setAttributes({ ${attribute.name}: value })}
+/>`;
+  }
+
+  return `<TextControl
+  label=${jsString(label)}
+  value={attributes.${attribute.name} || ''}
+  onChange={(value) => setAttributes({ ${attribute.name}: value })}
+/>`;
+}
+
+function generatedCustomBlockSaveSource(customBlock) {
+  const rootTag = customBlock.template.rootTag || 'section';
+  const rootClassName = [wpBlockClassName(customBlock.name), customBlock.template.rootClass, customBlock.sourceClassName].filter(Boolean).join(' ');
+  const children = customBlock.attributes.map((attribute) => generatedSaveElementSource(customBlock, attribute)).filter(Boolean).join('\n\n');
+
+  return `import { useBlockProps, RichText } from '@wordpress/block-editor';
+
+function renderItem(item, index) {
+  if (typeof item === 'string') {
+    return <span key={index}>{item}</span>;
+  }
+
+  return (
+    <article key={index}>
+      {item?.title && <h3>{item.title}</h3>}
+      {item?.heading && <h3>{item.heading}</h3>}
+      {item?.text && <p>{item.text}</p>}
+      {item?.description && <p>{item.description}</p>}
+      {item?.url && item?.linkText && <a href={item.url}>{item.linkText}</a>}
+    </article>
+  );
+}
+
+function renderField(field, index) {
+  const id = field?.name || \`field-\${index}\`;
+  const label = field?.label || id;
+  if (field?.type === 'textarea') {
+    return <label key={id}>{label}<textarea name={id} placeholder={field?.placeholder || ''} /></label>;
+  }
+  if (field?.type === 'select') {
+    return (
+      <label key={id}>{label}<select name={id}>{(field?.options || []).map((option) => <option key={option}>{option}</option>)}</select></label>
+    );
+  }
+  return <label key={id}>{label}<input type={field?.type || 'text'} name={id} placeholder={field?.placeholder || ''} /></label>;
+}
+
+export default function save({ attributes }) {
+  const blockProps = useBlockProps.save({ className: ${jsString(rootClassName)} });
+
+  return (
+    <${rootTag} {...blockProps}>
+${indent(children, 6)}
+    </${rootTag}>
+  );
+}
+`;
+}
+
+function generatedSaveElementSource(customBlock, attribute) {
+  const role = `${attribute.role || ''} ${attribute.name}`.toLowerCase();
+  const className = `${customBlock.slug}__${slug(attribute.name)}`;
+
+  if (attribute.type === 'array') {
+    if (/fields?|form/.test(role)) {
+      return `{(attributes.${attribute.name} || []).length > 0 && (
+  <form className=${jsString(className)}>
+    {(attributes.${attribute.name} || []).map(renderField)}
+    <button type="submit">{attributes.buttonText || attributes.ctaText || 'Submit'}</button>
+  </form>
+)}`;
+    }
+
+    return `{(attributes.${attribute.name} || []).length > 0 && (
+  <div className=${jsString(className)}>
+    {(attributes.${attribute.name} || []).map(renderItem)}
+  </div>
+)}`;
+  }
+
+  if (/inspector|style-variant|control|speed|tone/.test(role)) return '';
+
+  if (/url|href|link/.test(role)) return '';
+
+  if (/button.*text|cta.*text/.test(role)) {
+    if (customBlockHasFormFields(customBlock)) return '';
+    return `{attributes.${attribute.name} && <a className=${jsString(['button', className].join(' '))} href={attributes.ctaUrl || attributes.buttonUrl || attributes.url || '#'}>{attributes.${attribute.name}}</a>}`;
+  }
+
+  const tagName = editorTagNameForAttribute(attribute);
+  if (tagName) {
+    return `{attributes.${attribute.name} && <RichText.Content tagName=${jsString(tagName)} className=${jsString(className)} value={attributes.${attribute.name}} />}`;
+  }
+
+  return `{attributes.${attribute.name} && <p className=${jsString(className)}>{attributes.${attribute.name}}</p>}`;
+}
+
+function generatedCustomBlockCss(customBlock) {
+  const rootClassName = wpBlockClassName(customBlock.name);
+  return `.${rootClassName} {
+  position: relative;
+}
+
+.${rootClassName} .eyebrow,
+.${rootClassName} [class$="__eyebrow"] {
+  text-transform: uppercase;
+}
+
+.${rootClassName} [class$="__items"] {
+  display: grid;
+  gap: 1rem;
+}
+
+.${rootClassName} [class$="__item"] {
+  min-width: 0;
+}
+`;
+}
+
+function editorTagNameForAttribute(attribute) {
+  const role = `${attribute.role || ''} ${attribute.name}`.toLowerCase();
+  if (/eyebrow|kicker|label/.test(role)) return 'p';
+  if (/heading|title|headline/.test(role)) return 'h2';
+  if (/button.*text|cta.*text/.test(role)) return '';
+  if (/body|text|description|intro|lede|copy|subtitle/.test(role)) return 'p';
+  return '';
+}
+
+function customBlockHasFormFields(customBlock) {
+  return customBlock.attributes.some((attribute) => /fields?|form/.test(`${attribute.role || ''} ${attribute.name}`.toLowerCase()));
 }
 
 function renderFullHtml({ title, css, body }) {
@@ -1233,7 +1934,14 @@ ${indent(body, 6)}
 `;
 }
 
-function customBlockCss() {
+function customBlockCss(plan = null) {
+  const generatedCss = plan
+    ? plan.customBlocks
+        .filter((customBlock) => !FIXED_CUSTOM_BLOCKS.includes(customBlock.name))
+        .map((customBlock) => generatedCustomBlockCss(customBlock))
+        .join('\n')
+    : '';
+
   return `.wp-block-button__link { display: inline-flex; min-height: 48px; align-items: center; border: 1px solid var(--ink); background: var(--ink); color: white; padding: 0 22px; text-decoration: none; }
 .wp-block-columns { display: grid; grid-template-columns: repeat(var(--wp--columns-count, 2), minmax(0, 1fr)); gap: 48px; }
 @media (max-width: 760px) {
@@ -1245,14 +1953,16 @@ function customBlockCss() {
 .wp-block-poc-kind-marquee span { white-space: nowrap; }
 .wp-block-poc-studio-inquiry { padding: clamp(48px, 8vw, 104px) clamp(20px, 6vw, 80px); border-top: 1px solid rgba(20,32,29,.18); }
 .wp-block-poc-studio-inquiry textarea { padding-top: 10px; }
-.wp-block-poc-studio-inquiry .inquiry-columns { --wp--columns-count: 2; align-items: start; margin: 0; }`;
+.wp-block-poc-studio-inquiry .inquiry-columns { --wp--columns-count: 2; align-items: start; margin: 0; }
+${generatedCss}`;
 }
 
-function buildReport({ prompt, analysis, plan, assembly, providers, contentRepair }) {
+function buildReport({ prompt, analysis, plan, assembly, providers, contentRepair, customContractRepair }) {
   return {
     prompt,
     providers,
     contentRepair,
+    customContractRepair,
     sectionsAnalyzed: analysis.sections.length,
     sectionStrategies: plan.sections.map((section) => ({
       id: section.id,
@@ -1260,7 +1970,12 @@ function buildReport({ prompt, analysis, plan, assembly, providers, contentRepai
       coreAttempt: section.coreAttempt.verdict,
       customBlock: section.customBlock || null,
     })),
-    customBlocks: plan.customBlocks.map((block) => block.name),
+    customBlocks: plan.customBlocks.map((block) => ({
+      name: block.name,
+      slug: block.slug,
+      attributes: block.attributes.map((attribute) => `${attribute.name}:${attribute.type}:${attribute.role}`),
+      template: block.template,
+    })),
     blockCount: countBlocks(assembly.blockTree),
     outputs: {
       mockup: 'mockup/index.html',
@@ -1279,14 +1994,21 @@ function renderMarkdownReport(report) {
 
 - Sections analyzed: ${report.sectionsAnalyzed}
 - Blocks in assembled tree: ${report.blockCount}
-- Custom blocks: ${report.customBlocks.join(', ')}
+- Custom blocks: ${report.customBlocks.map((block) => block.name).join(', ')}
 - LLM providers: html=${report.providers.html}, plan=${report.providers.plan}, assembly=${report.providers.assembly}
 - Content repairs applied: ${report.contentRepair.repairedBlocks}
+- Custom contract repairs applied: ${report.customContractRepair.repairedBlocks}
 
 ## Section Strategies
 
 ${report.sectionStrategies
   .map((section) => `- \`${section.id}\`: ${section.strategy}${section.customBlock ? ` (${section.customBlock})` : ''}\n  - Core attempt: ${section.coreAttempt}`)
+  .join('\n')}
+
+## Custom Block Contracts
+
+${report.customBlocks
+  .map((block) => `- \`${block.name}\`: ${block.attributes.join(', ') || 'no attributes'}\n  - Template: ${block.template.rootTag}.${block.template.rootClass || block.slug}`)
   .join('\n')}
 
 ## Outputs
@@ -1368,8 +2090,16 @@ function titleCase(value) {
     .join(' ');
 }
 
+function wpBlockClassName(name) {
+  return `wp-block-${String(name).replace('/', '-').replace(/[^a-zA-Z0-9_-]/g, '-')}`;
+}
+
 function escapeHtml(value) {
   return String(value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function jsString(value) {
+  return JSON.stringify(String(value));
 }
 
 function indent(value, spaces) {
