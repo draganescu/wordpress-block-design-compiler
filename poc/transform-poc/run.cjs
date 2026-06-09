@@ -992,7 +992,7 @@ function registerPocBlocks() {
       className: { type: 'string' },
     },
     save: ({ attributes }) =>
-      element.createElement(`h${attributes.level || 2}`, { className: attributes.className }, attributes.content),
+      element.createElement(`h${attributes.level || 2}`, { className: attributes.className }, element.createElement(element.RawHTML, null, attributes.content || '')),
   });
 
   safeRegister('core/paragraph', {
@@ -1003,7 +1003,7 @@ function registerPocBlocks() {
       content: { type: 'string' },
       className: { type: 'string' },
     },
-    save: ({ attributes }) => element.createElement('p', { className: attributes.className }, attributes.content),
+    save: ({ attributes }) => element.createElement('p', { className: attributes.className }, element.createElement(element.RawHTML, null, attributes.content || '')),
   });
 
   safeRegister('core/buttons', {
@@ -1022,7 +1022,11 @@ function registerPocBlocks() {
       url: { type: 'string' },
     },
     save: ({ attributes }) =>
-      element.createElement('div', { className: 'wp-block-button' }, element.createElement('a', { className: 'wp-block-button__link wp-element-button', href: attributes.url }, attributes.text)),
+      element.createElement(
+        'div',
+        { className: 'wp-block-button' },
+        element.createElement('a', { className: 'wp-block-button__link wp-element-button', href: attributes.url }, element.createElement(element.RawHTML, null, attributes.text || ''))
+      ),
   });
 
   safeRegister('core/html', {

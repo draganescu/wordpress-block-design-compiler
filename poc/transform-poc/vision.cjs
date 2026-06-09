@@ -10,6 +10,8 @@ loadEnvFiles();
 const requireFromRoot = createRequire(path.join(process.cwd(), 'package.json'));
 const { chromium } = requireFromRoot('playwright');
 const { PNG } = requireFromRoot('pngjs');
+const blocks = requireFromRoot('@wordpress/blocks');
+const element = requireFromRoot('@wordpress/element');
 
 const ROOT = path.resolve('poc/transform-poc');
 const OUT = path.join(ROOT, 'output');
@@ -43,6 +45,13 @@ async function main() {
   resetVisionOutput();
 
   const baseRenderedHtml = stripPriorVisionRepairs(fs.readFileSync(RENDERED_HTML, 'utf8'));
+  const repairState = {
+    baseRenderedHtml,
+    blockTree: readJsonFile(BLOCK_TREE_JSON, []),
+    blockTreeChanged: false,
+    cssRepairs: [],
+    htmlReplacements: [],
+  };
   fs.writeFileSync(BASE_RENDERED_HTML, baseRenderedHtml, 'utf8');
   fs.writeFileSync(path.join(ITERATIONS_OUT, 'pass-0.html'), baseRenderedHtml, 'utf8');
 
@@ -84,10 +93,15 @@ async function main() {
         break;
       }
 
+      const appliedActionCount = applyRepairProposal(repairState, proposal);
+      if (appliedActionCount === 0) {
+        break;
+      }
+
       repairProposals.push(proposal);
       appliedRepairs.push(...proposal.repairs);
       currentHtmlPath = path.join(ITERATIONS_OUT, `pass-${pass + 1}.html`);
-      fs.writeFileSync(currentHtmlPath, injectRepairCss(baseRenderedHtml, appliedRepairs), 'utf8');
+      fs.writeFileSync(currentHtmlPath, renderRepairStateHtml(repairState), 'utf8');
     }
   } finally {
     await browser.close();
@@ -350,7 +364,8 @@ function buildOpenAiVisionRepairRequest(context) {
     instructions: [
       'You are the vision repair planner for a WordPress block design compiler POC.',
       'Use screenshots and diffs to diagnose visual drift between a source HTML mockup and rendered WordPress block HTML.',
-      'Return a small scoped CSS repair for this POC, but explain the preferred production repair location: core block structure, block attributes/supports, custom static block source, or scoped CSS.',
+      'Return the smallest executable repair actions for this POC: block tree edits, block attributes/supports/classes, rendered HTML replacements, or scoped CSS.',
+      'Prefer block-tree or block-attribute actions when rendered text shows escaped HTML markup or when the DOM structure is wrong.',
       'Do not propose raw HTML blocks unless core/custom static blocks cannot preserve both fidelity and editability.',
       'Do not include scripts, imports, network resources, or HTML in css.',
     ].join(' '),
@@ -411,16 +426,28 @@ function buildVisionRepairPrompt({ passReport, appliedRepairs, currentHtmlPath }
     `Already applied repairs: ${JSON.stringify(appliedRepairs.map((repair) => ({ id: repair.id, reason: repair.reason })), null, 2)}`,
     '',
     'Repair constraints:',
-    '- Prefer core block structure, block attributes, and block supports before custom blocks.',
+    '- Choose the repair layer that matches the cause: block composition, block styling attributes/supports, or scoped CSS.',
+    '- Prefer core block structure, block attributes, and block supports before custom blocks or CSS.',
     '- Use custom blocks only for the smallest subtree needing a custom editor model, behavior, or markup contract.',
     '- Keep rich text, links, fields, labels, placeholders, repeated items, and inspector controls editable.',
-    '- For this POC, return only scoped CSS in repairs[].css. Use preferredRealAction to describe where the production fix should live.',
+    '- If visible literal markup such as <label>, <a href>, <br>, or closing tags appears in the screenshot, do not use CSS to hide it. Return block-composition or block-attribute actions that make the rendered HTML semantic.',
+    '- For block-composition or block-styling actions, use blockPath values from the indexed block tree.',
+    '- Use css actions only for cascade/layout/spacing/typography problems that should remain CSS.',
+    '- Action formats:',
+    '  - {"kind":"set-block-attributes","blockPath":[0,1],"attributesJson":"{\\"className\\":\\"example\\"}"}',
+    '  - {"kind":"replace-block","blockPath":[0,1],"blockJson":"{\\"name\\":\\"core/html\\",\\"attributes\\":{\\"html\\":\\"<label>Name</label>\\"},\\"innerBlocks\\":[]}"}',
+    '  - {"kind":"insert-block","parentPath":[0],"index":2,"blockJson":"{\\"name\\":\\"core/paragraph\\",\\"attributes\\":{\\"content\\":\\"Text\\"},\\"innerBlocks\\":[]}"}',
+    '  - {"kind":"delete-block","blockPath":[0,2]}',
+    '  - {"kind":"html-replace","find":"escaped text","replace":"semantic html"}',
+    '  - {"kind":"css","css":".selector { property: value; }"}',
     '- Explain expectedVisualEffect and editabilityRisk for each repair.',
     '- Keep CSS scoped to existing rendered block classes/selectors.',
     '- Do not include </style>, <script>, @import, external URLs, or broad universal resets.',
-    '- If no CSS-only repair is appropriate, set stop=true and repairs=[].',
+    '- If no executable repair is appropriate, set stop=true and repairs=[].',
     '',
     `Block implementation plan:\n${readContextFile(PLAN_JSON)}`,
+    '',
+    `Indexed block tree paths:\n${renderIndexedBlockTree(readJsonFile(BLOCK_TREE_JSON, []))}`,
     '',
     `Block tree:\n${readContextFile(BLOCK_TREE_JSON)}`,
     '',
@@ -440,18 +467,42 @@ function visionRepairSchema() {
       likelyCause: { type: 'string' },
       repairs: {
         type: 'array',
-        maxItems: 2,
+        maxItems: 3,
         items: {
           type: 'object',
           additionalProperties: false,
-          required: ['id', 'reason', 'preferredRealAction', 'expectedVisualEffect', 'editabilityRisk', 'css'],
+          required: ['id', 'layer', 'reason', 'preferredRealAction', 'expectedVisualEffect', 'editabilityRisk', 'actions'],
           properties: {
             id: { type: 'string' },
+            layer: { type: 'string', enum: ['block-composition', 'block-styling', 'css', 'rendered-html'] },
             reason: { type: 'string' },
             preferredRealAction: { type: 'string' },
             expectedVisualEffect: { type: 'string' },
             editabilityRisk: { type: 'string' },
             css: { type: 'string' },
+            actions: {
+              type: 'array',
+              maxItems: 6,
+              items: {
+                type: 'object',
+                additionalProperties: false,
+                required: ['kind'],
+                properties: {
+                  kind: {
+                    type: 'string',
+                    enum: ['css', 'set-block-attributes', 'replace-block', 'delete-block', 'insert-block', 'html-replace'],
+                  },
+                  blockPath: { type: 'array', items: { type: 'number' } },
+                  parentPath: { type: 'array', items: { type: 'number' } },
+                  index: { type: 'number' },
+                  attributesJson: { type: 'string' },
+                  blockJson: { type: 'string' },
+                  find: { type: 'string' },
+                  replace: { type: 'string' },
+                  css: { type: 'string' },
+                },
+              },
+            },
           },
         },
       },
@@ -480,20 +531,137 @@ function normalizeOpenAiRepairProposal(raw, context, proposalPath) {
 
 function normalizeRepair(repair) {
   const id = slug(String(repair.id || 'openai-vision-repair'));
-  const css = String(repair.css || '').trim();
-  if (!css) return null;
-  if (css.length > 12000) return null;
-  if (/<\/?style|<\/?script|@import|url\s*\(/i.test(css)) return null;
+  const actions = normalizeRepairActions(repair);
+  if (actions.length === 0) return null;
 
   return {
     id,
     source: 'openai-vision',
+    layer: ['block-composition', 'block-styling', 'css', 'rendered-html'].includes(repair.layer) ? repair.layer : inferRepairLayer(actions),
     reason: String(repair.reason || '').trim(),
     preferredRealAction: String(repair.preferredRealAction || '').trim(),
     expectedVisualEffect: String(repair.expectedVisualEffect || '').trim(),
     editabilityRisk: String(repair.editabilityRisk || '').trim(),
-    css,
+    actions,
+    css: actions
+      .filter((action) => action.kind === 'css')
+      .map((action) => action.css)
+      .join('\n\n'),
   };
+}
+
+function normalizeRepairActions(repair) {
+  const actions = [];
+
+  if (Array.isArray(repair.actions)) {
+    for (const action of repair.actions) {
+      const normalized = normalizeRepairAction(action);
+      if (normalized) actions.push(normalized);
+    }
+  }
+
+  const legacyCss = normalizeCss(String(repair.css || ''));
+  if (legacyCss) {
+    actions.push({ kind: 'css', css: legacyCss });
+  }
+
+  return actions;
+}
+
+function normalizeRepairAction(action) {
+  const kind = String(action && action.kind ? action.kind : '').trim();
+
+  if (kind === 'css') {
+    const css = normalizeCss(String(action.css || ''));
+    return css ? { kind, css } : null;
+  }
+
+  if (kind === 'set-block-attributes') {
+    const blockPath = normalizeBlockPath(action.blockPath);
+    const attributes = parseJsonObject(action.attributesJson);
+    return blockPath && attributes ? { kind, blockPath, attributes } : null;
+  }
+
+  if (kind === 'replace-block') {
+    const blockPath = normalizeBlockPath(action.blockPath);
+    const block = normalizeBlockJson(action.blockJson);
+    return blockPath && block ? { kind, blockPath, block } : null;
+  }
+
+  if (kind === 'delete-block') {
+    const blockPath = normalizeBlockPath(action.blockPath);
+    return blockPath ? { kind, blockPath } : null;
+  }
+
+  if (kind === 'insert-block') {
+    const parentPath = normalizeBlockPath(action.parentPath, { allowRoot: true });
+    const block = normalizeBlockJson(action.blockJson);
+    const index = Number.isInteger(Number(action.index)) ? Number(action.index) : null;
+    return parentPath && block && index !== null && index >= 0 ? { kind, parentPath, index, block } : null;
+  }
+
+  if (kind === 'html-replace') {
+    const find = String(action.find || '');
+    const replace = String(action.replace || '');
+    if (!find || find.length > 12000 || replace.length > 12000) return null;
+    if (/<\/?script|@import/i.test(replace)) return null;
+    return { kind, find, replace };
+  }
+
+  return null;
+}
+
+function normalizeCss(value) {
+  const css = value.trim();
+  if (!css) return null;
+  if (css.length > 12000) return null;
+  if (/<\/?style|<\/?script|@import|url\s*\(/i.test(css)) return null;
+  return css;
+}
+
+function normalizeBlockPath(value, { allowRoot = false } = {}) {
+  if (!Array.isArray(value)) return null;
+  if (value.length === 0) return allowRoot ? [] : null;
+  if (value.length > 10) return null;
+
+  const pathItems = value.map((item) => Number(item));
+  return pathItems.every((item) => Number.isInteger(item) && item >= 0) ? pathItems : null;
+}
+
+function parseJsonObject(value) {
+  if (!value || typeof value !== 'string') return null;
+  try {
+    const parsed = JSON.parse(value);
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+function normalizeBlockJson(value) {
+  const parsed = parseJsonObject(value);
+  if (!parsed || typeof parsed.name !== 'string') return null;
+  return {
+    name: parsed.name,
+    attributes: parsed.attributes && typeof parsed.attributes === 'object' && !Array.isArray(parsed.attributes) ? parsed.attributes : {},
+    innerBlocks: Array.isArray(parsed.innerBlocks) ? parsed.innerBlocks.map((block) => normalizeBlockObject(block)).filter(Boolean) : [],
+  };
+}
+
+function normalizeBlockObject(block) {
+  if (!block || typeof block.name !== 'string') return null;
+  return {
+    name: block.name,
+    attributes: block.attributes && typeof block.attributes === 'object' && !Array.isArray(block.attributes) ? block.attributes : {},
+    innerBlocks: Array.isArray(block.innerBlocks) ? block.innerBlocks.map((child) => normalizeBlockObject(child)).filter(Boolean) : [],
+  };
+}
+
+function inferRepairLayer(actions) {
+  if (actions.some((action) => ['replace-block', 'delete-block', 'insert-block'].includes(action.kind))) return 'block-composition';
+  if (actions.some((action) => action.kind === 'set-block-attributes')) return 'block-styling';
+  if (actions.some((action) => action.kind === 'html-replace')) return 'rendered-html';
+  return 'css';
 }
 
 function proposeDeterministicRepairPass({ passReport, appliedRepairs }) {
@@ -588,6 +756,159 @@ function proposeDeterministicRepairPass({ passReport, appliedRepairs }) {
   };
 }
 
+function applyRepairProposal(state, proposal) {
+  let appliedActionCount = 0;
+
+  for (const repair of proposal.repairs || []) {
+    const actions = Array.isArray(repair.actions) && repair.actions.length ? repair.actions : legacyRepairActions(repair);
+    for (const action of actions) {
+      if (applyRepairAction(state, repair, action)) {
+        appliedActionCount += 1;
+      }
+    }
+  }
+
+  if (state.blockTreeChanged) {
+    writeBlockArtifacts(state.blockTree);
+  }
+
+  return appliedActionCount;
+}
+
+function legacyRepairActions(repair) {
+  const css = normalizeCss(String(repair.css || ''));
+  return css ? [{ kind: 'css', css }] : [];
+}
+
+function applyRepairAction(state, repair, action) {
+  if (action.kind === 'css') {
+    state.cssRepairs.push({
+      id: repair.id,
+      source: repair.source || proposalSource(repair),
+      css: action.css,
+    });
+    return true;
+  }
+
+  if (action.kind === 'set-block-attributes') {
+    const block = getBlockAtPath(state.blockTree, action.blockPath);
+    if (!block) return false;
+    block.attributes = { ...(block.attributes || {}), ...action.attributes };
+    state.blockTreeChanged = true;
+    return true;
+  }
+
+  if (action.kind === 'replace-block') {
+    if (!replaceBlockAtPath(state.blockTree, action.blockPath, action.block)) return false;
+    state.blockTreeChanged = true;
+    return true;
+  }
+
+  if (action.kind === 'delete-block') {
+    if (!deleteBlockAtPath(state.blockTree, action.blockPath)) return false;
+    state.blockTreeChanged = true;
+    return true;
+  }
+
+  if (action.kind === 'insert-block') {
+    if (!insertBlockAtPath(state.blockTree, action.parentPath, action.index, action.block)) return false;
+    state.blockTreeChanged = true;
+    return true;
+  }
+
+  if (action.kind === 'html-replace') {
+    state.htmlReplacements.push({ find: action.find, replace: action.replace });
+    return true;
+  }
+
+  return false;
+}
+
+function proposalSource(repair) {
+  return repair.source || 'vision-repair';
+}
+
+function renderRepairStateHtml(state) {
+  let html = state.blockTreeChanged ? replaceMainHtml(state.baseRenderedHtml, renderBlockTreeFragment(state.blockTree)) : state.baseRenderedHtml;
+
+  for (const replacement of state.htmlReplacements) {
+    html = html.split(replacement.find).join(replacement.replace);
+  }
+
+  return injectRepairCss(html, state.cssRepairs);
+}
+
+function writeBlockArtifacts(blockTree) {
+  const blockMarkup = renderBlockTreeMarkup(blockTree);
+  fs.writeFileSync(BLOCK_TREE_JSON, `${JSON.stringify(blockTree, null, 2)}\n`, 'utf8');
+  fs.writeFileSync(path.join(OUT, 'wordpress/content.html'), blockMarkup, 'utf8');
+  fs.writeFileSync(path.join(OUT, 'rendered/rendered-fragment.html'), stripBlockComments(blockMarkup), 'utf8');
+}
+
+function renderBlockTreeFragment(blockTree) {
+  return stripBlockComments(renderBlockTreeMarkup(blockTree));
+}
+
+function renderBlockTreeMarkup(blockTree) {
+  registerVisionBlocks(blockTree);
+  return blocks.serialize(simplifiedToBlocks(blockTree));
+}
+
+function replaceMainHtml(html, fragment) {
+  const indentedFragment = indent(fragment.trim(), 6);
+  if (/<main>[\s\S]*?<\/main>/.test(html)) {
+    return html.replace(/<main>[\s\S]*?<\/main>/, `<main>\n${indentedFragment}\n    </main>`);
+  }
+
+  return html.replace('</body>', `<main>\n${indentedFragment}\n    </main>\n  </body>`);
+}
+
+function getBlockAtPath(blockTree, blockPath) {
+  let list = blockTree;
+  let block = null;
+
+  for (const index of blockPath) {
+    if (!Array.isArray(list) || !list[index]) return null;
+    block = list[index];
+    list = block.innerBlocks || [];
+  }
+
+  return block;
+}
+
+function getBlockListAtPath(blockTree, parentPath) {
+  if (parentPath.length === 0) return blockTree;
+  const parent = getBlockAtPath(blockTree, parentPath);
+  if (!parent) return null;
+  if (!Array.isArray(parent.innerBlocks)) parent.innerBlocks = [];
+  return parent.innerBlocks;
+}
+
+function replaceBlockAtPath(blockTree, blockPath, replacement) {
+  const parentPath = blockPath.slice(0, -1);
+  const index = blockPath.at(-1);
+  const list = getBlockListAtPath(blockTree, parentPath);
+  if (!list || !list[index]) return false;
+  list[index] = replacement;
+  return true;
+}
+
+function deleteBlockAtPath(blockTree, blockPath) {
+  const parentPath = blockPath.slice(0, -1);
+  const index = blockPath.at(-1);
+  const list = getBlockListAtPath(blockTree, parentPath);
+  if (!list || !list[index]) return false;
+  list.splice(index, 1);
+  return true;
+}
+
+function insertBlockAtPath(blockTree, parentPath, index, block) {
+  const list = getBlockListAtPath(blockTree, parentPath);
+  if (!list || index > list.length) return false;
+  list.splice(index, 0, block);
+  return true;
+}
+
 function triggerForPass(passReport) {
   return {
     maxMismatchPercent: passReport.aggregate.maxMismatchPercent,
@@ -617,6 +938,265 @@ function readContextFile(filePath) {
   }
 
   return truncateMiddle(fs.readFileSync(filePath, 'utf8'), CONTEXT_CHAR_LIMIT);
+}
+
+function readJsonFile(filePath, fallback) {
+  if (!fs.existsSync(filePath)) return fallback;
+  try {
+    return JSON.parse(fs.readFileSync(filePath, 'utf8'));
+  } catch {
+    return fallback;
+  }
+}
+
+function renderIndexedBlockTree(blockTree) {
+  const lines = [];
+
+  function visit(list, pathItems) {
+    for (let index = 0; index < list.length; index += 1) {
+      const block = list[index];
+      const blockPath = [...pathItems, index];
+      const attributes = block.attributes || {};
+      const label = [attributes.className, attributes.content, attributes.html, attributes.text]
+        .filter(Boolean)
+        .map((value) => cleanForLine(String(value)))
+        .find(Boolean);
+      lines.push(`${JSON.stringify(blockPath)} ${block.name}${label ? ` :: ${label}` : ''}`);
+      visit(block.innerBlocks || [], blockPath);
+    }
+  }
+
+  visit(blockTree || [], []);
+  return lines.length ? lines.join('\n') : '(empty block tree)';
+}
+
+function cleanForLine(value) {
+  return value.replace(/\s+/g, ' ').trim().slice(0, 160);
+}
+
+function registerVisionBlocks(blockTree) {
+  safeRegister('core/group', {
+    apiVersion: 3,
+    title: 'Group',
+    category: 'design',
+    attributes: {
+      className: { type: 'string' },
+      tagName: { type: 'string', default: 'div' },
+    },
+    save: ({ attributes }) =>
+      element.createElement(
+        attributes.tagName || 'div',
+        blocks.__unstableGetInnerBlocksProps({ className: ['wp-block-group', attributes.className].filter(Boolean).join(' ') })
+      ),
+  });
+
+  safeRegister('core/columns', {
+    apiVersion: 3,
+    title: 'Columns',
+    category: 'design',
+    attributes: { className: { type: 'string' } },
+    save: ({ attributes }) =>
+      element.createElement('div', blocks.__unstableGetInnerBlocksProps({ className: ['wp-block-columns', attributes.className].filter(Boolean).join(' ') })),
+  });
+
+  safeRegister('core/column', {
+    apiVersion: 3,
+    title: 'Column',
+    category: 'design',
+    attributes: { className: { type: 'string' } },
+    save: ({ attributes }) =>
+      element.createElement('div', blocks.__unstableGetInnerBlocksProps({ className: ['wp-block-column', attributes.className].filter(Boolean).join(' ') })),
+  });
+
+  safeRegister('core/heading', {
+    apiVersion: 3,
+    title: 'Heading',
+    category: 'text',
+    attributes: {
+      level: { type: 'number', default: 2 },
+      content: { type: 'string' },
+      className: { type: 'string' },
+    },
+    save: ({ attributes }) =>
+      element.createElement(`h${attributes.level || 2}`, { className: attributes.className }, element.createElement(element.RawHTML, null, attributes.content || '')),
+  });
+
+  safeRegister('core/paragraph', {
+    apiVersion: 3,
+    title: 'Paragraph',
+    category: 'text',
+    attributes: {
+      content: { type: 'string' },
+      className: { type: 'string' },
+    },
+    save: ({ attributes }) => element.createElement('p', { className: attributes.className }, element.createElement(element.RawHTML, null, attributes.content || '')),
+  });
+
+  safeRegister('core/buttons', {
+    apiVersion: 3,
+    title: 'Buttons',
+    category: 'design',
+    save: () => element.createElement('div', blocks.__unstableGetInnerBlocksProps({ className: 'wp-block-buttons' })),
+  });
+
+  safeRegister('core/button', {
+    apiVersion: 3,
+    title: 'Button',
+    category: 'design',
+    attributes: {
+      text: { type: 'string' },
+      url: { type: 'string' },
+      className: { type: 'string' },
+    },
+    save: ({ attributes }) =>
+      element.createElement(
+        'div',
+        { className: ['wp-block-button', attributes.className].filter(Boolean).join(' ') },
+        element.createElement('a', { className: 'wp-block-button__link wp-element-button', href: attributes.url }, element.createElement(element.RawHTML, null, attributes.text || ''))
+      ),
+  });
+
+  safeRegister('core/html', {
+    apiVersion: 3,
+    title: 'Custom HTML',
+    category: 'widgets',
+    attributes: { html: { type: 'string' } },
+    save: ({ attributes }) => element.createElement(element.RawHTML, null, attributes.html || ''),
+  });
+
+  safeRegister('poc/kind-marquee', {
+    apiVersion: 3,
+    title: 'Kind Marquee',
+    category: 'design',
+    attributes: {
+      items: { type: 'array', default: [] },
+      speedSeconds: { type: 'number', default: 18 },
+      tone: { type: 'string', default: 'clay' },
+    },
+    save: ({ attributes }) => {
+      const items = attributes.items || [];
+      const repeated = [...items, ...items];
+      return element.createElement(
+        'section',
+        {
+          className: `wp-block-poc-kind-marquee is-tone-${attributes.tone || 'clay'}`,
+          style: { '--marquee-speed': `${attributes.speedSeconds || 18}s` },
+          'aria-label': 'Studio values',
+        },
+        element.createElement(
+          'div',
+          { className: 'marquee-track' },
+          repeated.map((item, index) => element.createElement('span', { key: `${item}-${index}` }, item))
+        )
+      );
+    },
+  });
+
+  safeRegister('poc/studio-inquiry', {
+    apiVersion: 3,
+    title: 'Studio Inquiry',
+    category: 'forms',
+    attributes: {
+      eyebrow: { type: 'string' },
+      heading: { type: 'string' },
+      fields: { type: 'array', default: [] },
+      buttonText: { type: 'string' },
+    },
+    save: ({ attributes }) =>
+      element.createElement(
+        'section',
+        { className: 'wp-block-poc-studio-inquiry', id: 'inquiry' },
+        element.createElement(
+          'div',
+          { className: 'wp-block-columns inquiry-columns' },
+          element.createElement(
+            'div',
+            { className: 'wp-block-column inquiry-copy' },
+            element.createElement('p', { className: 'eyebrow' }, attributes.eyebrow),
+            element.createElement('h2', null, attributes.heading)
+          ),
+          element.createElement(
+            'div',
+            { className: 'wp-block-column inquiry-panel' },
+            element.createElement(
+              'form',
+              { className: 'inquiry-form' },
+              (attributes.fields || []).map((field) => renderField(field)),
+              element.createElement('button', { type: 'submit' }, attributes.buttonText)
+            )
+          )
+        )
+      ),
+  });
+
+  for (const name of collectBlockNames(blockTree)) {
+    if (blocks.getBlockType(name)) continue;
+    safeRegister(name, {
+      apiVersion: 3,
+      title: name,
+      category: 'design',
+      attributes: {
+        sourceSelector: { type: 'string' },
+        html: { type: 'string' },
+        editableFields: { type: 'object' },
+        className: { type: 'string' },
+      },
+      save: ({ attributes }) => element.createElement(element.RawHTML, null, attributes.html || ''),
+    });
+  }
+}
+
+function safeRegister(name, settings) {
+  if (!blocks.getBlockType(name)) {
+    blocks.registerBlockType(name, settings);
+  }
+}
+
+function collectBlockNames(blockTree) {
+  const names = new Set();
+  visitSimplifiedBlocks(blockTree, (block) => names.add(block.name));
+  return names;
+}
+
+function visitSimplifiedBlocks(blockTree, callback) {
+  for (const block of blockTree || []) {
+    callback(block);
+    visitSimplifiedBlocks(block.innerBlocks || [], callback);
+  }
+}
+
+function simplifiedToBlocks(blockList) {
+  return (blockList || []).map((block) => blocks.createBlock(block.name, block.attributes || {}, simplifiedToBlocks(block.innerBlocks || [])));
+}
+
+function renderField(field) {
+  if (field.type === 'textarea') {
+    return element.createElement('label', { key: field.label }, field.label, element.createElement('textarea', { name: slug(field.label), placeholder: field.placeholder }));
+  }
+
+  if (field.type === 'select') {
+    return element.createElement(
+      'label',
+      { key: field.label },
+      field.label,
+      element.createElement(
+        'select',
+        { name: slug(field.label) },
+        (field.options || []).map((option) => element.createElement('option', { key: option }, option))
+      )
+    );
+  }
+
+  return element.createElement(
+    'label',
+    { key: field.label },
+    field.label,
+    element.createElement('input', {
+      type: field.type,
+      name: slug(field.label),
+      placeholder: field.placeholder,
+    })
+  );
 }
 
 function truncateMiddle(value, limit) {
@@ -681,11 +1261,20 @@ function redactOpenAiResponse(responseJson) {
   };
 }
 
+function stripBlockComments(markup) {
+  return markup
+    .replace(/<!--\s*\/?wp:[\s\S]*?-->/g, '')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
 function slug(value) {
   return String(value).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'repair';
 }
 
 function injectRepairCss(html, repairs) {
+  if (!repairs.length) return stripPriorVisionRepairs(html);
+
   const css = repairs.map((repair, index) => `/* pass ${index + 1}: ${repair.id} */\n${repair.css}`).join('\n\n');
   return stripPriorVisionRepairs(html).replace(
     '</head>',
@@ -796,7 +1385,8 @@ function renderMarkdownReport(report) {
           proposal.repairs.map((repair) => {
             const expected = repair.expectedVisualEffect ? ` Expected effect: ${repair.expectedVisualEffect}` : '';
             const risk = repair.editabilityRisk ? ` Editability risk: ${repair.editabilityRisk}` : '';
-            return `- after pass ${proposal.afterPass}, apply \`${repair.id}\` (${proposal.mode}): ${repair.reason} Real action: ${repair.preferredRealAction}${expected}${risk}`;
+            const actions = repairActionSummary(repair);
+            return `- after pass ${proposal.afterPass}, apply \`${repair.id}\` (${proposal.mode}, ${actions}): ${repair.reason} Real action: ${repair.preferredRealAction}${expected}${risk}`;
           })
         )
         .join('\n')
@@ -844,6 +1434,11 @@ ${observations}
 `;
 }
 
+function repairActionSummary(repair) {
+  const actions = Array.isArray(repair.actions) && repair.actions.length ? repair.actions : legacyRepairActions(repair);
+  return actions.map((action) => action.kind).join(', ') || 'no executable action';
+}
+
 function renderLlmVisionBrief(report) {
   return `# LLM Vision Repair Brief
 
@@ -868,14 +1463,16 @@ The OpenAI API key is read from the process environment or local env files such 
 
 Interpret the visual differences between the mockup screenshot, rendered block screenshot, and PNG diff. The PNG diff is a measurement signal, not the diagnosis.
 
-The current POC applies only scoped CSS from the returned proposal. The production implementation should apply the same diagnosis to the correct repair location: core block structure, block attributes/supports, custom static block source, or narrow bridge CSS.
+The current POC applies executable actions from the returned proposal: block-tree edits, block attribute/style changes, rendered HTML replacements, or scoped CSS. The production implementation should apply the same diagnosis to the correct repair location: core block structure, block attributes/supports, custom static block source, or narrow bridge CSS.
 
 ## Repair Rules
 
+- Choose an executable action layer: block composition, block styling attributes/supports, rendered HTML replacement, or scoped CSS.
 - Prefer core block structure, block attributes, and block supports before custom blocks.
 - Use custom blocks only for the smallest subtree that needs a custom editor model, behavior, or markup contract.
 - Preserve editable rich text, links, form labels/placeholders, repeated items, and inspector controls.
 - Do not use raw HTML blocks unless the plan explains why core/custom static blocks cannot preserve both fidelity and editability.
+- If escaped markup is visible in the browser, repair the block tree or block attributes rather than styling the text to look less wrong.
 - Keep repairs scoped to the observed discrepancy.
 - Stop after the configured repair pass limit, or earlier when visual drift is acceptable.
 
@@ -885,7 +1482,7 @@ Return a repair proposal with:
 
 - observed discrepancy
 - likely cause in block tree, block wrapper DOM, CSS cascade, responsive behavior, or missing custom block
-- scoped CSS patch for this POC
+- executable actions: set block attributes, replace/delete/insert blocks, rendered HTML replacement, or scoped CSS
 - preferred production repair location
 - expected visual effect
 - editability risk
