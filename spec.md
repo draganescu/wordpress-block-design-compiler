@@ -11,6 +11,18 @@ Build a standalone staged compiler that takes a user prompt, creates a beautiful
 
 This is not another hosted orchestration product, and it is not itself an open-ended agent. The durable product is a local, standalone staged engine with agent-specific adapters around it.
 
+## Rationale
+
+Telex and WordPress Studio both proved that AI can generate real WordPress blocks, themes, plugins, previews, and installable packages. They also exposed the central design problem: direct block generation tends to collapse visual ambition. Even when the model is shown sample HTML, screenshots, or inspiration, the final block result often feels less designed than the source.
+
+The reason for this project is to split the problem at the point where current LLMs are strongest:
+
+1. LLMs are good at creating rich HTML/CSS/JS designs from rough prompts.
+2. WordPress blocks are good at durable, editable publishing experiences.
+3. The weak step is design transfer: preserving the HTML mockup's layout, rhythm, typography, interaction intent, and visual language while producing editable blocks.
+
+This project treats the HTML mockup as the design source of truth. The deterministic pipeline exists to preserve that design through analysis, planning, validation, preview, visual diffing, and targeted repair. The LLM is used where judgment is required: deciding the editor model, composing core blocks, authoring custom blocks, and choosing the right editable controls.
+
 ## Prior Work Context
 
 This effort is informed by two previous approaches.

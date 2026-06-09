@@ -6,6 +6,8 @@ This plan turns `spec.md` into small, testable implementation steps. The default
 
 Build the standalone core first. Agent plugins come later as thin wrappers over stable commands and JSON contracts.
 
+The core bet is design transfer. Telex and WordPress Studio start too close to WordPress block output, which limits visual ambition. This project starts with the thing LLMs already do well: a rich HTML/CSS/JS mockup. Every later stage exists to preserve that design through the WordPress transform while making the result editable in the block editor.
+
 The first credible vertical slice should be:
 
 ```text

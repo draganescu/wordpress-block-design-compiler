@@ -2,6 +2,17 @@
 
 A staged toolchain for turning a user prompt into a polished HTML/CSS/JS design, then transforming that design into WordPress block markup.
 
+## Why This Exists
+
+Prior attempts in Telex and WordPress Studio generate WordPress blocks directly. Even with sample HTML and screenshots, the final block result often loses too much visual quality. LLMs are already strong at creating expressive HTML/CSS/JS mockups from weak prompts; the hard problem is transferring that design into WordPress blocks without flattening the layout, losing the visual language, or making the result uneditable.
+
+This project breaks the problem apart:
+
+1. Let the LLM design freely in HTML/CSS/JS first.
+2. Analyze the mockup deterministically.
+3. Ask the LLM to plan and author the WordPress block implementation.
+4. Validate, preview, diff, and repair until the block result preserves the design and remains editor-friendly.
+
 ## Goal
 
 Build a pipeline that can:
