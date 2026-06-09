@@ -11,10 +11,13 @@
     "build": "tsc -p tsconfig.json",
     "analyze-fixture": "npm run build && node dist/src/cli.js analyze artifacts/simple-landing/mockup --out artifacts/simple-landing/analysis",
     "doctor": "npm run build && node dist/src/cli.js doctor",
+    "poc:transform": "node poc/transform-poc/run.cjs",
     "run-fixture": "npm run build && node dist/src/cli.js run-fixture fixtures/simple-landing --out artifacts/simple-landing",
     "test": "npm run build && node --test dist/tests/*.test.js"
   },
   "dependencies": {
+    "@wordpress/blocks": "^15.21.0",
+    "@wordpress/element": "^8.0.0",
     "css-tree": "^3.2.1",
     "parse5": "^8.0.1"
   },

@@ -1,0 +1,128 @@
+{
+  "title": "Kiln & Kind POC",
+  "sections": [
+    {
+      "id": "hero",
+      "selector": "section.hero",
+      "classes": [
+        "hero"
+      ],
+      "heading": "Useful vessels with a visible maker's hand.",
+      "textLength": 183,
+      "features": {
+        "hasForm": false,
+        "hasMarquee": false,
+        "linkCount": 1,
+        "inputCount": 0,
+        "cardCount": 0
+      }
+    },
+    {
+      "id": "story",
+      "selector": "section.story",
+      "classes": [
+        "story"
+      ],
+      "heading": null,
+      "textLength": 196,
+      "features": {
+        "hasForm": false,
+        "hasMarquee": false,
+        "linkCount": 0,
+        "inputCount": 0,
+        "cardCount": 0
+      }
+    },
+    {
+      "id": "values-marquee",
+      "selector": "section.values-marquee",
+      "classes": [
+        "values-marquee"
+      ],
+      "heading": null,
+      "textLength": 59,
+      "features": {
+        "hasForm": false,
+        "hasMarquee": true,
+        "linkCount": 0,
+        "inputCount": 0,
+        "cardCount": 0
+      }
+    },
+    {
+      "id": "collection",
+      "selector": "section.collection",
+      "classes": [
+        "collection"
+      ],
+      "heading": "Quiet pieces for daily rituals.",
+      "textLength": 160,
+      "features": {
+        "hasForm": false,
+        "hasMarquee": false,
+        "linkCount": 0,
+        "inputCount": 0,
+        "cardCount": 3
+      }
+    },
+    {
+      "id": "inquiry",
+      "selector": "section#inquiry",
+      "classes": [
+        "inquiry"
+      ],
+      "heading": "Plan a studio visit or join the next wheel session.",
+      "textLength": 132,
+      "features": {
+        "hasForm": true,
+        "hasMarquee": false,
+        "linkCount": 0,
+        "inputCount": 3,
+        "cardCount": 0
+      }
+    }
+  ],
+  "css": {
+    "customProperties": {
+      "--ink": "#14201d",
+      "--paper": "#f7f0e3",
+      "--clay": "#a14f3e",
+      "--moss": "#416553",
+      "--ash": "#d8d1bd",
+      "--blue": "#2e5c70"
+    },
+    "selectors": [
+      ":root",
+      "*",
+      "body",
+      "a",
+      ".hero,.story,.collection,.inquiry",
+      ".hero",
+      ".eyebrow",
+      "h1,h2",
+      "h1",
+      "h2",
+      ".lede",
+      ".button,button",
+      ".hero-object",
+      ".story",
+      ".values-marquee",
+      ".marquee-track",
+      ".marquee-track span",
+      "from",
+      "to",
+      ".collection",
+      ".product-grid",
+      ".product-grid article",
+      ".swatch",
+      ".swatch.oat",
+      ".swatch.iron",
+      ".swatch.ash",
+      ".inquiry",
+      ".inquiry-form",
+      ".inquiry-form label",
+      ".inquiry-form input,.inquiry-form select",
+      ".hero,.story,.inquiry,.product-grid"
+    ]
+  }
+}

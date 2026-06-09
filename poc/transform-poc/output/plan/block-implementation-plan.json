@@ -1,0 +1,135 @@
+{
+  "version": 1,
+  "thesis": "Core-first plan with custom blocks only for repeated marquee behavior and structured form editing.",
+  "tokens": {
+    "--ink": "#14201d",
+    "--paper": "#f7f0e3",
+    "--clay": "#a14f3e",
+    "--moss": "#416553",
+    "--ash": "#d8d1bd",
+    "--blue": "#2e5c70"
+  },
+  "sections": [
+    {
+      "id": "hero",
+      "sourceSelector": "section.hero",
+      "strategy": "core-assembly",
+      "coreAttempt": {
+        "considered": [
+          "core/group",
+          "core/columns",
+          "core/heading",
+          "core/paragraph",
+          "core/buttons"
+        ],
+        "verdict": "Core blocks plus custom classes preserve the content model and are sufficient for this section."
+      },
+      "editableFields": [
+        "heading",
+        "paragraphs",
+        "links"
+      ]
+    },
+    {
+      "id": "story",
+      "sourceSelector": "section.story",
+      "strategy": "core-assembly",
+      "coreAttempt": {
+        "considered": [
+          "core/group",
+          "core/columns",
+          "core/heading",
+          "core/paragraph",
+          "core/buttons"
+        ],
+        "verdict": "Core blocks plus custom classes preserve the content model and are sufficient for this section."
+      },
+      "editableFields": [
+        "heading",
+        "paragraphs",
+        "links"
+      ]
+    },
+    {
+      "id": "values-marquee",
+      "sourceSelector": "section.values-marquee",
+      "strategy": "custom-block",
+      "coreAttempt": {
+        "considered": [
+          "core/group",
+          "core/paragraph"
+        ],
+        "verdict": "A static core group could show the words, but editable repeated marquee items, speed, and duplicated track markup need a purpose-built block."
+      },
+      "customBlock": "poc/kind-marquee",
+      "editableFields": [
+        "items",
+        "speedSeconds",
+        "tone"
+      ]
+    },
+    {
+      "id": "collection",
+      "sourceSelector": "section.collection",
+      "strategy": "core-assembly",
+      "coreAttempt": {
+        "considered": [
+          "core/group",
+          "core/columns",
+          "core/heading",
+          "core/paragraph",
+          "core/buttons"
+        ],
+        "verdict": "Core blocks plus custom classes preserve the content model and are sufficient for this section."
+      },
+      "editableFields": [
+        "heading",
+        "paragraphs",
+        "links"
+      ]
+    },
+    {
+      "id": "inquiry",
+      "sourceSelector": "section#inquiry",
+      "strategy": "custom-block",
+      "coreAttempt": {
+        "considered": [
+          "core/group",
+          "core/heading",
+          "core/paragraph",
+          "core/buttons"
+        ],
+        "verdict": "Core blocks can fake the CTA, but the mockup contains structured inputs and submission UI that need explicit fields and controls."
+      },
+      "customBlock": "poc/studio-inquiry",
+      "editableFields": [
+        "eyebrow",
+        "heading",
+        "fields",
+        "buttonText"
+      ]
+    }
+  ],
+  "customBlocks": [
+    {
+      "name": "poc/kind-marquee",
+      "slug": "kind-marquee",
+      "reason": "Editable repeated marquee items and speed/tone controls are cleaner as a custom static block than a brittle core group.",
+      "controls": [
+        "RichText-like repeated item text fields",
+        "Inspector speedSeconds",
+        "Inspector tone"
+      ]
+    },
+    {
+      "name": "poc/studio-inquiry",
+      "slug": "studio-inquiry",
+      "reason": "Structured form fields, labels, placeholders, and submit button need a coherent editor UI.",
+      "controls": [
+        "RichText heading fields",
+        "field list controls",
+        "button text control"
+      ]
+    }
+  ]
+}

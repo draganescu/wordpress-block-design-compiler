@@ -1,0 +1,249 @@
+[
+  {
+    "name": "core/group",
+    "attributes": {
+      "className": "hero alignwide",
+      "tagName": "section"
+    },
+    "innerBlocks": [
+      {
+        "name": "core/paragraph",
+        "attributes": {
+          "content": "Portland ceramic studio",
+          "className": "eyebrow"
+        },
+        "innerBlocks": []
+      },
+      {
+        "name": "core/heading",
+        "attributes": {
+          "level": 1,
+          "content": "Useful vessels with a visible maker's hand."
+        },
+        "innerBlocks": []
+      },
+      {
+        "name": "core/paragraph",
+        "attributes": {
+          "content": "Hand-thrown tableware, sculptural jars, and weekend workshops from a working neighborhood kiln.",
+          "className": "lede"
+        },
+        "innerBlocks": []
+      },
+      {
+        "name": "core/buttons",
+        "attributes": {},
+        "innerBlocks": [
+          {
+            "name": "core/button",
+            "attributes": {
+              "text": "Book a studio visit",
+              "url": "#inquiry"
+            },
+            "innerBlocks": []
+          }
+        ]
+      },
+      {
+        "name": "core/group",
+        "attributes": {
+          "className": "hero-object",
+          "tagName": "div"
+        },
+        "innerBlocks": []
+      }
+    ]
+  },
+  {
+    "name": "core/group",
+    "attributes": {
+      "className": "story",
+      "tagName": "section"
+    },
+    "innerBlocks": [
+      {
+        "name": "core/paragraph",
+        "attributes": {
+          "content": "Every piece is shaped slowly, fired in small batches, and finished with glazes mixed in-house."
+        },
+        "innerBlocks": []
+      },
+      {
+        "name": "core/paragraph",
+        "attributes": {
+          "content": "Irregular rims, ash marks, and thumbprints stay visible because the hand belongs in the final object."
+        },
+        "innerBlocks": []
+      }
+    ]
+  },
+  {
+    "name": "poc/kind-marquee",
+    "attributes": {
+      "items": [
+        "Local clay",
+        "Small batches",
+        "Food-safe glazes",
+        "Weekend workshops"
+      ],
+      "speedSeconds": 18,
+      "tone": "clay"
+    },
+    "innerBlocks": []
+  },
+  {
+    "name": "core/group",
+    "attributes": {
+      "className": "collection",
+      "tagName": "section"
+    },
+    "innerBlocks": [
+      {
+        "name": "core/paragraph",
+        "attributes": {
+          "content": "Current collection",
+          "className": "eyebrow"
+        },
+        "innerBlocks": []
+      },
+      {
+        "name": "core/heading",
+        "attributes": {
+          "level": 2,
+          "content": "Quiet pieces for daily rituals."
+        },
+        "innerBlocks": []
+      },
+      {
+        "name": "core/columns",
+        "attributes": {
+          "className": "product-grid"
+        },
+        "innerBlocks": [
+          {
+            "name": "core/column",
+            "attributes": {
+              "className": "product-card"
+            },
+            "innerBlocks": [
+              {
+                "name": "core/group",
+                "attributes": {
+                  "className": "swatch oat",
+                  "tagName": "span"
+                },
+                "innerBlocks": []
+              },
+              {
+                "name": "core/heading",
+                "attributes": {
+                  "level": 3,
+                  "content": "Breakfast bowl"
+                },
+                "innerBlocks": []
+              },
+              {
+                "name": "core/paragraph",
+                "attributes": {
+                  "content": "Speckled clay, oat glaze."
+                },
+                "innerBlocks": []
+              }
+            ]
+          },
+          {
+            "name": "core/column",
+            "attributes": {
+              "className": "product-card"
+            },
+            "innerBlocks": [
+              {
+                "name": "core/group",
+                "attributes": {
+                  "className": "swatch iron",
+                  "tagName": "span"
+                },
+                "innerBlocks": []
+              },
+              {
+                "name": "core/heading",
+                "attributes": {
+                  "level": 3,
+                  "content": "Tall cup"
+                },
+                "innerBlocks": []
+              },
+              {
+                "name": "core/paragraph",
+                "attributes": {
+                  "content": "Iron wash, clear glaze."
+                },
+                "innerBlocks": []
+              }
+            ]
+          },
+          {
+            "name": "core/column",
+            "attributes": {
+              "className": "product-card"
+            },
+            "innerBlocks": [
+              {
+                "name": "core/group",
+                "attributes": {
+                  "className": "swatch ash",
+                  "tagName": "span"
+                },
+                "innerBlocks": []
+              },
+              {
+                "name": "core/heading",
+                "attributes": {
+                  "level": 3,
+                  "content": "Moon jar"
+                },
+                "innerBlocks": []
+              },
+              {
+                "name": "core/paragraph",
+                "attributes": {
+                  "content": "Ash glaze, hand burnished."
+                },
+                "innerBlocks": []
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "poc/studio-inquiry",
+    "attributes": {
+      "eyebrow": "Workshops and visits",
+      "heading": "Plan a studio visit or join the next wheel session.",
+      "fields": [
+        {
+          "label": "Name",
+          "type": "text",
+          "placeholder": "Your name"
+        },
+        {
+          "label": "Email",
+          "type": "email",
+          "placeholder": "you@example.com"
+        },
+        {
+          "label": "Interest",
+          "type": "select",
+          "options": [
+            "Studio visit",
+            "Workshop seat"
+          ]
+        }
+      ],
+      "buttonText": "Send inquiry"
+    },
+    "innerBlocks": []
+  }
+]

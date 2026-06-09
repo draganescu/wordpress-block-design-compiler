@@ -1,0 +1,47 @@
+{
+  "prompt": "Create a polished landing page for a ceramic studio called Kiln & Kind. It should have a tactile editorial layout, a hero, a product story, an animated maker-values marquee, a small collection grid, and a workshop inquiry form.",
+  "sectionsAnalyzed": 5,
+  "sectionStrategies": [
+    {
+      "id": "hero",
+      "strategy": "core-assembly",
+      "coreAttempt": "Core blocks plus custom classes preserve the content model and are sufficient for this section.",
+      "customBlock": null
+    },
+    {
+      "id": "story",
+      "strategy": "core-assembly",
+      "coreAttempt": "Core blocks plus custom classes preserve the content model and are sufficient for this section.",
+      "customBlock": null
+    },
+    {
+      "id": "values-marquee",
+      "strategy": "custom-block",
+      "coreAttempt": "A static core group could show the words, but editable repeated marquee items, speed, and duplicated track markup need a purpose-built block.",
+      "customBlock": "poc/kind-marquee"
+    },
+    {
+      "id": "collection",
+      "strategy": "core-assembly",
+      "coreAttempt": "Core blocks plus custom classes preserve the content model and are sufficient for this section.",
+      "customBlock": null
+    },
+    {
+      "id": "inquiry",
+      "strategy": "custom-block",
+      "coreAttempt": "Core blocks can fake the CTA, but the mockup contains structured inputs and submission UI that need explicit fields and controls.",
+      "customBlock": "poc/studio-inquiry"
+    }
+  ],
+  "customBlocks": [
+    "poc/kind-marquee",
+    "poc/studio-inquiry"
+  ],
+  "blockCount": 28,
+  "outputs": {
+    "mockup": "mockup/index.html",
+    "plan": "plan/block-implementation-plan.json",
+    "blockMarkup": "wordpress/content.html",
+    "renderedHtml": "rendered/rendered-blocks.html"
+  }
+}

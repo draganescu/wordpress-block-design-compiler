@@ -1,0 +1,1 @@
+Create a polished landing page for a ceramic studio called Kiln & Kind. It should have a tactile editorial layout, a hero, a product story, an animated maker-values marquee, a small collection grid, and a workshop inquiry form.

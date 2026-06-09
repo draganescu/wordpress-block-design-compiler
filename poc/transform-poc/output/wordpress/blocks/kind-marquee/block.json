@@ -1,0 +1,20 @@
+{
+  "apiVersion": 3,
+  "name": "poc/kind-marquee",
+  "title": "Kind Marquee",
+  "category": "design",
+  "attributes": {
+    "items": {
+      "type": "array",
+      "default": []
+    },
+    "speedSeconds": {
+      "type": "number",
+      "default": 18
+    },
+    "tone": {
+      "type": "string",
+      "default": "clay"
+    }
+  }
+}
