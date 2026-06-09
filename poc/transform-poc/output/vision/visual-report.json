@@ -1,5 +1,5 @@
 {
-  "version": 2,
+  "version": 3,
   "source": {
     "mockup": "mockup/index.html",
     "initialRendered": "rendered/rendered-blocks.base.html",
@@ -20,7 +20,8 @@
   "strategy": {
     "measurement": "PNG diff is used as the deterministic score and regression signal.",
     "interpretation": "LLM vision should inspect screenshots and diffs to identify the visual cause, then propose the smallest block-tree, block-attribute, or scoped-CSS repair.",
-    "pocMode": "This POC uses a deterministic repair proxy so the iteration mechanics can be exercised without an external LLM call."
+    "repairProvider": "deterministic",
+    "pocMode": "This POC used a deterministic repair proxy. Set POC_VISION_REPAIR_PROVIDER=openai to use the brokered LLM vision step."
   },
   "passes": [
     {

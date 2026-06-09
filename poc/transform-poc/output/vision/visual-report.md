@@ -3,6 +3,7 @@
 ## Summary
 
 Final pass: 3
+Repair provider: deterministic
 
 | Pass | Viewport | Size | Pixel mismatch | Width / height delta | Diff |
 | ---: | --- | ---: | ---: | ---: | --- |
@@ -17,9 +18,9 @@ Final pass: 3
 
 ## Repairs
 
-- after pass 0, apply `core-layout-selector-bridges`: The diff shows large structural drift. The block tree uses core wrappers, so selectors from the mockup no longer map cleanly to the rendered block DOM. Real action: Ask the LLM to revise the block plan with explicit core wrapper mapping before adding new custom blocks.
-- after pass 1, apply `core-block-spacing-reset`: The first structural repair still leaves block-library wrapper spacing that changes the page height and rhythm. Real action: Ask the LLM to preserve the source spacing model through block supports, spacing attributes, or scoped CSS on the smallest affected wrapper.
-- after pass 2, apply `semantic-form-width-lock`: The remaining drift is concentrated around the custom form panel width and block wrapper behavior. Real action: Ask the LLM whether the custom inquiry block should expose a form width control or use a core column width attribute.
+- after pass 0, apply `core-layout-selector-bridges` (deterministic-poc-vision-proxy): The diff shows large structural drift. The block tree uses core wrappers, so selectors from the mockup no longer map cleanly to the rendered block DOM. Real action: Ask the LLM to revise the block plan with explicit core wrapper mapping before adding new custom blocks.
+- after pass 1, apply `core-block-spacing-reset` (deterministic-poc-vision-proxy): The first structural repair still leaves block-library wrapper spacing that changes the page height and rhythm. Real action: Ask the LLM to preserve the source spacing model through block supports, spacing attributes, or scoped CSS on the smallest affected wrapper.
+- after pass 2, apply `semantic-form-width-lock` (deterministic-poc-vision-proxy): The remaining drift is concentrated around the custom form panel width and block wrapper behavior. Real action: Ask the LLM whether the custom inquiry block should expose a form width control or use a core column width attribute.
 
 ## Final Screenshots
 
@@ -34,8 +35,8 @@ Final pass: 3
 ## Comparator Notes
 
 - PNG diff is the score and regression gate.
-- LLM vision should be the diagnosis and repair planner.
+- LLM vision is the diagnosis and repair planner when `POC_VISION_REPAIR_PROVIDER=openai`.
 - Full-page screenshots are captured with Playwright.
 - Animations and transitions are disabled before capture to reduce noisy marquee diffs.
 - Pixelmatch compares the shared cropped area and reports page-size deltas separately.
-- This POC uses a deterministic repair proxy for up to 3 repair passes.
+- This POC runs up to 3 repair passes.

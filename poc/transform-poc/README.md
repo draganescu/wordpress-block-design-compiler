@@ -61,4 +61,19 @@ The intended production split is hybrid:
 - PNG diff is the score, regression signal, and trigger.
 - LLM vision is the diagnosis and repair planner.
 
-This POC runs one to three repair passes with a deterministic proxy for the LLM vision call. The proxy applies scoped CSS repairs for known wrapper/layout drift, but the real implementation should ask the LLM to decide whether the fix belongs in the block tree, core block attributes/supports, custom block source, or narrow bridge CSS.
+By default, this POC runs one to three repair passes with a deterministic proxy for the LLM vision call. The proxy applies scoped CSS repairs for known wrapper/layout drift, so the POC remains runnable without API credentials.
+
+To use the brokered LLM vision repair step:
+
+```bash
+OPENAI_API_KEY=... POC_VISION_REPAIR_PROVIDER=openai npm run poc:transform
+```
+
+Optional settings:
+
+- `OPENAI_VISION_MODEL`: defaults to `gpt-4.1`.
+- `OPENAI_BASE_URL`: defaults to `https://api.openai.com/v1`.
+- `POC_VISION_REPAIR_PROVIDER=auto`: uses OpenAI when `OPENAI_API_KEY` is present, otherwise the deterministic proxy.
+- `POC_VISION_REPAIR_PROVIDER=off`: measures visual drift without applying repairs.
+
+The OpenAI mode sends the mockup, rendered screenshot, PNG diff, block plan, block tree, and rendered HTML context to the Responses API. It asks for structured JSON containing an observed discrepancy, likely cause, preferred production repair location, and scoped CSS patch for the current POC. The real implementation should use that diagnosis to decide whether the fix belongs in the block tree, core block attributes/supports, custom block source, or narrow bridge CSS.

@@ -1,6 +1,10 @@
 # LLM Vision Repair Brief
 
-Use this brief shape for the real brokered LLM call.
+Use this brief shape for the brokered LLM call. The POC can call OpenAI directly with:
+
+```bash
+OPENAI_API_KEY=... POC_VISION_REPAIR_PROVIDER=openai npm run poc:transform
+```
 
 ## Inputs
 
@@ -14,6 +18,8 @@ Use this brief shape for the real brokered LLM call.
 ## Role
 
 Interpret the visual differences between the mockup screenshot, rendered block screenshot, and PNG diff. The PNG diff is a measurement signal, not the diagnosis.
+
+The current POC applies only scoped CSS from the returned proposal. The production implementation should apply the same diagnosis to the correct repair location: core block structure, block attributes/supports, custom static block source, or narrow bridge CSS.
 
 ## Repair Rules
 
@@ -30,6 +36,7 @@ Return a repair proposal with:
 
 - observed discrepancy
 - likely cause in block tree, block wrapper DOM, CSS cascade, responsive behavior, or missing custom block
-- exact block-tree or block-source patch
+- scoped CSS patch for this POC
+- preferred production repair location
 - expected visual effect
 - editability risk
