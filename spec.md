@@ -177,6 +177,7 @@ The plan should include:
 - target block tree;
 - mapping from each mockup section to either core block assembly, custom block implementation, or justified HTML fallback;
 - selected implementation strategy for each section;
+- core-block attempt notes for each section, including which core blocks and block supports were considered before escalating;
 - editability contract for text, images, links, buttons, lists, cards, forms, and repeated items;
 - editor UI decisions: RichText fields, MediaUpload fields, URL controls, InspectorControls, InnerBlocks templates, template locks, and content-only editing modes where useful;
 - fidelity risks;
@@ -192,9 +193,18 @@ The plan should be serializable JSON, reviewable by agents, and suitable for det
 
 The LLM should choose the least custom implementation that preserves both fidelity and useful editability. Deterministic code should not try to infer every block choice through hard-coded HTML rules; it should provide structured evidence, validate the plan, validate emitted code/markup, and report failures.
 
+The default posture is core-first, but not core-only. The LLM should extensively use and style core blocks before deciding that a custom block is needed. Escalation is justified only when core blocks cannot preserve the layout, visual behavior, or editor model without creating brittle, unmaintainable nesting.
+
+Decision ladder:
+
+1. **Styled core block assembly.** Try core blocks plus block supports, custom classes, theme/style tokens, CSS, layout wrappers, groups, columns, covers, media blocks, buttons, and locked patterns.
+2. **Core assembly with light custom CSS.** Use core blocks as the editable structure while CSS recreates visual treatments that are not directly represented by block attributes.
+3. **Custom static block.** Use when the section needs a purpose-built editor model, repeated structured fields, custom controls, front-end behavior, or layout fidelity that core blocks would make fragile.
+4. **Core HTML block.** Use only for a small, justified fragment or temporary fallback.
+
 #### Core Blocks
 
-Use core blocks when they can represent the design with acceptable fidelity:
+Use core blocks when they can represent the design with acceptable fidelity, especially for normal publishing content:
 
 - group;
 - columns;
@@ -212,6 +222,13 @@ Use core blocks when they can represent the design with acceptable fidelity:
 
 Core blocks are preferred when the LLM can assemble them into cleanly editable content and block support styles can express the design without brittle nesting.
 
+The LLM should consider core blocks even for heavily styled sections. Examples:
+
+- a visually complex hero can often be a `core/group` or `core/cover` with headings, paragraphs, buttons, images, CSS classes, and spacing/color/typography support;
+- a product grid can often be `core/group` plus columns or a repeated group pattern before becoming a custom product-card block;
+- editorial callouts, stats, cards, and feature rows should start as groups, columns, headings, paragraphs, images, and buttons;
+- decorative shapes, background layers, and unusual frames can often be CSS on a core group if the content inside remains normal and editable.
+
 #### Custom Static Blocks
 
 Ask the LLM to generate custom static blocks when core blocks are insufficient but the result should still be editor-editable.
@@ -225,6 +242,14 @@ Use custom static blocks for:
 - data-bound or reusable domain-specific components;
 - interactive sections whose HTML and attributes need a stable save function;
 - precise layout patterns that core nesting would make brittle.
+
+Custom block escalation examples:
+
+- **Marquee:** use a custom block when the marquee has editable repeated items, speed/direction controls, pause behavior, or duplicated track markup. Use core blocks plus CSS only when it is a static decorative text row with simple editable text.
+- **Carousel/slideshow:** use a custom block when slides, timing, controls, or media fields need a coherent editor UI. Avoid dumping it into HTML.
+- **Forms:** use a custom block when the mockup implies a real structured form, submission endpoint, validation state, or reusable fields. Use core buttons/paragraphs only for a fake visual CTA; use an embed/plugin block only when targeting an existing form provider.
+- **Unusual visual object:** use core group/image/CSS if the unusual element is decorative around normal content. Use a custom block when the element itself has editable structured parts or front-end behavior.
+- **Repeated card systems:** use core patterns/inner blocks for simple cards; use a custom block when cards need structured attributes, constrained editing, or consistent repeated controls.
 
 Static block expectations:
 

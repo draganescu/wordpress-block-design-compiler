@@ -142,6 +142,7 @@ Build:
 - planner prompt using mockup and analysis artifacts;
 - plan validator;
 - explicit strategy labels: `core-assembly`, `custom-block`, `core-html`;
+- core-first escalation notes for every section;
 - editable-field contract per section;
 - editor-control contract covering RichText, MediaUpload, URL controls, InspectorControls, InnerBlocks, template locks, and content-only editing mode;
 - mandatory rationale for every custom/html decision.
@@ -157,7 +158,9 @@ Acceptance:
 
 - Plan validates against schema.
 - Every section maps back to a source selector.
+- Every section records which core block assembly was considered before escalation.
 - Any `core/html` usage has a specific reason.
+- Any `custom-block` usage explains why styled core blocks plus CSS are insufficient.
 - The plan can be reviewed independently of block output.
 - The plan tells a later LLM assembly stage what code and block markup to write.
 

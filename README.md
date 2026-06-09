@@ -13,6 +13,8 @@ This project breaks the problem apart:
 3. Ask the LLM to plan and author the WordPress block implementation.
 4. Validate, preview, diff, and repair until the block result preserves the design and remains editor-friendly.
 
+The block strategy is core-first, not core-only. The LLM should extensively style and assemble core blocks before escalating to custom blocks. Custom blocks are for sections where core blocks plus CSS cannot preserve the design or editor model cleanly, such as editable marquees, carousels, structured forms, unusual interactive elements, or repeated card systems that need constrained controls.
+
 ## Goal
 
 Build a pipeline that can:
