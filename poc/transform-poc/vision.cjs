@@ -21,7 +21,7 @@ const BASE_RENDERED_HTML = path.join(OUT, 'rendered/rendered-blocks.base.html');
 const FINAL_RENDERED_HTML = path.join(OUT, 'rendered/rendered-blocks.final.html');
 const PLAN_JSON = path.join(OUT, 'plan/block-implementation-plan.json');
 const BLOCK_TREE_JSON = path.join(OUT, 'wordpress/block-tree.json');
-const MAX_REPAIR_PASSES = 3;
+const DEFAULT_MAX_REPAIR_PASSES = 3;
 const DEFAULT_REPAIR_PROVIDER = 'deterministic';
 const DEFAULT_OPENAI_VISION_MODEL = 'gpt-4.1';
 const OPENAI_RESPONSES_URL = `${process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1'}/responses`;
@@ -36,6 +36,7 @@ const VIEWPORTS = [
 async function main() {
   const { default: pixelmatch } = await import('pixelmatch');
   const repairProvider = resolveRepairProvider();
+  const maxRepairPasses = resolveMaxRepairPasses();
 
   assertRepairProviderReady(repairProvider);
   assertTransformOutputExists();
@@ -54,7 +55,7 @@ async function main() {
   try {
     const mockupScreenshots = await captureMockupScreenshots(browser);
 
-    for (let pass = 0; pass <= MAX_REPAIR_PASSES; pass += 1) {
+    for (let pass = 0; pass <= maxRepairPasses; pass += 1) {
       const viewports = [];
       for (const viewport of VIEWPORTS) {
         viewports.push(await compareViewport(browser, currentHtmlPath, pass, viewport, mockupScreenshots[viewport.name], pixelmatch));
@@ -69,7 +70,7 @@ async function main() {
       };
       passReports.push(passReport);
 
-      if (isAcceptable(passReport) || pass === MAX_REPAIR_PASSES) {
+      if (isAcceptable(passReport) || pass === maxRepairPasses) {
         break;
       }
 
@@ -96,7 +97,7 @@ async function main() {
   fs.copyFileSync(currentHtmlPath, FINAL_RENDERED_HTML);
   copyFinalScreenshots(passReports.at(-1));
 
-  const report = buildVisionReport({ passReports, repairProposals, repairProvider });
+  const report = buildVisionReport({ passReports, repairProposals, repairProvider, maxRepairPasses });
   writeJson('visual-report.json', report);
   write('visual-report.md', renderMarkdownReport(report));
   write('llm-vision-brief.md', renderLlmVisionBrief(report));
@@ -107,6 +108,7 @@ async function main() {
         visionReport: path.join(VISION_OUT, 'visual-report.md'),
         finalRenderedHtml: FINAL_RENDERED_HTML,
         finalPass: report.final.pass,
+        maxRepairPasses: report.comparator.maxRepairPasses,
         viewports: report.final.viewports.map((viewport) => ({
           name: viewport.name,
           mismatchPercent: viewport.comparison.mismatchPercent,
@@ -269,6 +271,20 @@ function resolveRepairProvider() {
     return requested;
   }
   throw new Error(`Unsupported POC_VISION_REPAIR_PROVIDER "${requested}". Use deterministic, openai, auto, or off.`);
+}
+
+function resolveMaxRepairPasses() {
+  const raw =
+    readOption(process.argv.slice(2), ['--max-repair-passes', '--vision-repair-passes']) ||
+    process.env.POC_VISION_MAX_REPAIR_PASSES ||
+    String(DEFAULT_MAX_REPAIR_PASSES);
+  const parsed = Number(raw);
+
+  if (!Number.isInteger(parsed) || parsed < 0 || parsed > 20) {
+    throw new Error(`Invalid max repair passes "${raw}". Use an integer from 0 to 20.`);
+  }
+
+  return parsed;
 }
 
 function assertRepairProviderReady(repairProvider) {
@@ -696,7 +712,7 @@ function copyFinalScreenshots(finalPass) {
   }
 }
 
-function buildVisionReport({ passReports, repairProposals, repairProvider }) {
+function buildVisionReport({ passReports, repairProposals, repairProvider, maxRepairPasses }) {
   const final = passReports.at(-1);
   return {
     version: 3,
@@ -710,7 +726,7 @@ function buildVisionReport({ passReports, repairProposals, repairProvider }) {
       tool: 'playwright + pixelmatch',
       screenshotMode: 'fullPage',
       animations: 'disabled',
-      maxRepairPasses: MAX_REPAIR_PASSES,
+      maxRepairPasses,
       acceptance: {
         maxMismatchPercent: 8,
         maxHeightDelta: 80,
@@ -824,7 +840,7 @@ ${observations}
 - Full-page screenshots are captured with Playwright.
 - Animations and transitions are disabled before capture to reduce noisy marquee diffs.
 - Pixelmatch compares the shared cropped area and reports page-size deltas separately.
-- This POC runs up to ${MAX_REPAIR_PASSES} repair passes.
+- This POC runs up to ${report.comparator.maxRepairPasses} repair passes.
 `;
 }
 
@@ -861,7 +877,7 @@ The current POC applies only scoped CSS from the returned proposal. The producti
 - Preserve editable rich text, links, form labels/placeholders, repeated items, and inspector controls.
 - Do not use raw HTML blocks unless the plan explains why core/custom static blocks cannot preserve both fidelity and editability.
 - Keep repairs scoped to the observed discrepancy.
-- Stop after one to three repair passes, or earlier when visual drift is acceptable.
+- Stop after the configured repair pass limit, or earlier when visual drift is acceptable.
 
 ## Output
 

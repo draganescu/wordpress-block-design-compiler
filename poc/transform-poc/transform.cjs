@@ -12,13 +12,15 @@ const htmlProvider = readOption(args, ['--html-provider']);
 const planProvider = readOption(args, ['--plan-provider']);
 const assemblyProvider = readOption(args, ['--assembly-provider']);
 const visionProvider = readOption(args, ['--vision-provider', '--provider']);
-const runArgs = stripOptions(args, ['--vision-provider']);
+const maxRepairPasses = readOption(args, ['--max-repair-passes', '--vision-repair-passes']);
+const runArgs = stripOptions(args, ['--vision-provider', '--max-repair-passes', '--vision-repair-passes']);
 const visionArgs = [];
 
 if (!htmlProvider) runArgs.push(`--html-provider=${llmProvider}`);
 if (!planProvider) runArgs.push(`--plan-provider=${llmProvider}`);
 if (!assemblyProvider) runArgs.push(`--assembly-provider=${llmProvider}`);
 visionArgs.push(`--provider=${visionProvider || llmProvider}`);
+if (maxRepairPasses !== null) visionArgs.push(`--max-repair-passes=${maxRepairPasses}`);
 
 runStep('HTML transform', path.join(ROOT, 'run.cjs'), runArgs);
 runStep('Vision comparison', path.join(ROOT, 'vision.cjs'), visionArgs);

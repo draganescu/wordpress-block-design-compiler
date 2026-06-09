@@ -38,6 +38,7 @@ Non-interactive prompt options:
 POC_PROMPT="Create a polished landing page for a neighborhood florist..." npm run poc:transform
 npm run poc:transform -- --prompt "Create a polished landing page for a neighborhood florist..."
 npm run poc:transform -- --prompt-file ./brief.md
+npm run poc:transform -- --prompt-file ./brief.md --max-repair-passes=5
 ```
 
 It writes output under `poc/transform-poc/output/`.
@@ -80,7 +81,7 @@ The intended production split is hybrid:
 - PNG diff is the score, regression signal, and trigger.
 - LLM vision is the diagnosis and repair planner.
 
-By default, this POC runs one to three repair passes with OpenAI vision repair. PNG diff remains the deterministic score and trigger.
+By default, this POC runs up to three repair passes with OpenAI vision repair. PNG diff remains the deterministic score and trigger. Override the limit with `--max-repair-passes=N` or `POC_VISION_MAX_REPAIR_PASSES=N`; use `0` to capture comparison screenshots without applying repair passes.
 
 To run the older local fixture/debug path without API credentials:
 
@@ -102,6 +103,7 @@ Optional settings:
 - `POC_ASSEMBLY_PROVIDER=openai`: uses OpenAI for the supported block tree.
 - `POC_VISION_REPAIR_PROVIDER=auto`: uses OpenAI when `OPENAI_API_KEY` is present, otherwise the deterministic proxy.
 - `POC_VISION_REPAIR_PROVIDER=off`: measures visual drift without applying repairs.
+- `POC_VISION_MAX_REPAIR_PASSES=3`: maximum vision-informed repair passes. CLI aliases: `--max-repair-passes` or `--vision-repair-passes`.
 - `POC_PROMPT`: non-interactive design prompt.
 - `POC_PROMPT_FILE`: path to a file containing the design prompt.
 
