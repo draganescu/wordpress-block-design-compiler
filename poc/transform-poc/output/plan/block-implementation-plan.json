@@ -128,7 +128,8 @@
       "controls": [
         "RichText heading fields",
         "field list controls",
-        "button text control"
+        "button text control",
+        "core columns layout wrapper"
       ]
     }
   ]

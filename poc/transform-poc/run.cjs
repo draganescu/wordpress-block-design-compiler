@@ -294,8 +294,8 @@ function planBlocks(analysis) {
       {
         name: 'poc/studio-inquiry',
         slug: 'studio-inquiry',
-        reason: 'Structured form fields, labels, placeholders, and submit button need a coherent editor UI.',
-        controls: ['RichText heading fields', 'field list controls', 'button text control'],
+    reason: 'Structured form fields, labels, placeholders, and submit button need a coherent editor UI.',
+        controls: ['RichText heading fields', 'field list controls', 'button text control', 'core columns layout wrapper'],
       },
     ],
   };
@@ -491,18 +491,26 @@ function registerPocBlocks() {
     save: ({ attributes }) =>
       element.createElement(
         'section',
-        { className: 'wp-block-poc-studio-inquiry inquiry', id: 'inquiry' },
+        { className: 'wp-block-poc-studio-inquiry', id: 'inquiry' },
         element.createElement(
           'div',
-          null,
-          element.createElement('p', { className: 'eyebrow' }, attributes.eyebrow),
-          element.createElement('h2', null, attributes.heading)
-        ),
-        element.createElement(
-          'form',
-          { className: 'inquiry-form' },
-          (attributes.fields || []).map((field) => renderField(field)),
-          element.createElement('button', { type: 'submit' }, attributes.buttonText)
+          { className: 'wp-block-columns inquiry-columns' },
+          element.createElement(
+            'div',
+            { className: 'wp-block-column inquiry-copy' },
+            element.createElement('p', { className: 'eyebrow' }, attributes.eyebrow),
+            element.createElement('h2', null, attributes.heading)
+          ),
+          element.createElement(
+            'div',
+            { className: 'wp-block-column inquiry-panel' },
+            element.createElement(
+              'form',
+              { className: 'inquiry-form' },
+              (attributes.fields || []).map((field) => renderField(field)),
+              element.createElement('button', { type: 'submit' }, attributes.buttonText)
+            )
+          )
         )
       ),
   });
@@ -589,14 +597,16 @@ ${indent(body, 6)}
 
 function customBlockCss() {
   return `.wp-block-button__link { display: inline-flex; min-height: 48px; align-items: center; border: 1px solid var(--ink); background: var(--ink); color: white; padding: 0 22px; text-decoration: none; }
+.wp-block-columns { display: grid; grid-template-columns: repeat(var(--wp--columns-count, 2), minmax(0, 1fr)); gap: 48px; }
+@media (max-width: 760px) {
+  .wp-block-columns { grid-template-columns: 1fr; }
+}
 .product-card { background: white; border: 1px solid rgba(20,32,29,.14); padding: 22px; min-height: 280px; }
 .wp-block-poc-kind-marquee { overflow: hidden; background: var(--clay); color: white; padding: 18px 0; }
 .wp-block-poc-kind-marquee .marquee-track { display: flex; gap: 46px; width: max-content; animation: drift var(--marquee-speed, 18s) linear infinite; font: 700 18px/1 Inter, sans-serif; text-transform: uppercase; }
 .wp-block-poc-kind-marquee span { white-space: nowrap; }
-.wp-block-poc-studio-inquiry { display: grid; grid-template-columns: 1fr 420px; gap: 48px; align-items: start; }
-@media (max-width: 760px) {
-  .wp-block-poc-studio-inquiry { grid-template-columns: 1fr; }
-}`;
+.wp-block-poc-studio-inquiry { padding: clamp(48px, 8vw, 104px) clamp(20px, 6vw, 80px); border-top: 1px solid rgba(20,32,29,.18); }
+.wp-block-poc-studio-inquiry .inquiry-columns { --wp--columns-count: 2; align-items: start; margin: 0; }`;
 }
 
 function buildReport({ prompt, analysis, plan, assembly }) {
