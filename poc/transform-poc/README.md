@@ -18,10 +18,19 @@ prompt
 Run it from the repo root:
 
 ```bash
+cp .env.example .env.local
+# add OPENAI_API_KEY to .env.local
 npm run poc:transform
 ```
 
-In an interactive terminal, the command asks for the design prompt to run. Press enter to use the default Kiln & Kind fixture.
+In an interactive terminal, the command asks for the design prompt to run. Press enter to use the default Kiln & Kind brief.
+
+`npm run poc:transform` is the real POC path and uses OpenAI for every LLM-shaped stage:
+
+- prompt -> HTML/CSS mockup
+- analysis -> block implementation plan
+- plan/mockup -> supported WordPress block tree
+- screenshots/diffs -> vision repair proposals
 
 Non-interactive prompt options:
 
@@ -31,7 +40,7 @@ npm run poc:transform -- --prompt "Create a polished landing page for a neighbor
 npm run poc:transform -- --prompt-file ./brief.md
 ```
 
-It writes deterministic output under `poc/transform-poc/output/`.
+It writes output under `poc/transform-poc/output/`.
 
 The command also writes vision artifacts under `poc/transform-poc/output/vision/`:
 
@@ -71,22 +80,15 @@ The intended production split is hybrid:
 - PNG diff is the score, regression signal, and trigger.
 - LLM vision is the diagnosis and repair planner.
 
-By default, this POC runs one to three repair passes with a deterministic proxy for the LLM vision call. The proxy applies scoped CSS repairs for known wrapper/layout drift, so the POC remains runnable without API credentials.
+By default, this POC runs one to three repair passes with OpenAI vision repair. PNG diff remains the deterministic score and trigger.
 
-To use the brokered LLM vision repair step:
+To run the older local fixture/debug path without API credentials:
 
 ```bash
-cp .env.example .env.local
-# add OPENAI_API_KEY to .env.local
-npm run poc:transform:openai
+npm run poc:transform:deterministic -- --default-prompt
 ```
 
-`npm run poc:transform:openai` uses OpenAI for every LLM-shaped POC stage:
-
-- prompt -> HTML/CSS mockup
-- analysis -> block implementation plan
-- plan/mockup -> supported WordPress block tree
-- screenshots/diffs -> vision repair proposals
+That deterministic path exists only so committed POC artifacts can be regenerated without spending tokens.
 
 Optional settings:
 
@@ -103,4 +105,4 @@ Optional settings:
 - `POC_PROMPT`: non-interactive design prompt.
 - `POC_PROMPT_FILE`: path to a file containing the design prompt.
 
-The OpenAI mode sends the brief, generated mockup, deterministic analysis, block plan, block tree, rendered screenshot, PNG diff, and rendered HTML context to the Responses API depending on stage. It asks for structured JSON at each LLM stage. The real implementation should use the same stage boundaries but graduate from this POC's supported block subset to generated custom block source and richer WordPress package rendering.
+The POC sends the brief, generated mockup, deterministic analysis, block plan, block tree, rendered screenshot, PNG diff, and rendered HTML context to the Responses API depending on stage. It asks for structured JSON at each LLM stage. The real implementation should use the same stage boundaries but graduate from this POC's supported block subset to generated custom block source and richer WordPress package rendering.
