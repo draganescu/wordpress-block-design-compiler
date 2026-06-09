@@ -12,6 +12,7 @@ const element = requireFromRoot('@wordpress/element');
 
 const ROOT = path.resolve('poc/transform-poc');
 const OUT = path.join(ROOT, 'output');
+const DESIGN_SYSTEM_PROMPT = path.join(ROOT, 'system.design.md');
 const CONTEXT_CHAR_LIMIT = 18000;
 const CORE_ASSEMBLY_BLOCKS = [
   'core/group',
@@ -125,17 +126,12 @@ function assertLlmProvidersReady(providers) {
 }
 
 async function generateOpenAiMockup(prompt) {
+  const designSystemPrompt = fs.readFileSync(DESIGN_SYSTEM_PROMPT, 'utf8').trim();
   const result = await callOpenAiJson({
     schemaName: 'html_mockup',
     schema: htmlMockupSchema(),
-    instructions: [
-      'You generate polished standalone HTML/CSS mockups for a WordPress block transform POC.',
-      'Create a beautiful, visually specific one-page design from the user brief.',
-      'Use semantic sections with data-section attributes, meaningful class names, responsive CSS, and no external assets.',
-      'Return complete HTML and CSS separately. The HTML must link to ./style.css and must not include inline style tags.',
-      'Include rich layout, typography, responsive behavior, and realistic editable text content.',
-    ].join(' '),
-    inputText: `Design brief:\n${prompt}`,
+    instructions: designSystemPrompt,
+    inputText: `User request:\n${prompt}`,
   });
 
   return {

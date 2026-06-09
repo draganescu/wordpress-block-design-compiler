@@ -23,7 +23,7 @@ cp .env.example .env.local
 npm run poc:transform
 ```
 
-In an interactive terminal, the command asks for the design prompt to run. Press enter to use the default Kiln & Kind brief.
+In an interactive terminal, the command asks for the user request to run. Press enter to use the default Kiln & Kind request.
 
 `npm run poc:transform` is the real POC path and uses OpenAI for every LLM-shaped stage:
 
@@ -40,6 +40,8 @@ npm run poc:transform -- --prompt "Create a polished landing page for a neighbor
 npm run poc:transform -- --prompt-file ./brief.md
 npm run poc:transform -- --prompt-file ./brief.md --max-repair-passes=5
 ```
+
+The prompt file should contain only the user request. The reusable design-generation behavior lives in `poc/transform-poc/system.design.md`, which is loaded as the OpenAI HTML mockup stage instructions.
 
 It writes output under `poc/transform-poc/output/`.
 
@@ -105,7 +107,7 @@ Optional settings:
 - `POC_VISION_REPAIR_PROVIDER=auto`: uses OpenAI when `OPENAI_API_KEY` is present, otherwise the deterministic proxy.
 - `POC_VISION_REPAIR_PROVIDER=off`: measures visual drift without applying repairs.
 - `POC_VISION_MAX_REPAIR_PASSES=3`: maximum vision-informed repair passes. CLI aliases: `--max-repair-passes` or `--vision-repair-passes`.
-- `POC_PROMPT`: non-interactive design prompt.
-- `POC_PROMPT_FILE`: path to a file containing the design prompt.
+- `POC_PROMPT`: non-interactive user request.
+- `POC_PROMPT_FILE`: path to a file containing only the user request.
 
-The POC sends the brief, generated mockup, deterministic analysis, block plan, block tree, rendered screenshot, PNG diff, and rendered HTML context to the Responses API depending on stage. It asks for structured JSON at each LLM stage. The real implementation should use the same stage boundaries but graduate from this POC's supported block subset to generated custom block source and richer WordPress package rendering.
+The POC sends the user request, design system prompt, generated mockup, deterministic analysis, block plan, block tree, rendered screenshot, PNG diff, and rendered HTML context to the Responses API depending on stage. It asks for structured JSON at each LLM stage. The real implementation should use the same stage boundaries but graduate from this POC's supported block subset to generated custom block source and richer WordPress package rendering.
