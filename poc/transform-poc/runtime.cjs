@@ -9,7 +9,7 @@ const DEFAULT_PROMPT = [
 ].join(' ');
 
 const DEFAULT_OPENAI_TEXT_MODEL = 'gpt-4.1';
-const OPENAI_TIMEOUT_MS = 120000;
+const DEFAULT_OPENAI_TIMEOUT_MS = 300000;
 
 function loadEnvFiles() {
   const candidates = [
@@ -163,6 +163,8 @@ async function callOpenAiJson({ instructions, inputText, schema, schemaName, str
         },
       },
     }),
+  }, {
+    label: `${schemaName} (${model})`,
   });
 
   const responseText = await response.text();
@@ -174,15 +176,38 @@ async function callOpenAiJson({ instructions, inputText, schema, schemaName, str
   return JSON.parse(extractOpenAiOutputText(responseJson));
 }
 
-async function fetchWithTimeout(url, options) {
+async function fetchWithTimeout(url, options, { label = 'request', timeoutMs = resolveOpenAiTimeoutMs() } = {}) {
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), OPENAI_TIMEOUT_MS);
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
     return await fetch(url, { ...options, signal: controller.signal });
+  } catch (error) {
+    if (error && error.name === 'AbortError') {
+      throw new Error(`OpenAI ${label} timed out after ${formatDuration(timeoutMs)}. Increase OPENAI_TIMEOUT_MS for slower models or larger prompts.`);
+    }
+    throw error;
   } finally {
     clearTimeout(timeout);
   }
+}
+
+function resolveOpenAiTimeoutMs() {
+  const raw = process.env.OPENAI_TIMEOUT_MS || String(DEFAULT_OPENAI_TIMEOUT_MS);
+  const parsed = Number(raw);
+
+  if (!Number.isInteger(parsed) || parsed < 1000 || parsed > 1800000) {
+    throw new Error(`Invalid OPENAI_TIMEOUT_MS "${raw}". Use an integer from 1000 to 1800000.`);
+  }
+
+  return parsed;
+}
+
+function formatDuration(timeoutMs) {
+  if (timeoutMs % 1000 === 0) {
+    return `${timeoutMs / 1000}s`;
+  }
+  return `${timeoutMs}ms`;
 }
 
 function extractOpenAiOutputText(responseJson) {
@@ -228,11 +253,13 @@ module.exports = {
   DEFAULT_PROMPT,
   assertOpenAiReady,
   callOpenAiJson,
+  fetchWithTimeout,
   hasFlag,
   loadEnvFiles,
   readOption,
   resolvePrompt,
   resolveProvider,
+  resolveOpenAiTimeoutMs,
   stripOptions,
   truncateMiddle,
 };

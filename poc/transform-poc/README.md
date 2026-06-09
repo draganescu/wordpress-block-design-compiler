@@ -108,6 +108,7 @@ Optional settings:
 
 - `OPENAI_TEXT_MODEL`: defaults to `gpt-4.1`.
 - `OPENAI_VISION_MODEL`: defaults to `gpt-4.1`.
+- `OPENAI_TIMEOUT_MS`: defaults to `300000` milliseconds for each OpenAI Responses API request.
 - `OPENAI_BASE_URL`: defaults to `https://api.openai.com/v1`.
 - `OPENAI_API_KEY`: read from the process environment, `.env.local`, `.env`, `poc/transform-poc/.env.local`, or `poc/transform-poc/.env`.
 - `POC_LLM_PROVIDER=openai`: uses OpenAI for HTML, plan, assembly, and vision unless a stage override is passed.

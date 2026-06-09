@@ -3,7 +3,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { createRequire } = require('node:module');
 const { pathToFileURL } = require('node:url');
-const { loadEnvFiles, readOption } = require('./runtime.cjs');
+const { fetchWithTimeout, loadEnvFiles, readOption } = require('./runtime.cjs');
 
 loadEnvFiles();
 
@@ -27,7 +27,6 @@ const DEFAULT_MAX_REPAIR_PASSES = 3;
 const DEFAULT_REPAIR_PROVIDER = 'deterministic';
 const DEFAULT_OPENAI_VISION_MODEL = 'gpt-4.1';
 const OPENAI_RESPONSES_URL = `${process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1'}/responses`;
-const OPENAI_TIMEOUT_MS = 120000;
 const CONTEXT_CHAR_LIMIT = 18000;
 const DEFAULT_MAX_MISMATCH_PERCENT = 8;
 const DEFAULT_MAX_HEIGHT_DELTA = 80;
@@ -393,14 +392,20 @@ async function proposeOpenAiVisionRepairPass(context) {
 
   fs.writeFileSync(requestSummaryPath, renderOpenAiRequestSummary(context, requestBody), 'utf8');
 
-  const response = await fetchWithTimeout(OPENAI_RESPONSES_URL, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-      'Content-Type': 'application/json',
+  const response = await fetchWithTimeout(
+    OPENAI_RESPONSES_URL,
+    {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(requestBody),
     },
-    body: JSON.stringify(requestBody),
-  });
+    {
+      label: `vision repair pass ${context.passReport.pass} (${requestBody.model})`,
+    }
+  );
 
   const responseText = await response.text();
   if (!response.ok) {
@@ -977,17 +982,6 @@ function triggerForPass(passReport) {
     maxMismatchPercent: passReport.aggregate.maxMismatchPercent,
     maxHeightDelta: passReport.aggregate.maxHeightDelta,
   };
-}
-
-async function fetchWithTimeout(url, options) {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), OPENAI_TIMEOUT_MS);
-
-  try {
-    return await fetch(url, { ...options, signal: controller.signal });
-  } finally {
-    clearTimeout(timeout);
-  }
 }
 
 function imageDataUrl(filePath) {
