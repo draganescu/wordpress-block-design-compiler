@@ -3,6 +3,9 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { createRequire } = require('node:module');
 const { pathToFileURL } = require('node:url');
+const { loadEnvFiles, readOption } = require('./runtime.cjs');
+
+loadEnvFiles();
 
 const requireFromRoot = createRequire(path.join(process.cwd(), 'package.json'));
 const { chromium } = requireFromRoot('playwright');
@@ -258,7 +261,7 @@ function isAcceptable(passReport) {
 }
 
 function resolveRepairProvider() {
-  const requested = process.env.POC_VISION_REPAIR_PROVIDER || DEFAULT_REPAIR_PROVIDER;
+  const requested = readOption(process.argv.slice(2), ['--provider', '--vision-provider']) || process.env.POC_VISION_REPAIR_PROVIDER || DEFAULT_REPAIR_PROVIDER;
   if (requested === 'auto') {
     return process.env.OPENAI_API_KEY ? 'openai' : 'deterministic';
   }
@@ -831,8 +834,10 @@ function renderLlmVisionBrief(report) {
 Use this brief shape for the brokered LLM call. The POC can call OpenAI directly with:
 
 \`\`\`bash
-OPENAI_API_KEY=... POC_VISION_REPAIR_PROVIDER=openai npm run poc:transform
+npm run poc:transform:openai
 \`\`\`
+
+The OpenAI API key is read from the process environment or local env files such as \`.env.local\`.
 
 ## Inputs
 

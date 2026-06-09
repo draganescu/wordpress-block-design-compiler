@@ -4,6 +4,7 @@ const path = require('node:path');
 const { createRequire } = require('node:module');
 const parse5 = require('parse5');
 const csstree = require('css-tree');
+const { loadEnvFiles, resolvePrompt } = require('./runtime.cjs');
 
 const requireFromRoot = createRequire(path.join(process.cwd(), 'package.json'));
 const blocks = requireFromRoot('@wordpress/blocks');
@@ -12,15 +13,13 @@ const element = requireFromRoot('@wordpress/element');
 const ROOT = path.resolve('poc/transform-poc');
 const OUT = path.join(ROOT, 'output');
 
-function main() {
+loadEnvFiles();
+
+async function main() {
   resetOutput();
   registerPocBlocks();
 
-  const prompt = [
-    'Create a polished landing page for a ceramic studio called Kiln & Kind.',
-    'It should have a tactile editorial layout, a hero, a product story, an animated maker-values marquee,',
-    'a small collection grid, and a workshop inquiry form.',
-  ].join(' ');
+  const prompt = await resolvePrompt();
 
   const mockup = generateMockup(prompt);
   write('mockup/prompt.md', `${prompt}\n`);
@@ -737,4 +736,7 @@ function indent(value, spaces) {
     .join('\n');
 }
 
-main();
+main().catch((error) => {
+  process.stderr.write(`${error.stack || error.message}\n`);
+  process.exitCode = 1;
+});

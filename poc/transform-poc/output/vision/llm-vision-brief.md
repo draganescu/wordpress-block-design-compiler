@@ -3,8 +3,10 @@
 Use this brief shape for the brokered LLM call. The POC can call OpenAI directly with:
 
 ```bash
-OPENAI_API_KEY=... POC_VISION_REPAIR_PROVIDER=openai npm run poc:transform
+npm run poc:transform:openai
 ```
+
+The OpenAI API key is read from the process environment or local env files such as `.env.local`.
 
 ## Inputs
 

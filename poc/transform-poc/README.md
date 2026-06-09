@@ -21,6 +21,16 @@ Run it from the repo root:
 npm run poc:transform
 ```
 
+In an interactive terminal, the command asks for the design prompt to run. Press enter to use the default Kiln & Kind fixture.
+
+Non-interactive prompt options:
+
+```bash
+POC_PROMPT="Create a polished landing page for a neighborhood florist..." npm run poc:transform
+npm run poc:transform -- --prompt "Create a polished landing page for a neighborhood florist..."
+npm run poc:transform -- --prompt-file ./brief.md
+```
+
 It writes deterministic output under `poc/transform-poc/output/`.
 
 The command also writes vision artifacts under `poc/transform-poc/output/vision/`:
@@ -66,14 +76,19 @@ By default, this POC runs one to three repair passes with a deterministic proxy 
 To use the brokered LLM vision repair step:
 
 ```bash
-OPENAI_API_KEY=... POC_VISION_REPAIR_PROVIDER=openai npm run poc:transform
+cp .env.example .env.local
+# add OPENAI_API_KEY to .env.local
+npm run poc:transform:openai
 ```
 
 Optional settings:
 
 - `OPENAI_VISION_MODEL`: defaults to `gpt-4.1`.
 - `OPENAI_BASE_URL`: defaults to `https://api.openai.com/v1`.
+- `OPENAI_API_KEY`: read from the process environment, `.env.local`, `.env`, `poc/transform-poc/.env.local`, or `poc/transform-poc/.env`.
 - `POC_VISION_REPAIR_PROVIDER=auto`: uses OpenAI when `OPENAI_API_KEY` is present, otherwise the deterministic proxy.
 - `POC_VISION_REPAIR_PROVIDER=off`: measures visual drift without applying repairs.
+- `POC_PROMPT`: non-interactive design prompt.
+- `POC_PROMPT_FILE`: path to a file containing the design prompt.
 
 The OpenAI mode sends the mockup, rendered screenshot, PNG diff, block plan, block tree, and rendered HTML context to the Responses API. It asks for structured JSON containing an observed discrepancy, likely cause, preferred production repair location, and scoped CSS patch for the current POC. The real implementation should use that diagnosis to decide whether the fix belongs in the block tree, core block attributes/supports, custom block source, or narrow bridge CSS.
