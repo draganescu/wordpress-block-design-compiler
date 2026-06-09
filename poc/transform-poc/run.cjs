@@ -13,7 +13,7 @@ const element = requireFromRoot('@wordpress/element');
 const ROOT = path.resolve('poc/transform-poc');
 const OUT = path.join(ROOT, 'output');
 const CONTEXT_CHAR_LIMIT = 18000;
-const SUPPORTED_ASSEMBLY_BLOCKS = new Set([
+const CORE_ASSEMBLY_BLOCKS = [
   'core/group',
   'core/columns',
   'core/column',
@@ -22,9 +22,12 @@ const SUPPORTED_ASSEMBLY_BLOCKS = new Set([
   'core/buttons',
   'core/button',
   'core/html',
+];
+const FIXED_CUSTOM_BLOCKS = [
   'poc/kind-marquee',
   'poc/studio-inquiry',
-]);
+];
+const BASE_ASSEMBLY_BLOCKS = [...CORE_ASSEMBLY_BLOCKS, ...FIXED_CUSTOM_BLOCKS];
 
 loadEnvFiles();
 
@@ -42,12 +45,21 @@ async function main() {
   write('mockup/style.css', mockup.css);
 
   const analysis = analyzeMockup(mockup.html, mockup.css);
+  const contentInventory = extractContentInventory(mockup.html);
   writeJson('analysis/analysis.json', analysis);
+  writeJson('analysis/content-inventory.json', contentInventory);
 
   const plan = providers.plan === 'openai' ? await planBlocksWithOpenAi({ prompt, mockup, analysis }) : planBlocks(analysis);
   writeJson('plan/block-implementation-plan.json', plan);
 
-  const assembly = providers.assembly === 'openai' ? await assembleBlocksWithOpenAi({ prompt, mockup, analysis, plan }) : assembleBlocks(plan);
+  registerPlannedCustomBlocks(plan);
+  const supportedBlockNames = supportedAssemblyBlockNames(plan);
+  const assembly =
+    providers.assembly === 'openai'
+      ? await assembleBlocksWithOpenAi({ prompt, mockup, analysis, plan, contentInventory, supportedBlockNames })
+      : assembleBlocks(plan);
+  const contentRepair = repairMissingAssemblyContent(assembly.blockTree, contentInventory, { plan });
+  assembly.blockMarkup = blocks.serialize(assembly.blockTree);
   writeJson('wordpress/block-tree.json', simplifyBlocks(assembly.blockTree));
   write('wordpress/content.html', assembly.blockMarkup);
   writeCustomBlockSource(plan);
@@ -61,7 +73,7 @@ async function main() {
   write('rendered/rendered-fragment.html', renderedFragment);
   write('rendered/rendered-blocks.html', renderedHtml);
 
-  const report = buildReport({ prompt, analysis, plan, assembly, providers });
+  const report = buildReport({ prompt, analysis, plan, assembly, providers, contentRepair });
   writeJson('reports/summary.json', report);
   write('reports/summary.md', renderMarkdownReport(report));
 
@@ -170,11 +182,26 @@ async function planBlocksWithOpenAi({ prompt, mockup, analysis }) {
 function normalizePlan(plan, analysis) {
   const sections = Array.isArray(plan.sections) && plan.sections.length ? plan.sections : planBlocks(analysis).sections;
   const customBlocks = Array.isArray(plan.customBlocks) ? plan.customBlocks : [];
-  return {
-    version: Number(plan.version || 1),
-    thesis: String(plan.thesis || 'OpenAI-generated block implementation plan.'),
-    tokens: plan.tokens && typeof plan.tokens === 'object' && !Array.isArray(plan.tokens) ? plan.tokens : analysis.css.customProperties,
-    sections: sections.map((section) => ({
+  const customBlocksByName = new Map(
+    customBlocks.map((block) => {
+      const normalized = normalizeCustomBlockPlan(block);
+      return [normalized.name, normalized];
+    })
+  );
+  const customBlocksBySlug = new Map([...customBlocksByName.values()].map((block) => [block.slug, block]));
+  const normalizedSections = sections.map((section) => {
+    const customBlockName = normalizeSectionCustomBlockName(section.customBlock, customBlocksBySlug);
+    if (customBlockName && !customBlocksByName.has(customBlockName)) {
+      const blockSlug = blockSlugFromName(customBlockName);
+      customBlocksByName.set(customBlockName, {
+        name: customBlockName,
+        slug: blockSlug,
+        reason: `Custom static block planned for ${section.id || blockSlug}.`,
+        controls: Array.isArray(section.editableFields) ? section.editableFields.map(String) : [],
+      });
+    }
+
+    return {
       id: String(section.id || 'section'),
       sourceSelector: String(section.sourceSelector || section.id || 'section'),
       strategy: ['core-assembly', 'custom-block', 'html-block'].includes(section.strategy) ? section.strategy : 'core-assembly',
@@ -182,16 +209,56 @@ function normalizePlan(plan, analysis) {
         considered: Array.isArray(section.coreAttempt && section.coreAttempt.considered) ? section.coreAttempt.considered.map(String) : ['core/group'],
         verdict: String((section.coreAttempt && section.coreAttempt.verdict) || 'Use editable blocks where possible.'),
       },
-      customBlock: section.customBlock || null,
+      customBlock: customBlockName,
       editableFields: Array.isArray(section.editableFields) ? section.editableFields.map(String) : [],
-    })),
-    customBlocks: customBlocks.map((block) => ({
-      name: String(block.name || `poc/${block.slug || 'custom-static'}`),
-      slug: slug(String(block.slug || block.name || 'custom-static')),
-      reason: String(block.reason || 'OpenAI planned custom block.'),
-      controls: Array.isArray(block.controls) ? block.controls.map(String) : [],
-    })),
+    };
+  });
+
+  return {
+    version: Number(plan.version || 1),
+    thesis: String(plan.thesis || 'OpenAI-generated block implementation plan.'),
+    tokens: plan.tokens && typeof plan.tokens === 'object' && !Array.isArray(plan.tokens) ? plan.tokens : analysis.css.customProperties,
+    sections: normalizedSections,
+    customBlocks: [...customBlocksByName.values()],
   };
+}
+
+function normalizeCustomBlockPlan(block) {
+  const blockSlug = slug(String(block.slug || block.name || 'custom-static')) || 'custom-static';
+  const rawName = String(block.name || '').trim();
+  const name = canonicalBlockName(rawName.includes('/') ? rawName : blockSlug, blockSlug);
+
+  return {
+    name,
+    slug: blockSlugFromName(name),
+    reason: String(block.reason || 'OpenAI planned custom block.'),
+    controls: Array.isArray(block.controls) ? block.controls.map(String) : [],
+  };
+}
+
+function normalizeSectionCustomBlockName(value, customBlocksBySlug) {
+  if (!value) return null;
+
+  const candidateSlug = slug(String(value).includes('/') ? String(value).split('/').pop() : String(value));
+  if (candidateSlug && customBlocksBySlug.has(candidateSlug)) {
+    return customBlocksBySlug.get(candidateSlug).name;
+  }
+
+  return canonicalBlockName(value, candidateSlug || 'custom-static');
+}
+
+function canonicalBlockName(value, fallbackSlug) {
+  const raw = String(value || '').trim();
+  if (raw.includes('/')) {
+    const [rawNamespace, rawBlockSlug] = raw.split('/');
+    return `${slug(rawNamespace) || 'poc'}/${slug(rawBlockSlug) || fallbackSlug || 'custom-static'}`;
+  }
+
+  return `poc/${slug(raw) || fallbackSlug || 'custom-static'}`;
+}
+
+function blockSlugFromName(name) {
+  return slug(String(name).split('/').pop() || 'custom-static') || 'custom-static';
 }
 
 function blockPlanSchema() {
@@ -248,16 +315,21 @@ function blockPlanSchema() {
   };
 }
 
-async function assembleBlocksWithOpenAi({ prompt, mockup, analysis, plan }) {
+async function assembleBlocksWithOpenAi({ prompt, mockup, analysis, plan, contentInventory, supportedBlockNames }) {
+  const plannedCustomBlocks = plan.customBlocks
+    .map((block) => `- ${block.name}: ${block.reason} Controls: ${block.controls.join(', ') || 'source html plus editable field inventory'}`)
+    .join('\n');
   const result = await callOpenAiJson({
     schemaName: 'block_tree_assembly',
-    schema: blockTreeAssemblySchema(),
+    schema: blockTreeAssemblySchema(supportedBlockNames),
     strict: false,
     instructions: [
       'You assemble a WordPress static block tree JSON for a POC renderer.',
-      'Use only supported block names: core/group, core/columns, core/column, core/heading, core/paragraph, core/buttons, core/button, core/html, poc/kind-marquee, poc/studio-inquiry.',
+      `Use only supported block names: ${supportedBlockNames.join(', ')}.`,
       'Extract real text, links, repeated items, and form fields from the HTML mockup.',
-      'Prefer core blocks for layout/text/buttons/columns. Use poc/kind-marquee for marquee-like repeated text. Use poc/studio-inquiry for forms. Use core/html sparingly for visual fragments that cannot fit the supported editable blocks.',
+      'Every heading and paragraph from the content inventory must appear in a block attribute. Never leave core/heading content, core/paragraph content, core/button text, or core/html html empty when source content exists.',
+      'Prefer core blocks for layout/text/buttons/columns. Use planned custom blocks for sections the plan marked custom-block. Use core/html sparingly for visual fragments that cannot fit core blocks or a planned custom block.',
+      'When using a planned custom block, attributesJson must include sourceSelector, html with the exact source subtree for this static POC render, and editableFields with extracted text/link/control values.',
       'For every block, attributesJson must be a valid JSON object string containing the attributes for that block. Use "{}" when there are no attributes.',
       'Return a block tree that can render a close visual approximation using the generated CSS and the POC custom block CSS.',
     ].join(' '),
@@ -265,19 +337,21 @@ async function assembleBlocksWithOpenAi({ prompt, mockup, analysis, plan }) {
       `User prompt:\n${prompt}`,
       `Analysis:\n${JSON.stringify(analysis, null, 2)}`,
       `Plan:\n${JSON.stringify(plan, null, 2)}`,
+      `Planned custom static blocks:\n${plannedCustomBlocks || '(none)'}`,
+      `Content inventory that must be preserved:\n${JSON.stringify(contentInventory, null, 2)}`,
       `HTML:\n${truncateMiddle(mockup.html, CONTEXT_CHAR_LIMIT)}`,
       `CSS selectors and variables:\n${JSON.stringify(analysis.css, null, 2)}`,
     ].join('\n\n'),
   });
 
-  const blockTree = simplifiedToBlocks(result.blockTree || []);
+  const blockTree = simplifiedToBlocks(result.blockTree || [], new Set(supportedBlockNames));
   return {
     blockTree,
     blockMarkup: blocks.serialize(blockTree),
   };
 }
 
-function blockTreeAssemblySchema() {
+function blockTreeAssemblySchema(supportedBlockNames = BASE_ASSEMBLY_BLOCKS) {
   return {
     type: 'object',
     additionalProperties: false,
@@ -286,13 +360,13 @@ function blockTreeAssemblySchema() {
       notes: { type: 'string' },
       blockTree: {
         type: 'array',
-        items: blockNodeSchema(0),
+        items: blockNodeSchema(0, supportedBlockNames),
       },
     },
   };
 }
 
-function blockNodeSchema(depth) {
+function blockNodeSchema(depth, supportedBlockNames) {
   const childSchema =
     depth >= 5
       ? {
@@ -306,7 +380,7 @@ function blockNodeSchema(depth) {
         }
       : {
           type: 'array',
-          items: blockNodeSchema(depth + 1),
+          items: blockNodeSchema(depth + 1, supportedBlockNames),
         };
 
   return {
@@ -316,7 +390,7 @@ function blockNodeSchema(depth) {
     properties: {
       name: {
         type: 'string',
-        enum: ['core/group', 'core/columns', 'core/column', 'core/heading', 'core/paragraph', 'core/buttons', 'core/button', 'core/html', 'poc/kind-marquee', 'poc/studio-inquiry'],
+        enum: supportedBlockNames,
       },
       attributesJson: { type: 'string' },
       innerBlocks: childSchema,
@@ -324,12 +398,12 @@ function blockNodeSchema(depth) {
   };
 }
 
-function simplifiedToBlocks(blockList) {
+function simplifiedToBlocks(blockList, supportedBlocks = new Set(BASE_ASSEMBLY_BLOCKS)) {
   return blockList
-    .filter((block) => block && SUPPORTED_ASSEMBLY_BLOCKS.has(block.name))
+    .filter((block) => block && supportedBlocks.has(block.name))
     .map((block) => {
       const attributes = parseBlockAttributes(block);
-      return blocks.createBlock(block.name, attributes, simplifiedToBlocks(block.innerBlocks || []));
+      return blocks.createBlock(block.name, attributes, simplifiedToBlocks(block.innerBlocks || [], supportedBlocks));
     });
 }
 
@@ -458,7 +532,7 @@ h2 { font-size: clamp(38px, 5vw, 76px); max-width: 820px; }
 
 function analyzeMockup(html, css) {
   const document = parse5.parse(html);
-  const sections = findElements(document, 'section').map((section, index) => {
+  const sections = findSectionRoots(document).map((section, index) => {
     const className = attr(section, 'class') || '';
     const heading = findElements(section).find((node) => /^h[1-6]$/.test(node.tagName));
     const hasForm = findElements(section, 'form').length > 0;
@@ -467,6 +541,7 @@ function analyzeMockup(html, css) {
     return {
       id: attr(section, 'data-section') || attr(section, 'id') || `section-${index + 1}`,
       selector: selector(section),
+      tagName: section.tagName,
       classes: className.split(/\s+/).filter(Boolean),
       heading: heading ? clean(text(heading)) : null,
       textLength: clean(text(section)).length,
@@ -500,6 +575,241 @@ function analyzeMockup(html, css) {
       selectors: [...new Set(selectors)],
     },
   };
+}
+
+function extractContentInventory(html) {
+  const document = parse5.parse(html);
+  return {
+    sections: findSectionRoots(document).map((node, index) => ({
+      id: attr(node, 'data-section') || attr(node, 'id') || `section-${index + 1}`,
+      selector: selector(node),
+      tagName: node.tagName,
+      className: attr(node, 'class') || '',
+      text: clean(text(node)),
+      html: outerHtml(node),
+      editableFields: editableFieldsForNode(node),
+    })),
+    headings: findElements(document)
+      .filter((node) => /^h[1-6]$/.test(node.tagName))
+      .map((node) => ({
+        level: Number(node.tagName.slice(1)),
+        className: attr(node, 'class') || '',
+        content: clean(text(node)),
+      }))
+      .filter((item) => item.content),
+    paragraphs: findElements(document, 'p')
+      .map((node) => ({
+        className: attr(node, 'class') || '',
+        content: clean(text(node)),
+      }))
+      .filter((item) => item.content),
+    links: findElements(document, 'a')
+      .map((node) => ({
+        className: attr(node, 'class') || '',
+        text: clean(text(node)),
+        url: attr(node, 'href') || '',
+      }))
+      .filter((item) => item.text || item.url),
+    htmlFragments: findHtmlFragments(document),
+  };
+}
+
+function findSectionRoots(document) {
+  return findElements(document).filter((node) => {
+    if (attr(node, 'data-section')) return true;
+    return ['section', 'header', 'footer'].includes(node.tagName);
+  });
+}
+
+function editableFieldsForNode(node) {
+  return {
+    headings: findElements(node)
+      .filter((child) => /^h[1-6]$/.test(child.tagName))
+      .map((child) => ({
+        level: Number(child.tagName.slice(1)),
+        className: attr(child, 'class') || '',
+        content: clean(text(child)),
+      }))
+      .filter((item) => item.content),
+    paragraphs: findElements(node, 'p')
+      .map((child) => ({
+        className: attr(child, 'class') || '',
+        content: clean(text(child)),
+      }))
+      .filter((item) => item.content),
+    links: findElements(node, 'a')
+      .map((child) => ({
+        className: attr(child, 'class') || '',
+        text: clean(text(child)),
+        url: attr(child, 'href') || '',
+      }))
+      .filter((item) => item.text || item.url),
+  };
+}
+
+function findHtmlFragments(root) {
+  const fragments = [];
+
+  function visit(node, insideCandidate) {
+    if (!node || !node.tagName) {
+      for (const child of node.childNodes || []) visit(child, insideCandidate);
+      return;
+    }
+
+    const candidate = isHtmlFragmentCandidate(node);
+    if (candidate && !insideCandidate) {
+      fragments.push({
+        selector: selector(node),
+        className: attr(node, 'class') || '',
+        html: outerHtml(node),
+      });
+    }
+
+    for (const child of node.childNodes || []) {
+      visit(child, insideCandidate || candidate);
+    }
+  }
+
+  visit(root, false);
+  return fragments;
+}
+
+function isHtmlFragmentCandidate(node) {
+  const tagName = node.tagName;
+  const className = attr(node, 'class') || '';
+  if (!className && !['nav', 'blockquote'].includes(tagName)) return false;
+  if (!['div', 'nav', 'blockquote', 'span'].includes(tagName)) return false;
+  if (findElements(node).some((child) => /^h[1-6]$/.test(child.tagName) || child.tagName === 'p' || child.tagName === 'form')) return false;
+
+  return /bg|light|photo|circle|quote|icon|nav|object|shape|blob|decor|visual/i.test(`${className} ${tagName}`);
+}
+
+function outerHtml(node) {
+  const attrs = (node.attrs || [])
+    .map((nodeAttr) => ` ${nodeAttr.name}="${escapeHtml(nodeAttr.value)}"`)
+    .join('');
+  return `<${node.tagName}${attrs}>${parse5.serialize(node)}</${node.tagName}>`;
+}
+
+function repairMissingAssemblyContent(blockTree, inventory, { plan = null } = {}) {
+  const customBlockSources = new Map();
+  for (const section of (plan && plan.sections) || []) {
+    if (section.customBlock) {
+      customBlockSources.set(section.customBlock, section.sourceSelector || section.id);
+    }
+  }
+
+  const state = {
+    sections: new Set(),
+    headings: new Set(),
+    paragraphs: new Set(),
+    links: new Set(),
+    htmlFragments: new Set(),
+    repairs: [],
+  };
+
+  visitBlocks(blockTree, (block) => {
+    const attributes = block.attributes || {};
+
+    if (customBlockSources.has(block.name) && !hasText(attributes.html)) {
+      const expectedSource = attributes.sourceSelector || customBlockSources.get(block.name);
+      const item = takeInventoryItem(inventory.sections, state.sections, (candidate) => matchesSection(candidate, expectedSource));
+      if (item) {
+        attributes.sourceSelector = attributes.sourceSelector || item.selector;
+        attributes.html = item.html;
+        attributes.editableFields = attributes.editableFields || item.editableFields;
+        state.repairs.push({ block: block.name, field: 'html', selector: item.selector });
+      }
+    }
+
+    if (block.name === 'core/heading' && !hasText(attributes.content)) {
+      const item = takeInventoryItem(inventory.headings, state.headings, (candidate) => {
+        const sameClass = attributes.className && candidate.className === attributes.className;
+        const sameLevel = attributes.level && Number(attributes.level) === Number(candidate.level);
+        return sameClass || sameLevel;
+      });
+      if (item) {
+        attributes.content = item.content;
+        if (!attributes.level) attributes.level = item.level;
+        if (!attributes.className && item.className) attributes.className = item.className;
+        state.repairs.push({ block: block.name, field: 'content', value: item.content });
+      }
+    }
+
+    if (block.name === 'core/paragraph' && !hasText(attributes.content)) {
+      const item = takeInventoryItem(inventory.paragraphs, state.paragraphs, (candidate) => attributes.className && candidate.className === attributes.className);
+      if (item) {
+        attributes.content = item.content;
+        if (!attributes.className && item.className) attributes.className = item.className;
+        state.repairs.push({ block: block.name, field: 'content', value: item.content });
+      }
+    }
+
+    if (block.name === 'core/button' && !hasText(attributes.text)) {
+      const item = takeInventoryItem(inventory.links, state.links, (candidate) => attributes.url && candidate.url === attributes.url);
+      if (item) {
+        attributes.text = item.text;
+        if (!attributes.url) attributes.url = item.url;
+        state.repairs.push({ block: block.name, field: 'text', value: item.text });
+      }
+    }
+
+    if (block.name === 'core/html' && !hasText(attributes.html)) {
+      const item = takeInventoryItem(inventory.htmlFragments, state.htmlFragments);
+      if (item) {
+        attributes.html = item.html;
+        state.repairs.push({ block: block.name, field: 'html', selector: item.selector });
+      }
+    }
+
+    block.attributes = attributes;
+  });
+
+  return {
+    repairedBlocks: state.repairs.length,
+    repairs: state.repairs,
+  };
+}
+
+function matchesSection(candidate, expectedSource) {
+  if (!expectedSource) return false;
+
+  const source = String(expectedSource);
+  return (
+    candidate.selector === source ||
+    candidate.id === source ||
+    source.includes(candidate.id) ||
+    (candidate.className && source.includes(candidate.className)) ||
+    (source.includes('#') && candidate.selector.includes(source)) ||
+    (source.includes('.') && source.split('.').some((part) => part && candidate.className.split(/\s+/).includes(part)))
+  );
+}
+
+function visitBlocks(blockTree, callback) {
+  for (const block of blockTree || []) {
+    callback(block);
+    visitBlocks(block.innerBlocks || [], callback);
+  }
+}
+
+function hasText(value) {
+  return typeof value === 'string' && value.trim().length > 0;
+}
+
+function takeInventoryItem(items, used, preferred = null) {
+  const preferredIndex = preferred ? items.findIndex((item, index) => !used.has(index) && preferred(item)) : -1;
+  if (preferredIndex >= 0) {
+    used.add(preferredIndex);
+    return items[preferredIndex];
+  }
+
+  const nextIndex = items.findIndex((_, index) => !used.has(index));
+  if (nextIndex >= 0) {
+    used.add(nextIndex);
+    return items[nextIndex];
+  }
+
+  return null;
 }
 
 function planBlocks(analysis) {
@@ -722,7 +1032,7 @@ function registerPocBlocks() {
     attributes: {
       html: { type: 'string' },
     },
-    save: ({ attributes }) => element.createElement('div', { className: 'wp-block-html', dangerouslySetInnerHTML: { __html: attributes.html || '' } }),
+    save: ({ attributes }) => element.createElement(element.RawHTML, null, attributes.html || ''),
   });
 
   safeRegister('poc/kind-marquee', {
@@ -791,6 +1101,28 @@ function registerPocBlocks() {
   });
 }
 
+function registerPlannedCustomBlocks(plan) {
+  for (const customBlock of plan.customBlocks) {
+    if (FIXED_CUSTOM_BLOCKS.includes(customBlock.name)) continue;
+    safeRegister(customBlock.name, {
+      apiVersion: 3,
+      title: titleCase(customBlock.slug),
+      category: 'design',
+      attributes: {
+        sourceSelector: { type: 'string' },
+        html: { type: 'string' },
+        editableFields: { type: 'object' },
+        className: { type: 'string' },
+      },
+      save: ({ attributes }) => element.createElement(element.RawHTML, null, attributes.html || ''),
+    });
+  }
+}
+
+function supportedAssemblyBlockNames(plan) {
+  return [...new Set([...BASE_ASSEMBLY_BLOCKS, ...plan.customBlocks.map((block) => block.name)])];
+}
+
 function renderField(field) {
   if (field.type === 'textarea') {
     return element.createElement(
@@ -838,28 +1170,47 @@ function safeRegister(name, settings) {
 function writeCustomBlockSource(plan) {
   for (const customBlock of plan.customBlocks) {
     const base = `wordpress/blocks/${customBlock.slug}`;
+    const attributes = customBlockAttributes(customBlock.name);
     writeJson(`${base}/block.json`, {
       apiVersion: 3,
       name: customBlock.name,
       title: titleCase(customBlock.slug),
       category: customBlock.name.includes('inquiry') ? 'forms' : 'design',
-      attributes: customBlock.name.includes('marquee')
-        ? {
-            items: { type: 'array', default: [] },
-            speedSeconds: { type: 'number', default: 18 },
-            tone: { type: 'string', default: 'clay' },
-          }
-        : {
-            eyebrow: { type: 'string' },
-            heading: { type: 'string' },
-            fields: { type: 'array', default: [] },
-            buttonText: { type: 'string' },
-          },
+      attributes,
     });
-    write(`${base}/edit.js`, `// POC edit component sketch.\n// Controls: ${customBlock.controls.join(', ')}\n`);
+    write(
+      `${base}/edit.js`,
+      `// POC edit component sketch.\n// Planned controls: ${customBlock.controls.join(', ') || 'source html plus editable field inventory'}\n`
+    );
     write(`${base}/save.js`, `// POC save implementation lives in run.cjs for executable comparison.\n`);
-    write(`${base}/style.css`, customBlockCss());
+    write(`${base}/style.css`, FIXED_CUSTOM_BLOCKS.includes(customBlock.name) ? customBlockCss() : '/* Generated static block CSS is currently supplied by the page mockup stylesheet. */\n');
   }
+}
+
+function customBlockAttributes(name) {
+  if (name === 'poc/kind-marquee') {
+    return {
+      items: { type: 'array', default: [] },
+      speedSeconds: { type: 'number', default: 18 },
+      tone: { type: 'string', default: 'clay' },
+    };
+  }
+
+  if (name === 'poc/studio-inquiry') {
+    return {
+      eyebrow: { type: 'string' },
+      heading: { type: 'string' },
+      fields: { type: 'array', default: [] },
+      buttonText: { type: 'string' },
+    };
+  }
+
+  return {
+    sourceSelector: { type: 'string' },
+    html: { type: 'string' },
+    editableFields: { type: 'object' },
+    className: { type: 'string' },
+  };
 }
 
 function renderFullHtml({ title, css, body }) {
@@ -897,10 +1248,11 @@ function customBlockCss() {
 .wp-block-poc-studio-inquiry .inquiry-columns { --wp--columns-count: 2; align-items: start; margin: 0; }`;
 }
 
-function buildReport({ prompt, analysis, plan, assembly, providers }) {
+function buildReport({ prompt, analysis, plan, assembly, providers, contentRepair }) {
   return {
     prompt,
     providers,
+    contentRepair,
     sectionsAnalyzed: analysis.sections.length,
     sectionStrategies: plan.sections.map((section) => ({
       id: section.id,
@@ -929,6 +1281,7 @@ function renderMarkdownReport(report) {
 - Blocks in assembled tree: ${report.blockCount}
 - Custom blocks: ${report.customBlocks.join(', ')}
 - LLM providers: html=${report.providers.html}, plan=${report.providers.plan}, assembly=${report.providers.assembly}
+- Content repairs applied: ${report.contentRepair.repairedBlocks}
 
 ## Section Strategies
 
