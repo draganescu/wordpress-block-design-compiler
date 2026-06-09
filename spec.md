@@ -46,15 +46,18 @@ The tool should separate creative design from WordPress conversion.
 
 1. The design phase should be open, expressive, and guided. It should let the model produce an excellent modern HTML/CSS/JS design without prematurely constraining itself to core WordPress blocks.
 2. The conversion phase should be disciplined. It should deeply inspect the HTML, CSS, layout, assets, and interactions before planning a block tree.
-3. The output should use the right mix of core blocks, custom static blocks, and rare core/html blocks.
+3. The output should use the right mix of LLM-authored core block assembly, LLM-authored custom blocks, and rare core/html blocks.
 4. Every non-core choice should be justified in a conversion plan.
 5. The tool should preview block output without requiring a full WordPress install whenever possible.
+
+The point is not to build a generic deterministic HTML-to-Gutenberg compiler. Existing tools such as `html-to-gutenberg` compile specially annotated HTML templates into Gutenberg block source. This project should do something different: use the LLM to understand an LLM-designed mockup, decide the editor model, author the custom block code, choose RichText/MediaUpload/InnerBlocks/InspectorControls patterns, and assemble core plus custom blocks into a result that preserves both visual design and editor usefulness.
 
 ## Non-Goals
 
 - Do not require a hosted backend for the default workflow.
 - Do not depend on one agent vendor.
 - Do not go straight from prompt to block markup.
+- Do not reimplement an attribute/template-based HTML-to-Gutenberg compiler.
 - Do not treat `core/html` as the easy answer for fidelity.
 - Do not generate classic themes as the primary output.
 - Do not require WordPress just to inspect a static block tree preview.
@@ -152,29 +155,30 @@ Analysis should include:
 
 This stage should use structured parsers and browser rendering where useful. It should not rely only on model interpretation of raw HTML.
 
-### 4. Conversion Plan
+### 4. LLM Block Implementation Plan
 
-The conversion plan is the central artifact. The tool must plan before emitting block markup.
+The block implementation plan is the central artifact. The tool must plan before emitting block markup or custom block code.
 
 The plan should include:
 
 - normalized design tokens: colors, spacing, typography, radii, shadows, layout primitives;
 - target block tree;
-- mapping from each mockup node/section to WordPress blocks;
-- selected block type for each section;
+- mapping from each mockup section to either core block assembly, custom block implementation, or justified HTML fallback;
+- selected implementation strategy for each section;
 - editability contract for text, images, links, buttons, lists, cards, forms, and repeated items;
+- editor UI decisions: RichText fields, MediaUpload fields, URL controls, InspectorControls, InnerBlocks templates, template locks, and content-only editing modes where useful;
 - fidelity risks;
 - fallback decisions;
-- custom static block definitions;
+- custom block definitions and source-file plan;
 - specific reasons for any `core/html` block;
 - expected validation checks;
 - expected pixel-diff checkpoints.
 
 The plan should be serializable JSON, reviewable by agents, and suitable for deterministic tests.
 
-### 5. Block Strategy
+### 5. LLM Block Strategy
 
-The converter should choose the least custom block type that preserves both fidelity and useful editability.
+The LLM should choose the least custom implementation that preserves both fidelity and useful editability. Deterministic code should not try to infer every block choice through hard-coded HTML rules; it should provide structured evidence, validate the plan, validate emitted code/markup, and report failures.
 
 #### Core Blocks
 
@@ -194,11 +198,11 @@ Use core blocks when they can represent the design with acceptable fidelity:
 - query where appropriate;
 - navigation when appropriate.
 
-Core blocks are preferred when content remains cleanly editable and block support styles can express the design.
+Core blocks are preferred when the LLM can assemble them into cleanly editable content and block support styles can express the design without brittle nesting.
 
 #### Custom Static Blocks
 
-Generate custom static blocks when core blocks are insufficient but the result should still be editor-editable.
+Ask the LLM to generate custom static blocks when core blocks are insufficient but the result should still be editor-editable.
 
 Use custom static blocks for:
 
@@ -213,9 +217,10 @@ Use custom static blocks for:
 Static block expectations:
 
 - `block.json`;
-- editor component with meaningful controls;
+- editor component with meaningful controls chosen by the LLM;
 - save implementation that emits deterministic markup;
 - attributes for user-editable content;
+- appropriate use of `RichText`, `MediaUpload`, `URLInput`, `InspectorControls`, `InnerBlocks`, and block supports;
 - front-end script only when behavior requires it;
 - styles isolated enough to avoid theme collisions;
 - no server render requirement for the default path.
@@ -234,7 +239,7 @@ Acceptable reasons include:
 
 Unacceptable reasons:
 
-- the converter failed to map normal headings, paragraphs, images, buttons, or sections;
+- the LLM failed to model normal headings, paragraphs, images, buttons, or sections as editable content;
 - raw HTML is used for an entire page section without analysis;
 - raw HTML is used to avoid building a custom block that the plan says is needed.
 
@@ -243,14 +248,14 @@ Unacceptable reasons:
 Outputs should include:
 
 - WordPress block markup;
-- generated custom static block source, if needed;
+- LLM-generated custom static block source, if needed;
 - block registration metadata;
 - CSS/assets;
 - a conversion report;
 - preview bundle;
 - validation report.
 
-The block serializer should use WordPress-compatible block delimiters and should round-trip through WordPress block parsing/serialization.
+The emitted block markup should use WordPress-compatible block delimiters and should round-trip through WordPress block parsing/serialization. The deterministic layer may serialize and normalize known structures, but it should not be the primary intelligence that converts arbitrary HTML into blocks.
 
 ### 7. Preview Without WordPress
 
@@ -381,7 +386,7 @@ The exact layout can change, but every major stage should leave inspectable file
 wp-block-compiler design --prompt "..." --out artifact/mockup
 wp-block-compiler analyze artifact/mockup --out artifact/analysis
 wp-block-compiler plan artifact/mockup artifact/analysis --out artifact/plan
-wp-block-compiler convert artifact/plan --out artifact/wordpress
+wp-block-compiler assemble artifact/plan --out artifact/wordpress
 wp-block-compiler preview artifact/wordpress --out artifact/preview
 wp-block-compiler validate artifact --out artifact/reports
 wp-block-compiler run --prompt "..." --out artifact
@@ -437,7 +442,7 @@ Adapters should stream structured events:
 ## Implementation Principles
 
 - Keep the core deterministic where possible.
-- Use model calls for creative generation and hard judgement, not for things parsers can do.
+- Use model calls for creative generation, editor-model decisions, custom block authoring, and block assembly. Use parsers and validators for facts and enforcement.
 - Make every fallback visible.
 - Prefer structured JSON contracts between stages.
 - Keep agent wrappers thin.
@@ -468,16 +473,16 @@ Adapters should stream structured events:
 - Capture viewport layout data.
 - Emit analysis JSON.
 
-### Slice 4: Planner
+### Slice 4: LLM Planner
 
-- Generate conversion plan from mockup and analysis.
+- Generate block implementation plan from mockup and analysis.
 - Require explicit custom-block and HTML-block rationales.
 - Add plan validation.
 
-### Slice 5: Converter
+### Slice 5: LLM Block Assembly
 
-- Emit core block markup.
-- Emit custom static block source.
+- Ask the LLM to emit core block markup.
+- Ask the LLM to emit custom static block source.
 - Serialize block tree.
 - Round-trip validate with WordPress block parser.
 

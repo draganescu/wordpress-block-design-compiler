@@ -12,13 +12,15 @@ The first credible vertical slice should be:
 fixture prompt
   -> mockup bundle
   -> analysis JSON
-  -> conversion plan
-  -> core-block-only content.html
+  -> LLM block implementation plan
+  -> LLM-authored core/custom block assembly
   -> parse/serialize validation
   -> preview screenshot
 ```
 
-Only after that should we add custom static block generation, richer fidelity loops, and agent adapters.
+Only after that should we add richer fidelity loops, packaging, and agent adapters.
+
+Important architectural boundary: this is not a deterministic HTML-to-Gutenberg converter. The compiler should not attempt to reproduce tools that compile annotated HTML templates into Gutenberg block source. The deterministic layers provide facts, constraints, schemas, validation, previews, and reports. The LLM authors the block strategy, custom blocks, RichText/MediaUpload/InspectorControls/InnerBlocks decisions, and final core plus custom block assembly.
 
 ## Iteration 0: Project Skeleton
 
@@ -128,23 +130,25 @@ Acceptance:
 - Layout data includes key boxes for each major section at desktop/mobile.
 - The analyzer does not call a model for basic parsing.
 
-## Iteration 4: Conversion Planner V1
+## Iteration 4: LLM Block Implementation Planner V1
 
-Goal: plan the block tree before emitting markup.
+Goal: ask the LLM to plan the WordPress editor model before emitting markup or custom block code.
 
 Build:
 
-- conversion-plan schema;
+- block implementation plan schema;
 - planner prompt using mockup and analysis artifacts;
 - plan validator;
-- explicit strategy labels: `core-blocks`, `custom-static-block`, `core-html`;
-- mandatory rationale for every custom/static/html decision.
+- explicit strategy labels: `core-assembly`, `custom-block`, `core-html`;
+- editable-field contract per section;
+- editor-control contract covering RichText, MediaUpload, URL controls, InspectorControls, InnerBlocks, template locks, and content-only editing mode;
+- mandatory rationale for every custom/html decision.
 
 Commands:
 
 ```bash
 wp-block-compiler plan artifacts/jazz --out artifacts/jazz/plan
-wp-block-compiler validate-plan artifacts/jazz/plan/conversion-plan.json
+wp-block-compiler validate-plan artifacts/jazz/plan/block-implementation-plan.json
 ```
 
 Acceptance:
@@ -153,34 +157,31 @@ Acceptance:
 - Every section maps back to a source selector.
 - Any `core/html` usage has a specific reason.
 - The plan can be reviewed independently of block output.
+- The plan tells a later LLM assembly stage what code and block markup to write.
 
-## Iteration 5: Core-Block Converter V1
+## Iteration 5: LLM Block Assembler V1
 
-Goal: convert simple plans into valid core block markup.
+Goal: ask the LLM to emit WordPress block markup and any custom block files required by the plan.
 
 Scope:
 
-- group;
-- heading;
-- paragraph;
-- image;
-- buttons/button;
-- columns/column;
-- spacer;
-- separator.
+- core block assembly for simple sections;
+- generated custom block source for sections marked `custom-block`;
+- no hand-written deterministic HTML-to-block conversion rules beyond validation helpers.
 
 Build:
 
-- block tree IR;
-- serializer for WordPress block comments;
-- token-to-block-support mapping;
-- basic style preservation through block attributes and classes;
-- block parse/serialize validator using `@wordpress/blocks`.
+- assembly prompt using the implementation plan, mockup, and analysis;
+- output parser for `wordpress/content.html` and `wordpress/blocks/*`;
+- generated `block.json`, `edit.js`, `save.js`, `style.css` when custom blocks are planned;
+- validation that planned files were produced;
+- block parse/serialize validator using `@wordpress/blocks`;
+- HTML block policy validator.
 
 Commands:
 
 ```bash
-wp-block-compiler convert artifacts/jazz/plan --out artifacts/jazz/wordpress
+wp-block-compiler assemble artifacts/jazz/plan --out artifacts/jazz/wordpress
 wp-block-compiler validate-blocks artifacts/jazz/wordpress/content.html
 ```
 
@@ -188,8 +189,9 @@ Acceptance:
 
 - Produces `wordpress/content.html`.
 - Round-trips through WordPress block parsing and serialization.
-- Emits no custom blocks yet.
+- Produces all custom blocks required by the plan.
 - Emits no unplanned `core/html` blocks.
+- Generated custom block editor code exposes the planned editable fields and controls.
 
 ## Iteration 6: Preview Without WordPress V1
 
@@ -264,35 +266,32 @@ Acceptance:
 - Fails when normal editable content is dumped into HTML.
 - Passes when a small, justified raw fragment is present.
 
-## Iteration 9: Custom Static Blocks V1
+## Iteration 9: Custom Block Quality V1
 
-Goal: generate custom static blocks for sections core blocks cannot represent well.
+Goal: improve LLM-generated custom blocks until they feel hand-authored rather than mechanically derived.
 
 Build:
 
-- generated block package layout;
-- `block.json`;
-- `edit.js`;
-- `save.js`;
-- `style.css`;
-- attribute schema from editable fields;
+- richer block-authoring prompt examples;
+- generated `README.md` per custom block explaining fields and editor behavior;
+- checks for planned RichText/MediaUpload/InspectorControls/InnerBlocks usage;
 - custom block registration in preview;
-- serializer support for custom blocks.
+- compile/build checks for generated block files.
 
 Commands:
 
 ```bash
-wp-block-compiler generate-custom-blocks artifacts/jazz/plan --out artifacts/jazz/wordpress/blocks
-wp-block-compiler convert artifacts/jazz/plan --with-custom-blocks --out artifacts/jazz/wordpress
+wp-block-compiler improve-custom-blocks artifacts/jazz --out artifacts/jazz/wordpress/blocks
+wp-block-compiler assemble artifacts/jazz/plan --out artifacts/jazz/wordpress
 wp-block-compiler preview artifacts/jazz/wordpress --out artifacts/jazz/preview
 ```
 
 Acceptance:
 
-- Planned custom blocks are generated.
 - Generated custom blocks register in preview.
 - Custom blocks round-trip through parser/serializer.
 - Editable fields map to block attributes or inner blocks.
+- Editor controls match the implementation plan.
 
 ## Iteration 10: Editor Editability Score
 
@@ -339,7 +338,7 @@ wp-block-compiler repair artifacts/jazz --out artifacts/jazz-repaired
 Acceptance:
 
 - Repair consumes validation and visual-diff reports.
-- Writes a new conversion plan, not silent edits.
+- Writes a new implementation plan and regenerated block output, not silent edits.
 - Keeps old and new artifacts available for comparison.
 
 ## Iteration 12: WordPress Package Output
@@ -374,7 +373,7 @@ Goal: expose the stable core to agents through a tool protocol.
 Build:
 
 - MCP server or equivalent tool server;
-- schema for `run`, `design`, `plan`, `convert`, `preview`, `validate`;
+- schema for `run`, `design`, `plan`, `assemble`, `preview`, `validate`;
 - progress event stream;
 - artifact path returns.
 
@@ -456,11 +455,11 @@ The fastest useful path is iterations 0 through 6, but with narrow scope:
 1. Hardcoded fixture mockup.
 2. Analyzer V1.
 3. Planner V1.
-4. Core-block converter for a simple landing page.
+4. LLM block assembler for a simple landing page.
 5. Parse/serialize validation.
 6. Static preview screenshot.
 
-This proves the architecture before spending time on model prompts, custom blocks, or agent distribution.
+This proves the architecture before spending time on packaging or agent distribution.
 
 ## Early Decisions To Make
 
@@ -479,5 +478,6 @@ This proves the architecture before spending time on model prompts, custom block
 - Pixel-perfect conversion can fight editor editability.
 - Generated CSS can leak globally if custom block styles are not scoped.
 - Model-generated plans can overuse custom blocks unless the schema and policy are strict.
+- A deterministic converter can creep back into scope; keep conversion intelligence in the LLM and enforcement in validators.
 - Raw HTML can creep back in without a hard policy gate.
 - Agent adapters can tempt us to put logic outside the core package.

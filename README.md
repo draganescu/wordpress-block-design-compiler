@@ -35,6 +35,6 @@ The current vertical slice is fixture-driven. It copies a known mockup into an a
 This repo starts as a workspace for the compiler core. The implementation choices are still open, but likely areas to evaluate are:
 
 - Node.js for DOM parsing and transformation.
-- A block serializer for WordPress-compatible comment delimiters.
+- WordPress-compatible block validation and serialization for emitted output.
 - A validation layer for unsafe scripts, unsupported CSS, and block fidelity.
 - Optional browser rendering for screenshot-based design QA.
