@@ -28,6 +28,7 @@ const DEFAULT_REPAIR_PROVIDER = 'deterministic';
 const DEFAULT_OPENAI_VISION_MODEL = 'gpt-4.1';
 const OPENAI_RESPONSES_URL = `${process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1'}/responses`;
 const CONTEXT_CHAR_LIMIT = 18000;
+const MAX_REPAIR_CSS_CHARS = 60000;
 const DEFAULT_MAX_MISMATCH_PERCENT = 8;
 const DEFAULT_MAX_HEIGHT_DELTA = 80;
 
@@ -106,10 +107,14 @@ async function main() {
       });
       if (proposal.repairs.length === 0) {
         repairProposals.push(proposal);
+        const rejectedDetail =
+          Array.isArray(proposal.rejectedRepairs) && proposal.rejectedRepairs.length
+            ? ` Rejected repairs: ${proposal.rejectedRepairs.map((repair) => `${repair.id || 'repair'} (${repair.artifact || 'unknown'}): ${repair.reason}`).join('; ')}`
+            : '';
         stopReason = {
           reason: proposal.mode === 'off' ? 'repair-provider-off' : 'no-executable-repairs',
           pass,
-          detail: proposal.mode === 'off' ? 'Vision repair provider is disabled.' : 'The repair provider returned no executable repairs for the current pass.',
+          detail: proposal.mode === 'off' ? 'Vision repair provider is disabled.' : `The repair provider returned no executable repairs for the current pass.${rejectedDetail}`,
         };
         break;
       }
@@ -554,7 +559,9 @@ function visionRepairSchema() {
 }
 
 function normalizeOpenAiRepairProposal(raw, context, proposalPath) {
-  const repairs = raw.stop ? [] : (raw.repairs || []).map(normalizeArtifactRepair).filter(Boolean);
+  const normalizedRepairs = raw.stop ? [] : (raw.repairs || []).map(normalizeArtifactRepairWithDiagnostics);
+  const repairs = normalizedRepairs.map((result) => result.repair).filter(Boolean);
+  const rejectedRepairs = normalizedRepairs.map((result) => result.rejection).filter(Boolean);
   return {
     afterPass: context.passReport.pass,
     nextPass: context.passReport.pass + 1,
@@ -570,14 +577,30 @@ function normalizeOpenAiRepairProposal(raw, context, proposalPath) {
     confidence: raw.confidence,
     stop: Boolean(raw.stop),
     repairs,
+    rejectedRepairs,
   };
 }
 
 function normalizeArtifactRepair(repair) {
+  return normalizeArtifactRepairWithDiagnostics(repair).repair;
+}
+
+function normalizeArtifactRepairWithDiagnostics(repair) {
   const id = slug(String(repair.id || 'openai-vision-artifact-repair'));
   const artifact = ['block-tree', 'vision-css', 'rendered-html'].includes(repair.artifact) ? repair.artifact : null;
   const content = String(repair.content || '').trim();
-  if (!artifact || !content) return null;
+  if (!artifact) {
+    return {
+      repair: null,
+      rejection: { id, artifact: repair.artifact || null, reason: 'Unsupported or missing artifact type.' },
+    };
+  }
+  if (!content) {
+    return {
+      repair: null,
+      rejection: { id, artifact, reason: 'Artifact content was empty.' },
+    };
+  }
 
   const normalized = {
     id,
@@ -592,16 +615,20 @@ function normalizeArtifactRepair(repair) {
 
   if (artifact === 'block-tree') {
     const blockTree = normalizeBlockTreeJson(content);
-    return blockTree ? { ...normalized, blockTree } : null;
+    return blockTree
+      ? { repair: { ...normalized, blockTree }, rejection: null }
+      : { repair: null, rejection: { id, artifact, reason: 'Block tree content was not a valid non-empty JSON array of block objects.' } };
   }
 
   if (artifact === 'vision-css') {
-    const css = normalizeCss(content);
-    return css ? { ...normalized, css } : null;
+    const css = normalizeCssWithDiagnostics(content);
+    return css.value ? { repair: { ...normalized, css: css.value }, rejection: null } : { repair: null, rejection: { id, artifact, reason: css.reason } };
   }
 
   const html = normalizeRenderedHtml(content);
-  return html ? { ...normalized, html } : null;
+  return html
+    ? { repair: { ...normalized, html }, rejection: null }
+    : { repair: null, rejection: { id, artifact, reason: 'Rendered HTML was unsafe or not a complete HTML document.' } };
 }
 
 function artifactLayer(artifact) {
@@ -693,11 +720,20 @@ function normalizeRepairAction(action) {
 }
 
 function normalizeCss(value) {
+  return normalizeCssWithDiagnostics(value).value;
+}
+
+function normalizeCssWithDiagnostics(value) {
   const css = stripMarkdownFence(value).trim();
-  if (!css) return null;
-  if (css.length > 12000) return null;
-  if (/<\/?style|<\/?script|@import|url\s*\(/i.test(css)) return null;
-  return css;
+  if (!css) return { value: null, reason: 'CSS content was empty.' };
+  if (css.length > MAX_REPAIR_CSS_CHARS) {
+    return { value: null, reason: `CSS content was ${css.length} characters, above the ${MAX_REPAIR_CSS_CHARS} character limit.` };
+  }
+  if (/<\/?style/i.test(css)) return { value: null, reason: 'CSS content included a style tag.' };
+  if (/<\/?script/i.test(css)) return { value: null, reason: 'CSS content included a script tag.' };
+  if (/@import/i.test(css)) return { value: null, reason: 'CSS content included @import.' };
+  if (/url\s*\(/i.test(css)) return { value: null, reason: 'CSS content included url(...).' };
+  return { value: css, reason: null };
 }
 
 function normalizeBlockPath(value, { allowRoot = false } = {}) {
@@ -1517,6 +1553,10 @@ function renderMarkdownReport(report) {
     })
   );
   const repairs = repairLines.length ? repairLines.join('\n') : '- No repairs proposed.';
+  const rejectedLines = report.repairProposals.flatMap((proposal) =>
+    (proposal.rejectedRepairs || []).map((repair) => `- after pass ${proposal.afterPass}, rejected \`${repair.id}\` (${repair.artifact || 'unknown'}): ${repair.reason}`)
+  );
+  const rejectedRepairs = rejectedLines.length ? rejectedLines.join('\n') : '- No rejected repairs.';
 
   const observations = report.observations
     .map((observation) => `- \`${observation.viewport}\` (${observation.severity}): ${observation.issue} ${observation.promptImplication}`)
@@ -1538,6 +1578,10 @@ ${rows}
 ## Repairs
 
 ${repairs}
+
+## Rejected Repairs
+
+${rejectedRepairs}
 
 ## Final Screenshots
 
