@@ -59,6 +59,7 @@ async function main() {
   const passReports = [];
   const repairProposals = [];
   const appliedRepairs = [];
+  let stopReason = null;
   let currentHtmlPath = path.join(ITERATIONS_OUT, 'pass-0.html');
 
   try {
@@ -79,7 +80,13 @@ async function main() {
       };
       passReports.push(passReport);
 
-      if (isAcceptable(passReport) || pass === maxRepairPasses) {
+      if (isAcceptable(passReport)) {
+        stopReason = { reason: 'accepted', pass, detail: 'Visual drift is within the POC acceptance threshold.' };
+        break;
+      }
+
+      if (pass === maxRepairPasses) {
+        stopReason = { reason: 'max-repair-passes', pass, detail: 'Reached the configured maximum repair pass count.' };
         break;
       }
 
@@ -90,6 +97,12 @@ async function main() {
         repairProvider,
       });
       if (proposal.repairs.length === 0) {
+        repairProposals.push(proposal);
+        stopReason = {
+          reason: proposal.mode === 'off' ? 'repair-provider-off' : 'no-executable-repairs',
+          pass,
+          detail: proposal.mode === 'off' ? 'Vision repair provider is disabled.' : 'The repair provider returned no executable repairs for the current pass.',
+        };
         break;
       }
 
@@ -111,7 +124,7 @@ async function main() {
   fs.copyFileSync(currentHtmlPath, FINAL_RENDERED_HTML);
   copyFinalScreenshots(passReports.at(-1));
 
-  const report = buildVisionReport({ passReports, repairProposals, repairProvider, maxRepairPasses });
+  const report = buildVisionReport({ passReports, repairProposals, repairProvider, maxRepairPasses, stopReason });
   writeJson('visual-report.json', report);
   write('visual-report.md', renderMarkdownReport(report));
   write('llm-vision-brief.md', renderLlmVisionBrief(report));
@@ -123,6 +136,7 @@ async function main() {
         finalRenderedHtml: FINAL_RENDERED_HTML,
         finalPass: report.final.pass,
         maxRepairPasses: report.comparator.maxRepairPasses,
+        stopReason: report.stop.reason,
         viewports: report.final.viewports.map((viewport) => ({
           name: viewport.name,
           mismatchPercent: viewport.comparison.mismatchPercent,
@@ -313,6 +327,7 @@ async function proposeRepairPass(context) {
       afterPass: context.passReport.pass,
       nextPass: context.passReport.pass + 1,
       mode: 'off',
+      stop: true,
       trigger: triggerForPass(context.passReport),
       repairs: [],
     };
@@ -526,6 +541,7 @@ function normalizeOpenAiRepairProposal(raw, context, proposalPath) {
     observedDiscrepancy: raw.observedDiscrepancy,
     likelyCause: raw.likelyCause,
     confidence: raw.confidence,
+    stop: Boolean(raw.stop),
     repairs,
   };
 }
@@ -752,6 +768,7 @@ function proposeDeterministicRepairPass({ passReport, appliedRepairs }) {
     afterPass: passReport.pass,
     nextPass: passReport.pass + 1,
     mode: 'deterministic-poc-vision-proxy',
+    stop: repairs.length === 0,
     trigger: triggerForPass(passReport),
     repairs,
   };
@@ -1302,7 +1319,7 @@ function copyFinalScreenshots(finalPass) {
   }
 }
 
-function buildVisionReport({ passReports, repairProposals, repairProvider, maxRepairPasses }) {
+function buildVisionReport({ passReports, repairProposals, repairProvider, maxRepairPasses, stopReason }) {
   const final = passReports.at(-1);
   return {
     version: 3,
@@ -1335,6 +1352,7 @@ function buildVisionReport({ passReports, repairProposals, repairProvider, maxRe
     passes: passReports,
     repairProposals,
     final,
+    stop: stopReason || { reason: 'unknown', pass: final ? final.pass : null, detail: 'The loop ended without recording a stop reason.' },
     observations: buildObservations(final),
   };
 }
@@ -1380,18 +1398,15 @@ function renderMarkdownReport(report) {
     )
     .join('\n');
 
-  const repairs = report.repairProposals.length
-    ? report.repairProposals
-        .flatMap((proposal) =>
-          proposal.repairs.map((repair) => {
-            const expected = repair.expectedVisualEffect ? ` Expected effect: ${repair.expectedVisualEffect}` : '';
-            const risk = repair.editabilityRisk ? ` Editability risk: ${repair.editabilityRisk}` : '';
-            const actions = repairActionSummary(repair);
-            return `- after pass ${proposal.afterPass}, apply \`${repair.id}\` (${proposal.mode}, ${actions}): ${repair.reason} Real action: ${repair.preferredRealAction}${expected}${risk}`;
-          })
-        )
-        .join('\n')
-    : '- No repairs proposed.';
+  const repairLines = report.repairProposals.flatMap((proposal) =>
+    proposal.repairs.map((repair) => {
+      const expected = repair.expectedVisualEffect ? ` Expected effect: ${repair.expectedVisualEffect}` : '';
+      const risk = repair.editabilityRisk ? ` Editability risk: ${repair.editabilityRisk}` : '';
+      const actions = repairActionSummary(repair);
+      return `- after pass ${proposal.afterPass}, apply \`${repair.id}\` (${proposal.mode}, ${actions}): ${repair.reason} Real action: ${repair.preferredRealAction}${expected}${risk}`;
+    })
+  );
+  const repairs = repairLines.length ? repairLines.join('\n') : '- No repairs proposed.';
 
   const observations = report.observations
     .map((observation) => `- \`${observation.viewport}\` (${observation.severity}): ${observation.issue} ${observation.promptImplication}`)
@@ -1401,8 +1416,9 @@ function renderMarkdownReport(report) {
 
 ## Summary
 
-Final pass: ${report.final.pass}
+Final pass: ${report.final.pass} of max ${report.comparator.maxRepairPasses}
 Repair provider: ${report.strategy.repairProvider}
+Stop reason: ${report.stop.reason} - ${report.stop.detail}
 
 | Pass | Viewport | Size | Pixel mismatch | Width / height delta | Diff |
 | ---: | --- | ---: | ---: | ---: | --- |
