@@ -85,11 +85,13 @@ The intended production split is hybrid:
 
 - PNG diff is the score, regression signal, and trigger.
 - LLM vision is the diagnosis and artifact repair generator.
-- OpenAI vision repair regenerates one complete repair artifact per pass: `block-tree`, `vision-css`, or the rare `rendered-html` escape hatch. The deterministic proxy still uses older local CSS patch actions for cheap debugging.
+- OpenAI vision repair returns one repair artifact per pass: `block-tree`, `vision-css-addition`, `vision-css`, or the rare `rendered-html` escape hatch. `vision-css-addition` is used for focused styling refinements; `vision-css` remains a complete replacement stylesheet. The deterministic proxy still uses older local CSS patch actions for cheap debugging.
 
 By default, this POC runs up to three repair passes with OpenAI vision repair. PNG diff remains the deterministic score and trigger. Override the limit with `--max-repair-passes=N` or `POC_VISION_MAX_REPAIR_PASSES=N`; use `0` to capture comparison screenshots without applying repair passes.
 
-The repair pass count is a ceiling, not a target. Each pass is measured as a candidate final artifact, and the POC copies the best measured pass to `rendered/rendered-blocks.html` and `rendered/rendered-blocks.final.html`. Passes that satisfy the acceptance gate are preferred over passes that do not; otherwise, the score is `maxMismatchPercent + maxHeightDelta / 100`, so height drift influences selection without overwhelming the screenshot mismatch percentage. If a later pass clearly regresses against the best pass, the loop stops early and keeps the better earlier artifact.
+The repair pass count is a ceiling, not a target. Each pass is measured as a candidate final artifact, and the POC copies the best measured pass to `rendered/rendered-blocks.html` and `rendered/rendered-blocks.final.html`. Passes that satisfy the acceptance gate are preferred over passes that do not; otherwise, the score is `maxMismatchPercent + maxHeightDelta / 100`, so height drift influences selection without overwhelming the screenshot mismatch percentage.
+
+Regressions are treated as rejected candidates, not expected progress. When a candidate pass clearly regresses against the best pass and more pass budget remains, the POC rolls the repair state back to the best pass and asks the next repair from that state with a focused CSS-first prompt. This is meant to catch the common case where pass 0 or pass 1 is structurally close and remaining differences are better handled as narrow typography, spacing, color, or responsive CSS refinements instead of another broad block-tree rewrite.
 
 The visual acceptance gate is also configurable. A pass is accepted only when both values are within the configured thresholds:
 

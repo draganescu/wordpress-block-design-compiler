@@ -51,7 +51,7 @@ async function main() {
   resetVisionOutput();
 
   const baseRenderedHtml = stripPriorVisionRepairs(fs.readFileSync(RENDERED_HTML, 'utf8'));
-  const repairState = {
+  let repairState = {
     baseRenderedHtml,
     blockTree: readJsonFile(BLOCK_TREE_JSON, []),
     blockTreeChanged: false,
@@ -65,11 +65,14 @@ async function main() {
   const browser = await chromium.launch({ headless: true });
   const passReports = [];
   const repairProposals = [];
+  const regressionEvents = [];
   const appliedRepairs = [];
   let stopReason = null;
   let currentHtmlPath = path.join(ITERATIONS_OUT, 'pass-0.html');
   let bestPassReport = null;
   let bestHtmlPath = currentHtmlPath;
+  let bestRepairState = cloneRepairState(repairState);
+  let bestAppliedRepairs = [];
 
   try {
     const mockupScreenshots = await captureMockupScreenshots(browser);
@@ -93,13 +96,68 @@ async function main() {
       if (!bestPassReport || isBetterPass(passReport, bestPassReport, acceptanceThresholds)) {
         bestPassReport = passReport;
         bestHtmlPath = currentHtmlPath;
+        bestRepairState = cloneRepairState(repairState);
+        bestAppliedRepairs = cloneJson(appliedRepairs);
       } else if (isSignificantRegression(passReport, bestPassReport, acceptanceThresholds)) {
-        stopReason = {
-          reason: 'regressed',
+        const regressionEvent = {
           pass,
-          detail: `Pass ${pass} scored worse than best pass ${bestPassReport.pass} (${passReport.aggregate.visualScore} vs ${bestPassReport.aggregate.visualScore}), so the loop kept the best pass instead of continuing repairs.`,
+          rejectedHtml: passReport.html,
+          rejectedScore: passReport.aggregate.visualScore,
+          bestPass: bestPassReport.pass,
+          bestHtml: bestPassReport.html,
+          bestScore: bestPassReport.aggregate.visualScore,
+          action: pass === maxRepairPasses ? 'kept-best-at-pass-limit' : 'rolled-back-and-focused',
         };
-        break;
+        regressionEvents.push(regressionEvent);
+
+        if (pass === maxRepairPasses) {
+          stopReason = {
+            reason: 'max-repair-passes',
+            pass,
+            detail: `Reached the configured maximum repair pass count after rejecting regressed pass ${pass}; kept best pass ${bestPassReport.pass}.`,
+          };
+          break;
+        }
+
+        repairState = cloneRepairState(bestRepairState);
+        replaceArray(appliedRepairs, bestAppliedRepairs);
+        writeBlockArtifacts(repairState.blockTree);
+
+        const proposal = await proposeRepairPass({
+          passReport: bestPassReport,
+          appliedRepairs,
+          currentHtmlPath: bestHtmlPath,
+          repairProvider,
+          acceptanceThresholds,
+          repairPass: pass,
+          repairFocus: resolveRepairFocus({ passReport: bestPassReport, acceptanceThresholds, regressionEvent }),
+        });
+        if (proposal.repairs.length === 0) {
+          repairProposals.push(proposal);
+          stopReason = {
+            reason: proposal.mode === 'off' ? 'repair-provider-off' : 'no-focused-repairs',
+            pass,
+            detail: proposal.mode === 'off' ? 'Vision repair provider is disabled.' : `A regressed candidate was rejected, but the repair provider returned no focused repair from best pass ${bestPassReport.pass}.`,
+          };
+          break;
+        }
+
+        const appliedActionCount = applyRepairProposal(repairState, proposal);
+        if (appliedActionCount === 0) {
+          repairProposals.push(proposal);
+          stopReason = {
+            reason: 'no-executable-focused-repairs',
+            pass,
+            detail: `A regressed candidate was rejected, but no focused repair action could be applied from best pass ${bestPassReport.pass}.`,
+          };
+          break;
+        }
+
+        repairProposals.push(proposal);
+        appliedRepairs.push(...proposal.repairs);
+        currentHtmlPath = path.join(ITERATIONS_OUT, `pass-${pass + 1}.html`);
+        fs.writeFileSync(currentHtmlPath, renderRepairStateHtml(repairState), 'utf8');
+        continue;
       }
 
       if (isAcceptable(passReport, acceptanceThresholds)) {
@@ -122,6 +180,8 @@ async function main() {
         currentHtmlPath,
         repairProvider,
         acceptanceThresholds,
+        repairPass: pass,
+        repairFocus: resolveRepairFocus({ passReport, acceptanceThresholds }),
       });
       if (proposal.repairs.length === 0) {
         repairProposals.push(proposal);
@@ -157,7 +217,7 @@ async function main() {
   fs.copyFileSync(finalHtmlPath, FINAL_RENDERED_HTML);
   copyFinalScreenshots(finalPassReport);
 
-  const report = buildVisionReport({ passReports, repairProposals, repairProvider, maxRepairPasses, acceptanceThresholds, stopReason, finalPassReport });
+  const report = buildVisionReport({ passReports, repairProposals, repairProvider, maxRepairPasses, acceptanceThresholds, stopReason, finalPassReport, regressionEvents });
   writeJson('visual-report.json', report);
   write('visual-report.md', renderMarkdownReport(report));
   write('llm-vision-brief.md', renderLlmVisionBrief(report));
@@ -173,6 +233,7 @@ async function main() {
         maxRepairPasses: report.comparator.maxRepairPasses,
         acceptance: report.comparator.acceptance,
         stopReason: report.stop.reason,
+        rejectedRegressions: report.regressions.length,
         viewports: report.final.viewports.map((viewport) => ({
           name: viewport.name,
           mismatchPercent: viewport.comparison.mismatchPercent,
@@ -357,6 +418,36 @@ function isAcceptable(passReport, acceptanceThresholds) {
   );
 }
 
+function resolveRepairFocus({ passReport, acceptanceThresholds, regressionEvent = null }) {
+  if (regressionEvent) {
+    return {
+      mode: 'regression-recovery',
+      artifactPreference: 'vision-css-addition',
+      reason: `Candidate pass ${regressionEvent.pass} regressed from best score ${regressionEvent.bestScore} to ${regressionEvent.rejectedScore}. Ignore that candidate and repair from best pass ${regressionEvent.bestPass}.`,
+      instruction: 'Make one narrow CSS addition that targets the remaining visible drift from the best pass. Do not rewrite the block tree unless the screenshots show visible literal markup, missing content, wrong content order, or broken editable structure.',
+    };
+  }
+
+  const heightIsClose = passReport.aggregate.maxHeightDelta <= Math.max(acceptanceThresholds.maxHeightDelta * 3, 240);
+  const pixelsStillDrift = passReport.aggregate.maxMismatchPercent > acceptanceThresholds.maxMismatchPercent;
+
+  if (heightIsClose && pixelsStillDrift) {
+    return {
+      mode: 'styling-refinement',
+      artifactPreference: 'vision-css-addition',
+      reason: 'The rendered page height is close to the mockup, so remaining drift is likely typography, spacing, color, sizing, or responsive CSS rather than block composition.',
+      instruction: 'Prefer one narrow CSS addition scoped to existing rendered classes/selectors. Preserve the block tree and any layout that already matches.',
+    };
+  }
+
+  return {
+    mode: 'open',
+    artifactPreference: 'best-fit',
+    reason: 'The visual drift may require block composition, attributes, custom block structure, or CSS.',
+    instruction: 'Choose the smallest artifact that addresses the dominant discrepancy without disturbing regions that already match.',
+  };
+}
+
 function resolveRepairProvider() {
   const requested = readOption(process.argv.slice(2), ['--provider', '--vision-provider']) || process.env.POC_VISION_REPAIR_PROVIDER || DEFAULT_REPAIR_PROVIDER;
   if (requested === 'auto') {
@@ -424,10 +515,12 @@ async function proposeRepairPass(context) {
   if (context.repairProvider === 'off') {
     return {
       afterPass: context.passReport.pass,
-      nextPass: context.passReport.pass + 1,
+      repairPass: context.repairPass ?? context.passReport.pass,
+      nextPass: (context.repairPass ?? context.passReport.pass) + 1,
       mode: 'off',
       stop: true,
       trigger: triggerForPass(context.passReport),
+      focus: context.repairFocus || null,
       repairs: [],
     };
   }
@@ -440,7 +533,8 @@ async function proposeRepairPass(context) {
 }
 
 async function proposeOpenAiVisionRepairPass(context) {
-  const passOut = path.join(VISION_OUT, `pass-${context.passReport.pass}`);
+  const repairPass = context.repairPass ?? context.passReport.pass;
+  const passOut = path.join(VISION_OUT, `pass-${repairPass}`);
   const requestSummaryPath = path.join(passOut, 'llm-repair-request.md');
   const responsePath = path.join(passOut, 'llm-repair-response.json');
   const proposalPath = path.join(passOut, 'llm-repair-proposal.json');
@@ -459,7 +553,7 @@ async function proposeOpenAiVisionRepairPass(context) {
       body: JSON.stringify(requestBody),
     },
     {
-      label: `vision repair pass ${context.passReport.pass} (${requestBody.model})`,
+      label: `vision repair pass ${repairPass} (${requestBody.model})`,
     }
   );
 
@@ -484,9 +578,11 @@ function buildOpenAiVisionRepairRequest(context) {
     instructions: [
       'You are the vision repair artifact generator for a WordPress block design compiler POC.',
       'Use screenshots and diffs to diagnose visual drift between a source HTML mockup and rendered WordPress block HTML.',
-      'Choose the highest-leverage repair artifact and regenerate that complete artifact instead of returning granular patch actions.',
+      'Choose the highest-leverage repair artifact. Return complete artifacts for block-tree, vision-css, and rendered-html; return only additive scoped CSS for vision-css-addition.',
+      'When the prompt asks for focused styling refinement, prefer a small additive vision CSS artifact that cannot disturb unrelated working regions.',
       'Prefer a complete block-tree replacement when structure, content, wrappers, editability, forms, or custom-block choices are wrong.',
       'Use a complete vision-css replacement only when the block structure is already semantically right and the drift is purely cascade, layout, spacing, typography, or color.',
+      'Use a vision-css-addition when the current block structure and most layout are already close and only small styling corrections are needed.',
       'Do not propose raw HTML blocks unless core/custom static blocks cannot preserve both fidelity and editability.',
       'Use rendered-html only as an explicitly justified escape hatch.',
     ].join(' '),
@@ -529,11 +625,13 @@ function buildOpenAiVisionContent(context) {
   return content;
 }
 
-function buildVisionRepairPrompt({ passReport, appliedRepairs, currentHtmlPath, acceptanceThresholds }) {
+function buildVisionRepairPrompt({ passReport, appliedRepairs, currentHtmlPath, acceptanceThresholds, repairPass, repairFocus }) {
   return [
-    `Current pass: ${passReport.pass}`,
+    `Measured pass being repaired: ${passReport.pass}`,
+    `Repair attempt slot: ${repairPass ?? passReport.pass}`,
     `Aggregate mismatch: ${JSON.stringify(passReport.aggregate)}`,
     `Acceptance thresholds: ${JSON.stringify(acceptanceThresholds)}`,
+    `Repair focus: ${JSON.stringify(repairFocus || resolveRepairFocus({ passReport, acceptanceThresholds }))}`,
     `Per-viewport comparison: ${JSON.stringify(
       passReport.viewports.map((viewport) => ({
         viewport: viewport.name,
@@ -548,17 +646,20 @@ function buildVisionRepairPrompt({ passReport, appliedRepairs, currentHtmlPath, 
     `Already applied repairs: ${JSON.stringify(appliedRepairs.map((repair) => ({ id: repair.id, artifact: repair.artifact || repair.layer, reason: repair.reason })), null, 2)}`,
     '',
     'Repair constraints:',
-    '- Choose one repair artifact that matches the cause: block-tree, vision-css, or rendered-html.',
+    '- Choose one repair artifact that matches the cause: block-tree, vision-css-addition, vision-css, or rendered-html.',
+    '- If Repair focus artifactPreference is vision-css-addition, default to vision-css-addition and make one narrow CSS addition.',
     '- Prefer block-tree when block composition, block attributes, core block choice, custom block choice, wrappers, content, forms, links, or editability are wrong.',
-    '- Use vision-css only when the structure is semantically correct and the remaining drift is purely visual styling.',
-    '- Use rendered-html only as an escape hatch when neither block-tree nor vision-css can express the repair in this POC, and explain why.',
-    '- If the current pass is mostly better and remaining issues are ambiguous, low-confidence, or likely to cause artifact churn, set stop=true and repairs=[].',
-    '- Do not repair just because deterministic thresholds are not yet met. Regenerate an artifact only when the diagnosis is clear and expected improvement outweighs regression risk.',
+    '- Use vision-css-addition when the structure is semantically correct and the remaining drift is a small visual styling refinement.',
+    '- Use vision-css only when the structure is semantically correct and the prior vision CSS needs complete replacement.',
+    '- Use rendered-html only as an escape hatch when neither block-tree nor vision CSS can express the repair in this POC, and explain why.',
+    '- If the current pass is mostly better and remaining issues are ambiguous or low-confidence, prefer a smaller vision-css-addition over a broad rewrite.',
+    '- Do not repair just because deterministic thresholds are not yet met. Return a repair only when there is an actionable visible discrepancy.',
     '- For block-tree, return the complete replacement simplified block tree JSON array. Do not return a patch. Preserve all editable text, links, form labels, placeholders, repeated items, and inspector-style attributes.',
     '- For block-tree, each node must use {"name":"namespace/block","attributes":{},"innerBlocks":[]}. Do not use markdown code fences.',
     '- For block-tree, prefer core block structure, block attributes, and block supports before custom blocks or CSS.',
     '- For block-tree, use custom blocks only for the smallest subtree needing a custom editor model, behavior, or markup contract.',
     '- For block-tree, do not add generated custom blocks that are disguised HTML blocks with html/sourceHtml/markup/innerHTML/editableFields/sourceSelector blobs.',
+    '- For vision-css-addition, return only the small additive CSS needed for this pass. Keep it scoped to existing rendered block classes/selectors.',
     '- For vision-css, return the complete replacement vision repair stylesheet for this pass. Keep it scoped to existing rendered block classes/selectors.',
     '- For rendered-html, return the complete replacement HTML document. Do not use scripts, imports, or external URLs.',
     '- Keep rich text, links, fields, labels, placeholders, repeated items, and inspector controls editable.',
@@ -597,7 +698,7 @@ function visionRepairSchema() {
           required: ['id', 'artifact', 'reason', 'preferredRealAction', 'expectedVisualEffect', 'editabilityRisk', 'content'],
           properties: {
             id: { type: 'string' },
-            artifact: { type: 'string', enum: ['block-tree', 'vision-css', 'rendered-html'] },
+            artifact: { type: 'string', enum: ['block-tree', 'vision-css-addition', 'vision-css', 'rendered-html'] },
             reason: { type: 'string' },
             preferredRealAction: { type: 'string' },
             expectedVisualEffect: { type: 'string' },
@@ -614,16 +715,19 @@ function normalizeOpenAiRepairProposal(raw, context, proposalPath) {
   const normalizedRepairs = raw.stop ? [] : (raw.repairs || []).map(normalizeArtifactRepairWithDiagnostics);
   const repairs = normalizedRepairs.map((result) => result.repair).filter(Boolean);
   const rejectedRepairs = normalizedRepairs.map((result) => result.rejection).filter(Boolean);
+  const repairPass = context.repairPass ?? context.passReport.pass;
   return {
     afterPass: context.passReport.pass,
-    nextPass: context.passReport.pass + 1,
+    repairPass,
+    nextPass: repairPass + 1,
     mode: 'openai-vision-artifact',
     provider: {
       model: process.env.OPENAI_VISION_MODEL || DEFAULT_OPENAI_VISION_MODEL,
-      response: relativeToOutput(path.join(VISION_OUT, `pass-${context.passReport.pass}`, 'llm-repair-response.json')),
+      response: relativeToOutput(path.join(VISION_OUT, `pass-${repairPass}`, 'llm-repair-response.json')),
       proposal: relativeToOutput(proposalPath),
     },
     trigger: triggerForPass(context.passReport),
+    focus: context.repairFocus || null,
     observedDiscrepancy: raw.observedDiscrepancy,
     likelyCause: raw.likelyCause,
     confidence: raw.confidence,
@@ -639,7 +743,7 @@ function normalizeArtifactRepair(repair) {
 
 function normalizeArtifactRepairWithDiagnostics(repair) {
   const id = slug(String(repair.id || 'openai-vision-artifact-repair'));
-  const artifact = ['block-tree', 'vision-css', 'rendered-html'].includes(repair.artifact) ? repair.artifact : null;
+  const artifact = ['block-tree', 'vision-css-addition', 'vision-css', 'rendered-html'].includes(repair.artifact) ? repair.artifact : null;
   const content = String(repair.content || '').trim();
   if (!artifact) {
     return {
@@ -672,7 +776,7 @@ function normalizeArtifactRepairWithDiagnostics(repair) {
       : { repair: null, rejection: { id, artifact, reason: 'Block tree content was not a valid non-empty JSON array of block objects.' } };
   }
 
-  if (artifact === 'vision-css') {
+  if (artifact === 'vision-css' || artifact === 'vision-css-addition') {
     const css = normalizeCssWithDiagnostics(content);
     return css.value ? { repair: { ...normalized, css: css.value }, rejection: null } : { repair: null, rejection: { id, artifact, reason: css.reason } };
   }
@@ -685,6 +789,7 @@ function normalizeArtifactRepairWithDiagnostics(repair) {
 
 function artifactLayer(artifact) {
   if (artifact === 'block-tree') return 'artifact:block-tree';
+  if (artifact === 'vision-css-addition') return 'artifact:vision-css-addition';
   if (artifact === 'vision-css') return 'artifact:vision-css';
   return 'artifact:rendered-html';
 }
@@ -861,7 +966,7 @@ function inferRepairLayer(actions) {
   return 'css';
 }
 
-function proposeDeterministicRepairPass({ passReport, appliedRepairs }) {
+function proposeDeterministicRepairPass({ passReport, appliedRepairs, repairPass, repairFocus }) {
   const appliedIds = new Set(appliedRepairs.map((repair) => repair.id));
   const repairs = [];
 
@@ -946,10 +1051,12 @@ function proposeDeterministicRepairPass({ passReport, appliedRepairs }) {
 
   return {
     afterPass: passReport.pass,
-    nextPass: passReport.pass + 1,
+    repairPass: repairPass ?? passReport.pass,
+    nextPass: (repairPass ?? passReport.pass) + 1,
     mode: 'deterministic-poc-vision-proxy',
     stop: repairs.length === 0,
     trigger: triggerForPass(passReport),
+    focus: repairFocus || null,
     repairs,
   };
 }
@@ -994,6 +1101,15 @@ function applyArtifactRepair(state, repair) {
         css: repair.css,
       },
     ];
+    return true;
+  }
+
+  if (repair.artifact === 'vision-css-addition') {
+    state.cssRepairs.push({
+      id: repair.id,
+      source: repair.source || proposalSource(repair),
+      css: repair.css,
+    });
     return true;
   }
 
@@ -1056,6 +1172,25 @@ function applyRepairAction(state, repair, action) {
 
 function proposalSource(repair) {
   return repair.source || 'vision-repair';
+}
+
+function cloneRepairState(state) {
+  return {
+    baseRenderedHtml: state.baseRenderedHtml,
+    blockTree: cloneJson(state.blockTree),
+    blockTreeChanged: state.blockTreeChanged,
+    cssRepairs: cloneJson(state.cssRepairs),
+    htmlReplacements: cloneJson(state.htmlReplacements),
+    renderedHtmlOverride: state.renderedHtmlOverride,
+  };
+}
+
+function cloneJson(value) {
+  return JSON.parse(JSON.stringify(value));
+}
+
+function replaceArray(target, items) {
+  target.splice(0, target.length, ...cloneJson(items));
 }
 
 function renderRepairStateHtml(state) {
@@ -1520,11 +1655,11 @@ function copyFinalScreenshots(finalPass) {
   }
 }
 
-function buildVisionReport({ passReports, repairProposals, repairProvider, maxRepairPasses, acceptanceThresholds, stopReason, finalPassReport }) {
+function buildVisionReport({ passReports, repairProposals, repairProvider, maxRepairPasses, acceptanceThresholds, stopReason, finalPassReport, regressionEvents }) {
   const last = passReports.at(-1);
   const final = finalPassReport || last;
   return {
-    version: 3,
+    version: 4,
     source: {
       mockup: 'mockup/index.html',
       initialRendered: 'rendered/rendered-blocks.base.html',
@@ -1550,6 +1685,7 @@ function buildVisionReport({ passReports, repairProposals, repairProvider, maxRe
     },
     passes: passReports,
     repairProposals,
+    regressions: regressionEvents || [],
     last,
     final,
     stop: stopReason || { reason: 'unknown', pass: last ? last.pass : null, detail: 'The loop ended without recording a stop reason.' },
@@ -1603,7 +1739,8 @@ function renderMarkdownReport(report) {
       const expected = repair.expectedVisualEffect ? ` Expected effect: ${repair.expectedVisualEffect}` : '';
       const risk = repair.editabilityRisk ? ` Editability risk: ${repair.editabilityRisk}` : '';
       const actions = repairActionSummary(repair);
-      return `- after pass ${proposal.afterPass}, apply \`${repair.id}\` (${proposal.mode}, ${actions}): ${repair.reason} Real action: ${repair.preferredRealAction}${expected}${risk}`;
+      const focus = proposal.focus ? ` Focus: ${proposal.focus.mode}.` : '';
+      return `- after pass ${proposal.afterPass}, repair slot ${proposal.repairPass ?? proposal.afterPass}, apply \`${repair.id}\` (${proposal.mode}, ${actions}): ${repair.reason}${focus} Real action: ${repair.preferredRealAction}${expected}${risk}`;
     })
   );
   const repairs = repairLines.length ? repairLines.join('\n') : '- No repairs proposed.';
@@ -1611,6 +1748,11 @@ function renderMarkdownReport(report) {
     (proposal.rejectedRepairs || []).map((repair) => `- after pass ${proposal.afterPass}, rejected \`${repair.id}\` (${repair.artifact || 'unknown'}): ${repair.reason}`)
   );
   const rejectedRepairs = rejectedLines.length ? rejectedLines.join('\n') : '- No rejected repairs.';
+  const regressionLines = (report.regressions || []).map(
+    (regression) =>
+      `- pass ${regression.pass} rejected: score ${regression.rejectedScore} from \`${regression.rejectedHtml}\`; rolled back to pass ${regression.bestPass} score ${regression.bestScore} from \`${regression.bestHtml}\` (${regression.action}).`
+  );
+  const regressions = regressionLines.length ? regressionLines.join('\n') : '- No regressed candidates rejected.';
 
   const observations = report.observations
     .map((observation) => `- \`${observation.viewport}\` (${observation.severity}): ${observation.issue} ${observation.promptImplication}`)
@@ -1639,6 +1781,10 @@ ${repairs}
 
 ${rejectedRepairs}
 
+## Regression Recoveries
+
+${regressions}
+
 ## Final Screenshots
 
 ${report.final.viewports
@@ -1656,6 +1802,7 @@ ${observations}
 - PNG diff is the score and regression gate.
 - LLM vision regenerates one complete repair artifact per pass when \`POC_VISION_REPAIR_PROVIDER=openai\`.
 - The final rendered HTML is selected from the best-scoring measured pass, not necessarily the last measured pass.
+- Regressed candidates are rejected; the next repair starts from the best measured state with a focused CSS-first prompt when passes remain.
 - Full-page screenshots are captured with Playwright.
 - Animations and transitions are disabled before capture to reduce noisy marquee diffs.
 - Pixelmatch compares the shared cropped area and reports page-size deltas separately.
@@ -1666,6 +1813,9 @@ ${observations}
 
 function repairActionSummary(repair) {
   if (repair.artifact) {
+    if (repair.artifact === 'vision-css-addition') {
+      return 'vision-css addition';
+    }
     return `${repair.artifact} replacement`;
   }
 
@@ -1697,13 +1847,14 @@ The OpenAI API key is read from the process environment or local env files such 
 
 Interpret the visual differences between the mockup screenshot, rendered block screenshot, and PNG diff. The PNG diff is a measurement signal, not the diagnosis.
 
-The current POC asks the LLM to choose and regenerate one complete repair artifact per pass: a full simplified block tree, a complete scoped vision CSS stylesheet, or a full rendered HTML document as a rare escape hatch. The deterministic proxy still supports older local patch actions for cheap debugging.
+The current POC asks the LLM to choose one repair artifact per pass: a full simplified block tree, a small additive vision CSS stylesheet, a complete replacement vision CSS stylesheet, or a full rendered HTML document as a rare escape hatch. The deterministic proxy still supports older local patch actions for cheap debugging.
 
 ## Repair Rules
 
-- Choose one repair artifact: \`block-tree\`, \`vision-css\`, or \`rendered-html\`.
+- Choose one repair artifact: \`block-tree\`, \`vision-css-addition\`, \`vision-css\`, or \`rendered-html\`.
 - Prefer \`block-tree\` when composition, editable content, wrappers, core/custom block choices, forms, or escaped markup are wrong.
-- Use \`vision-css\` only when the block structure is semantically correct and the remaining discrepancy is visual styling.
+- Use \`vision-css-addition\` when the block structure is semantically correct and the remaining discrepancy is a small styling refinement.
+- Use \`vision-css\` only when the block structure is semantically correct and prior vision CSS needs complete replacement.
 - Use \`rendered-html\` only as an explicitly justified escape hatch.
 - Prefer core block structure, block attributes, and block supports before custom blocks.
 - Use custom blocks only for the smallest subtree that needs a custom editor model, behavior, or markup contract.
@@ -1711,8 +1862,9 @@ The current POC asks the LLM to choose and regenerate one complete repair artifa
 - Do not use raw HTML blocks unless the plan explains why core/custom static blocks cannot preserve both fidelity and editability.
 - If escaped markup is visible in the browser, repair the block tree or block attributes rather than styling the text to look less wrong.
 - Keep regenerated artifacts scoped to the observed discrepancy.
-- Treat the repair pass limit as a ceiling, not a target. If the current artifact is mostly better and the remaining issues are ambiguous or high-risk, stop rather than forcing another rewrite.
-- Stop after the configured repair pass limit, earlier when visual drift is acceptable, or earlier when another repair is more likely to regress than improve the artifact.
+- Treat the repair pass limit as a ceiling, not a target.
+- Regressed candidates are rejected. When passes remain, the next repair should restart from the best measured pass with a focused CSS-first instruction.
+- Stop after the configured repair pass limit or earlier when visual drift is acceptable.
 
 ## Output
 
@@ -1720,8 +1872,8 @@ Return a repair proposal with:
 
 - observed discrepancy
 - likely cause in block tree, block wrapper DOM, CSS cascade, responsive behavior, or missing custom block
-- artifact: \`block-tree\`, \`vision-css\`, or \`rendered-html\`
-- content: full replacement artifact
+- artifact: \`block-tree\`, \`vision-css-addition\`, \`vision-css\`, or \`rendered-html\`
+- content: full replacement artifact for block-tree, vision-css, and rendered-html; additive scoped CSS for vision-css-addition
 - preferred production repair location
 - expected visual effect
 - editability risk
