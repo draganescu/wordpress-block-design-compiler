@@ -593,7 +593,10 @@ function customBlockCss() {
 .wp-block-poc-kind-marquee { overflow: hidden; background: var(--clay); color: white; padding: 18px 0; }
 .wp-block-poc-kind-marquee .marquee-track { display: flex; gap: 46px; width: max-content; animation: drift var(--marquee-speed, 18s) linear infinite; font: 700 18px/1 Inter, sans-serif; text-transform: uppercase; }
 .wp-block-poc-kind-marquee span { white-space: nowrap; }
-.wp-block-poc-studio-inquiry { display: grid; grid-template-columns: 1fr 420px; gap: 48px; align-items: start; }`;
+.wp-block-poc-studio-inquiry { display: grid; grid-template-columns: 1fr 420px; gap: 48px; align-items: start; }
+@media (max-width: 760px) {
+  .wp-block-poc-studio-inquiry { grid-template-columns: 1fr; }
+}`;
 }
 
 function buildReport({ prompt, analysis, plan, assembly }) {

@@ -54,6 +54,9 @@ h2 { font-size: clamp(38px, 5vw, 76px); max-width: 820px; }
 .wp-block-poc-kind-marquee .marquee-track { display: flex; gap: 46px; width: max-content; animation: drift var(--marquee-speed, 18s) linear infinite; font: 700 18px/1 Inter, sans-serif; text-transform: uppercase; }
 .wp-block-poc-kind-marquee span { white-space: nowrap; }
 .wp-block-poc-studio-inquiry { display: grid; grid-template-columns: 1fr 420px; gap: 48px; align-items: start; }
+@media (max-width: 760px) {
+  .wp-block-poc-studio-inquiry { grid-template-columns: 1fr; }
+}
     </style>
   </head>
   <body>

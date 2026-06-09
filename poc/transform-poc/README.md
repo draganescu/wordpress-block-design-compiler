@@ -37,3 +37,5 @@ This POC keeps styling as page CSS plus custom-block scoped CSS. That is intenti
 ## POC Limitation
 
 The script registers a minimal subset of core block save implementations directly with `@wordpress/blocks` instead of loading the full browser-oriented `@wordpress/block-library` package. The production renderer should move this into a browser/jsdom-backed package renderer so it can use fuller WordPress package behavior.
+
+The first POC run exposed a useful transform lesson: custom-block bridge CSS can accidentally override responsive rules from the original mockup because it is appended later. Vision/screenshot comparison should catch this class of drift immediately, especially desktop/mobile layout differences.
