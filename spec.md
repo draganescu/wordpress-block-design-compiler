@@ -322,6 +322,22 @@ Later, optional WordPress validation can run through Playground, Studio, wp-env,
 
 The rendered block HTML is a required comparison artifact. Visual diffs should compare the original LLM-designed mockup against the WordPress-package-rendered static block output, not against raw `content.html` text or a hand-built approximation. Repair prompts should receive the original mockup, rendered block HTML, validation errors, and visual diff report so the LLM can adjust the plan, custom blocks, or assembly.
 
+### 8. Theme Inference Comes Later
+
+Do not front-load `theme.json` generation during early transform work.
+
+The first goal is to learn how to preserve a single HTML design as editable blocks. During that phase, block-level attributes, custom classes, page CSS, and custom-block scoped CSS are acceptable. Once multiple pages produce good block styling and visual fidelity, the tool can infer shared theme concerns from repeated evidence:
+
+- palette slugs;
+- typography presets;
+- spacing scale;
+- layout/content width;
+- reusable section and card patterns;
+- block style variations;
+- global custom properties.
+
+Theme inference should be an extraction pass after successful transforms, not an upfront constraint that limits the LLM's design transfer. A premature `theme.json` can force weak generic styling before the transform has discovered which styles are genuinely reusable across pages.
+
 ## Fidelity Model
 
 The tool should optimize for two scores together.
@@ -491,6 +507,7 @@ Adapters should stream structured events:
 - Keep agent wrappers thin.
 - Build evals before optimizing prompts.
 - Keep the HTML mockup as the visual source of truth.
+- Infer `theme.json` only after repeated successful page/block transforms reveal stable shared styling.
 - Keep WordPress editor editability as a first-class constraint.
 
 ## Initial Build Slices

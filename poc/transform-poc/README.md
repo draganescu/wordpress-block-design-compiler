@@ -30,6 +30,10 @@ It writes deterministic output under `poc/transform-poc/output/`.
 - `@wordpress/blocks` can serialize registered static blocks into block markup.
 - The serialized block output can be rendered into `rendered/rendered-blocks.html` for visual comparison against the original mockup.
 
+## Theme JSON Is Deliberately Omitted
+
+This POC keeps styling as page CSS plus custom-block scoped CSS. That is intentional. `theme.json` should come after several pages have good block styling, so shared palette, spacing, typography, layout, and block variation decisions can be inferred from repeated successful transforms instead of guessed upfront.
+
 ## POC Limitation
 
 The script registers a minimal subset of core block save implementations directly with `@wordpress/blocks` instead of loading the full browser-oriented `@wordpress/block-library` package. The production renderer should move this into a browser/jsdom-backed package renderer so it can use fuller WordPress package behavior.

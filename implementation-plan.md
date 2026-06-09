@@ -472,6 +472,12 @@ The fastest useful path is iterations 0 through 6, but with narrow scope:
 
 This proves the architecture before spending time on packaging or agent distribution.
 
+## Theme JSON Timing
+
+Do not build `theme.json` into the early transform path. Keep the POC and first real transforms focused on page-level fidelity and editable block output. Allow page CSS, core block classes, and custom-block scoped CSS while we learn what preserves design best.
+
+Add theme inference only after we have several high-quality transformed pages. At that point, infer shared palette, typography, spacing, layout widths, block style variations, and reusable patterns from repeated successful output.
+
 ## Early Decisions To Make
 
 - Package manager: npm, pnpm, or bun.
@@ -479,7 +485,7 @@ This proves the architecture before spending time on packaging or agent distribu
 - Test runner: Vitest is the likely default.
 - Browser automation: Playwright is the likely default.
 - CSS parser: pick a structured parser early.
-- Block validation: use `@wordpress/blocks` and `@wordpress/block-library`.
+- Block validation: use `@wordpress/blocks`; evaluate browser/jsdom-backed `@wordpress/block-library` registration later.
 - Preview app: Vite is the likely simplest first host.
 - Model provider abstraction: define the interface before choosing defaults.
 
@@ -488,6 +494,7 @@ This proves the architecture before spending time on packaging or agent distribu
 - Block editor preview outside WordPress may diverge from final WordPress rendering.
 - Pixel-perfect conversion can fight editor editability.
 - Generated CSS can leak globally if custom block styles are not scoped.
+- Premature `theme.json` inference can flatten useful per-page design variation before we know which styles are stable.
 - Model-generated plans can overuse custom blocks unless the schema and policy are strict.
 - A deterministic converter can creep back into scope; keep conversion intelligence in the LLM and enforcement in validators.
 - Raw HTML can creep back in without a hard policy gate.
