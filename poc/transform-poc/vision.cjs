@@ -29,6 +29,8 @@ const DEFAULT_OPENAI_VISION_MODEL = 'gpt-4.1';
 const OPENAI_RESPONSES_URL = `${process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1'}/responses`;
 const OPENAI_TIMEOUT_MS = 120000;
 const CONTEXT_CHAR_LIMIT = 18000;
+const DEFAULT_MAX_MISMATCH_PERCENT = 8;
+const DEFAULT_MAX_HEIGHT_DELTA = 80;
 
 const VIEWPORTS = [
   { name: 'desktop', width: 1440, height: 1200 },
@@ -39,6 +41,7 @@ async function main() {
   const { default: pixelmatch } = await import('pixelmatch');
   const repairProvider = resolveRepairProvider();
   const maxRepairPasses = resolveMaxRepairPasses();
+  const acceptanceThresholds = resolveAcceptanceThresholds();
 
   assertRepairProviderReady(repairProvider);
   assertTransformOutputExists();
@@ -80,8 +83,12 @@ async function main() {
       };
       passReports.push(passReport);
 
-      if (isAcceptable(passReport)) {
-        stopReason = { reason: 'accepted', pass, detail: 'Visual drift is within the POC acceptance threshold.' };
+      if (isAcceptable(passReport, acceptanceThresholds)) {
+        stopReason = {
+          reason: 'accepted',
+          pass,
+          detail: `Visual drift is within the POC acceptance threshold: <= ${acceptanceThresholds.maxMismatchPercent}% max mismatch and <= ${acceptanceThresholds.maxHeightDelta}px max height delta.`,
+        };
         break;
       }
 
@@ -95,6 +102,7 @@ async function main() {
         appliedRepairs,
         currentHtmlPath,
         repairProvider,
+        acceptanceThresholds,
       });
       if (proposal.repairs.length === 0) {
         repairProposals.push(proposal);
@@ -124,7 +132,7 @@ async function main() {
   fs.copyFileSync(currentHtmlPath, FINAL_RENDERED_HTML);
   copyFinalScreenshots(passReports.at(-1));
 
-  const report = buildVisionReport({ passReports, repairProposals, repairProvider, maxRepairPasses, stopReason });
+  const report = buildVisionReport({ passReports, repairProposals, repairProvider, maxRepairPasses, acceptanceThresholds, stopReason });
   writeJson('visual-report.json', report);
   write('visual-report.md', renderMarkdownReport(report));
   write('llm-vision-brief.md', renderLlmVisionBrief(report));
@@ -136,6 +144,7 @@ async function main() {
         finalRenderedHtml: FINAL_RENDERED_HTML,
         finalPass: report.final.pass,
         maxRepairPasses: report.comparator.maxRepairPasses,
+        acceptance: report.comparator.acceptance,
         stopReason: report.stop.reason,
         viewports: report.final.viewports.map((viewport) => ({
           name: viewport.name,
@@ -286,8 +295,11 @@ function aggregateViewportResults(viewports) {
   };
 }
 
-function isAcceptable(passReport) {
-  return passReport.aggregate.maxMismatchPercent <= 8 && passReport.aggregate.maxHeightDelta <= 80;
+function isAcceptable(passReport, acceptanceThresholds) {
+  return (
+    passReport.aggregate.maxMismatchPercent <= acceptanceThresholds.maxMismatchPercent &&
+    passReport.aggregate.maxHeightDelta <= acceptanceThresholds.maxHeightDelta
+  );
 }
 
 function resolveRepairProvider() {
@@ -310,6 +322,38 @@ function resolveMaxRepairPasses() {
 
   if (!Number.isInteger(parsed) || parsed < 0 || parsed > 20) {
     throw new Error(`Invalid max repair passes "${raw}". Use an integer from 0 to 20.`);
+  }
+
+  return parsed;
+}
+
+function resolveAcceptanceThresholds() {
+  return {
+    maxMismatchPercent: resolveNumberOption({
+      names: ['--max-mismatch-percent'],
+      envName: 'POC_VISION_MAX_MISMATCH_PERCENT',
+      fallback: DEFAULT_MAX_MISMATCH_PERCENT,
+      label: 'max mismatch percent',
+      min: 0,
+      max: 100,
+    }),
+    maxHeightDelta: resolveNumberOption({
+      names: ['--max-height-delta'],
+      envName: 'POC_VISION_MAX_HEIGHT_DELTA',
+      fallback: DEFAULT_MAX_HEIGHT_DELTA,
+      label: 'max height delta',
+      min: 0,
+      max: 10000,
+    }),
+  };
+}
+
+function resolveNumberOption({ names, envName, fallback, label, min, max }) {
+  const raw = readOption(process.argv.slice(2), names) || process.env[envName] || String(fallback);
+  const parsed = Number(raw);
+
+  if (!Number.isFinite(parsed) || parsed < min || parsed > max) {
+    throw new Error(`Invalid ${label} "${raw}". Use a number from ${min} to ${max}.`);
   }
 
   return parsed;
@@ -423,10 +467,11 @@ function buildOpenAiVisionContent(context) {
   return content;
 }
 
-function buildVisionRepairPrompt({ passReport, appliedRepairs, currentHtmlPath }) {
+function buildVisionRepairPrompt({ passReport, appliedRepairs, currentHtmlPath, acceptanceThresholds }) {
   return [
     `Current pass: ${passReport.pass}`,
     `Aggregate mismatch: ${JSON.stringify(passReport.aggregate)}`,
+    `Acceptance thresholds: ${JSON.stringify(acceptanceThresholds)}`,
     `Per-viewport comparison: ${JSON.stringify(
       passReport.viewports.map((viewport) => ({
         viewport: viewport.name,
@@ -1319,7 +1364,7 @@ function copyFinalScreenshots(finalPass) {
   }
 }
 
-function buildVisionReport({ passReports, repairProposals, repairProvider, maxRepairPasses, stopReason }) {
+function buildVisionReport({ passReports, repairProposals, repairProvider, maxRepairPasses, acceptanceThresholds, stopReason }) {
   const final = passReports.at(-1);
   return {
     version: 3,
@@ -1334,10 +1379,7 @@ function buildVisionReport({ passReports, repairProposals, repairProvider, maxRe
       screenshotMode: 'fullPage',
       animations: 'disabled',
       maxRepairPasses,
-      acceptance: {
-        maxMismatchPercent: 8,
-        maxHeightDelta: 80,
-      },
+      acceptance: acceptanceThresholds,
       note: 'Images are compared across the shared cropped area. Full-page dimension deltas are reported separately.',
     },
     strategy: {
@@ -1353,15 +1395,15 @@ function buildVisionReport({ passReports, repairProposals, repairProvider, maxRe
     repairProposals,
     final,
     stop: stopReason || { reason: 'unknown', pass: final ? final.pass : null, detail: 'The loop ended without recording a stop reason.' },
-    observations: buildObservations(final),
+    observations: buildObservations(final, acceptanceThresholds),
   };
 }
 
-function buildObservations(finalPass) {
+function buildObservations(finalPass, acceptanceThresholds) {
   return finalPass.viewports.map((viewport) => {
     const { mismatchPercent, dimensionDelta } = viewport.comparison;
 
-    if (dimensionDelta.height > 120) {
+    if (dimensionDelta.height > acceptanceThresholds.maxHeightDelta) {
       return {
         viewport: viewport.name,
         severity: 'high',
@@ -1370,7 +1412,7 @@ function buildObservations(finalPass) {
       };
     }
 
-    if (mismatchPercent > 10) {
+    if (mismatchPercent > acceptanceThresholds.maxMismatchPercent) {
       return {
         viewport: viewport.name,
         severity: 'medium',
@@ -1418,6 +1460,7 @@ function renderMarkdownReport(report) {
 
 Final pass: ${report.final.pass} of max ${report.comparator.maxRepairPasses}
 Repair provider: ${report.strategy.repairProvider}
+Acceptance gate: <= ${report.comparator.acceptance.maxMismatchPercent}% max mismatch and <= ${report.comparator.acceptance.maxHeightDelta}px max height delta
 Stop reason: ${report.stop.reason} - ${report.stop.detail}
 
 | Pass | Viewport | Size | Pixel mismatch | Width / height delta | Diff |
@@ -1447,6 +1490,7 @@ ${observations}
 - Full-page screenshots are captured with Playwright.
 - Animations and transitions are disabled before capture to reduce noisy marquee diffs.
 - Pixelmatch compares the shared cropped area and reports page-size deltas separately.
+- A pass is accepted when the maximum viewport mismatch percentage and maximum viewport height delta are both within the configured gate.
 - This POC runs up to ${report.comparator.maxRepairPasses} repair passes.
 `;
 }

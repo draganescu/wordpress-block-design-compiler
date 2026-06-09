@@ -13,7 +13,9 @@ const planProvider = readOption(args, ['--plan-provider']);
 const assemblyProvider = readOption(args, ['--assembly-provider']);
 const visionProvider = readOption(args, ['--vision-provider', '--provider']);
 const maxRepairPasses = readOption(args, ['--max-repair-passes', '--vision-repair-passes']);
-const runArgs = stripOptions(args, ['--vision-provider', '--max-repair-passes', '--vision-repair-passes']);
+const maxMismatchPercent = readOption(args, ['--max-mismatch-percent']);
+const maxHeightDelta = readOption(args, ['--max-height-delta']);
+const runArgs = stripOptions(args, ['--vision-provider', '--max-repair-passes', '--vision-repair-passes', '--max-mismatch-percent', '--max-height-delta']);
 const visionArgs = [];
 
 if (!htmlProvider) runArgs.push(`--html-provider=${llmProvider}`);
@@ -21,6 +23,8 @@ if (!planProvider) runArgs.push(`--plan-provider=${llmProvider}`);
 if (!assemblyProvider) runArgs.push(`--assembly-provider=${llmProvider}`);
 visionArgs.push(`--provider=${visionProvider || llmProvider}`);
 if (maxRepairPasses !== null) visionArgs.push(`--max-repair-passes=${maxRepairPasses}`);
+if (maxMismatchPercent !== null) visionArgs.push(`--max-mismatch-percent=${maxMismatchPercent}`);
+if (maxHeightDelta !== null) visionArgs.push(`--max-height-delta=${maxHeightDelta}`);
 
 runStep('HTML transform', path.join(ROOT, 'run.cjs'), runArgs);
 runStep('Vision comparison', path.join(ROOT, 'vision.cjs'), visionArgs);

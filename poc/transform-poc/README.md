@@ -39,6 +39,7 @@ POC_PROMPT="Create a polished landing page for a neighborhood florist..." npm ru
 npm run poc:transform -- --prompt "Create a polished landing page for a neighborhood florist..."
 npm run poc:transform -- --prompt-file ./brief.md
 npm run poc:transform -- --prompt-file ./brief.md --max-repair-passes=5
+npm run poc:transform -- --prompt-file ./brief.md --max-mismatch-percent=4 --max-height-delta=40
 ```
 
 The prompt file should contain only the user request. The reusable design-generation behavior lives in `poc/transform-poc/system.design.md`, which is loaded as the OpenAI HTML mockup stage instructions.
@@ -86,6 +87,13 @@ The intended production split is hybrid:
 
 By default, this POC runs up to three repair passes with OpenAI vision repair. PNG diff remains the deterministic score and trigger. Override the limit with `--max-repair-passes=N` or `POC_VISION_MAX_REPAIR_PASSES=N`; use `0` to capture comparison screenshots without applying repair passes.
 
+The visual acceptance gate is also configurable. A pass is accepted only when both values are within the configured thresholds:
+
+- `POC_VISION_MAX_MISMATCH_PERCENT=8`, or `--max-mismatch-percent=8`: maximum allowed Pixelmatch mismatch percentage, using the shared cropped screenshot area. The report aggregates this as the maximum value across desktop and mobile.
+- `POC_VISION_MAX_HEIGHT_DELTA=80`, or `--max-height-delta=80`: maximum allowed absolute full-page height difference in pixels between the source mockup and rendered block HTML. The report aggregates this as the maximum value across desktop and mobile.
+
+Lower values make the loop stricter and can trigger more repair passes. Width delta is reported for diagnosis but is not currently part of the acceptance gate.
+
 To run the older local fixture/debug path without API credentials:
 
 ```bash
@@ -107,6 +115,8 @@ Optional settings:
 - `POC_VISION_REPAIR_PROVIDER=auto`: uses OpenAI when `OPENAI_API_KEY` is present, otherwise the deterministic proxy.
 - `POC_VISION_REPAIR_PROVIDER=off`: measures visual drift without applying repairs.
 - `POC_VISION_MAX_REPAIR_PASSES=3`: maximum vision-informed repair passes. CLI aliases: `--max-repair-passes` or `--vision-repair-passes`.
+- `POC_VISION_MAX_MISMATCH_PERCENT=8`: maximum accepted Pixelmatch mismatch percentage across compared viewport screenshots. CLI alias: `--max-mismatch-percent`.
+- `POC_VISION_MAX_HEIGHT_DELTA=80`: maximum accepted rendered page-height delta in pixels across compared viewports. CLI alias: `--max-height-delta`.
 - `POC_PROMPT`: non-interactive user request.
 - `POC_PROMPT_FILE`: path to a file containing only the user request.
 
