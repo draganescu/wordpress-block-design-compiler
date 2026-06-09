@@ -8,6 +8,9 @@ const DEFAULT_PROMPT = [
   'a small collection grid, and a workshop inquiry form.',
 ].join(' ');
 
+const DEFAULT_OPENAI_TEXT_MODEL = 'gpt-4.1';
+const OPENAI_TIMEOUT_MS = 120000;
+
 function loadEnvFiles() {
   const candidates = [
     path.resolve('.env'),
@@ -108,6 +111,96 @@ function hasFlag(args, names) {
   return args.some((arg) => names.includes(arg));
 }
 
+function resolveProvider({ stage, fallback = 'deterministic', args = process.argv.slice(2) }) {
+  const stageValue = readOption(args, [`--${stage}-provider`]);
+  const llmValue = readOption(args, ['--llm-provider']);
+  const providerValue = readOption(args, ['--provider']);
+  const envStageName = `POC_${stage.toUpperCase().replace(/-/g, '_')}_PROVIDER`;
+  const requested = stageValue || llmValue || providerValue || process.env[envStageName] || process.env.POC_LLM_PROVIDER || fallback;
+
+  if (requested === 'auto') {
+    return process.env.OPENAI_API_KEY ? 'openai' : fallback;
+  }
+
+  if (['deterministic', 'openai', 'off'].includes(requested)) {
+    return requested;
+  }
+
+  throw new Error(`Unsupported ${stage} provider "${requested}". Use deterministic, openai, auto, or off.`);
+}
+
+function assertOpenAiReady(label = 'OpenAI provider') {
+  if (!process.env.OPENAI_API_KEY) {
+    throw new Error(`${label} requires OPENAI_API_KEY in the process environment or a local env file.`);
+  }
+}
+
+async function callOpenAiJson({ instructions, inputText, schema, schemaName, strict = true, model = process.env.OPENAI_TEXT_MODEL || DEFAULT_OPENAI_TEXT_MODEL }) {
+  assertOpenAiReady('OpenAI LLM stage');
+
+  const response = await fetchWithTimeout(`${process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1'}/responses`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model,
+      store: false,
+      instructions,
+      input: [
+        {
+          role: 'user',
+          content: [{ type: 'input_text', text: inputText }],
+        },
+      ],
+      text: {
+        format: {
+          type: 'json_schema',
+          name: schemaName,
+          strict,
+          schema,
+        },
+      },
+    }),
+  });
+
+  const responseText = await response.text();
+  if (!response.ok) {
+    throw new Error(`OpenAI request failed with ${response.status}: ${responseText}`);
+  }
+
+  const responseJson = JSON.parse(responseText);
+  return JSON.parse(extractOpenAiOutputText(responseJson));
+}
+
+async function fetchWithTimeout(url, options) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), OPENAI_TIMEOUT_MS);
+
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+function extractOpenAiOutputText(responseJson) {
+  if (typeof responseJson.output_text === 'string') {
+    return responseJson.output_text;
+  }
+
+  for (const item of responseJson.output || []) {
+    for (const content of item.content || []) {
+      if (content.type === 'output_text' && typeof content.text === 'string') {
+        return content.text;
+      }
+    }
+  }
+
+  throw new Error('OpenAI response did not include output_text.');
+}
+
 function stripOptions(args, names) {
   const stripped = [];
   for (let index = 0; index < args.length; index += 1) {
@@ -126,9 +219,12 @@ function stripOptions(args, names) {
 
 module.exports = {
   DEFAULT_PROMPT,
+  assertOpenAiReady,
+  callOpenAiJson,
   hasFlag,
   loadEnvFiles,
   readOption,
   resolvePrompt,
+  resolveProvider,
   stripOptions,
 };

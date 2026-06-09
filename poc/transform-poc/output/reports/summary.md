@@ -5,6 +5,7 @@
 - Sections analyzed: 5
 - Blocks in assembled tree: 28
 - Custom blocks: poc/kind-marquee, poc/studio-inquiry
+- LLM providers: html=deterministic, plan=deterministic, assembly=deterministic
 
 ## Section Strategies
 

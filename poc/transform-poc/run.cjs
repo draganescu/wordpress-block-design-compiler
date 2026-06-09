@@ -4,7 +4,7 @@ const path = require('node:path');
 const { createRequire } = require('node:module');
 const parse5 = require('parse5');
 const csstree = require('css-tree');
-const { loadEnvFiles, resolvePrompt } = require('./runtime.cjs');
+const { assertOpenAiReady, callOpenAiJson, loadEnvFiles, resolvePrompt, resolveProvider } = require('./runtime.cjs');
 
 const requireFromRoot = createRequire(path.join(process.cwd(), 'package.json'));
 const blocks = requireFromRoot('@wordpress/blocks');
@@ -12,16 +12,31 @@ const element = requireFromRoot('@wordpress/element');
 
 const ROOT = path.resolve('poc/transform-poc');
 const OUT = path.join(ROOT, 'output');
+const CONTEXT_CHAR_LIMIT = 18000;
+const SUPPORTED_ASSEMBLY_BLOCKS = new Set([
+  'core/group',
+  'core/columns',
+  'core/column',
+  'core/heading',
+  'core/paragraph',
+  'core/buttons',
+  'core/button',
+  'core/html',
+  'poc/kind-marquee',
+  'poc/studio-inquiry',
+]);
 
 loadEnvFiles();
 
 async function main() {
+  const providers = resolveLlmProviders();
+  assertLlmProvidersReady(providers);
+  const prompt = await resolvePrompt();
+
   resetOutput();
   registerPocBlocks();
 
-  const prompt = await resolvePrompt();
-
-  const mockup = generateMockup(prompt);
+  const mockup = providers.html === 'openai' ? await generateOpenAiMockup(prompt) : generateMockup(prompt);
   write('mockup/prompt.md', `${prompt}\n`);
   write('mockup/index.html', mockup.html);
   write('mockup/style.css', mockup.css);
@@ -29,24 +44,24 @@ async function main() {
   const analysis = analyzeMockup(mockup.html, mockup.css);
   writeJson('analysis/analysis.json', analysis);
 
-  const plan = planBlocks(analysis);
+  const plan = providers.plan === 'openai' ? await planBlocksWithOpenAi({ prompt, mockup, analysis }) : planBlocks(analysis);
   writeJson('plan/block-implementation-plan.json', plan);
 
-  const assembly = assembleBlocks(plan);
+  const assembly = providers.assembly === 'openai' ? await assembleBlocksWithOpenAi({ prompt, mockup, analysis, plan }) : assembleBlocks(plan);
   writeJson('wordpress/block-tree.json', simplifyBlocks(assembly.blockTree));
   write('wordpress/content.html', assembly.blockMarkup);
   writeCustomBlockSource(plan);
 
   const renderedFragment = stripBlockComments(assembly.blockMarkup);
   const renderedHtml = renderFullHtml({
-    title: 'Rendered Blocks - Kiln & Kind',
+    title: `Rendered Blocks - ${analysis.title || 'POC'}`,
     css: [mockup.css, customBlockCss()].join('\n\n'),
     body: renderedFragment,
   });
   write('rendered/rendered-fragment.html', renderedFragment);
   write('rendered/rendered-blocks.html', renderedHtml);
 
-  const report = buildReport({ prompt, analysis, plan, assembly });
+  const report = buildReport({ prompt, analysis, plan, assembly, providers });
   writeJson('reports/summary.json', report);
   write('reports/summary.md', renderMarkdownReport(report));
 
@@ -54,6 +69,7 @@ async function main() {
     JSON.stringify(
       {
         output: OUT,
+        providers,
         sections: analysis.sections.length,
         plannedCustomBlocks: plan.customBlocks.map((block) => block.name),
         renderedHtml: path.join(OUT, 'rendered/rendered-blocks.html'),
@@ -78,6 +94,256 @@ function write(relativePath, content) {
 
 function writeJson(relativePath, data) {
   write(relativePath, `${JSON.stringify(data, null, 2)}\n`);
+}
+
+function resolveLlmProviders() {
+  return {
+    html: resolveProvider({ stage: 'html', fallback: 'deterministic' }),
+    plan: resolveProvider({ stage: 'plan', fallback: 'deterministic' }),
+    assembly: resolveProvider({ stage: 'assembly', fallback: 'deterministic' }),
+  };
+}
+
+function assertLlmProvidersReady(providers) {
+  for (const [stage, provider] of Object.entries(providers)) {
+    if (provider === 'openai') {
+      assertOpenAiReady(`OpenAI ${stage} provider`);
+    }
+  }
+}
+
+async function generateOpenAiMockup(prompt) {
+  const result = await callOpenAiJson({
+    schemaName: 'html_mockup',
+    schema: htmlMockupSchema(),
+    instructions: [
+      'You generate polished standalone HTML/CSS mockups for a WordPress block transform POC.',
+      'Create a beautiful, visually specific one-page design from the user brief.',
+      'Use semantic sections with data-section attributes, meaningful class names, responsive CSS, and no external assets.',
+      'Return complete HTML and CSS separately. The HTML must link to ./style.css and must not include inline style tags.',
+      'Include rich layout, typography, responsive behavior, and realistic editable text content.',
+    ].join(' '),
+    inputText: `Design brief:\n${prompt}`,
+  });
+
+  return {
+    html: result.html.trim().endsWith('\n') ? result.html : `${result.html.trim()}\n`,
+    css: result.css.trim().endsWith('\n') ? result.css : `${result.css.trim()}\n`,
+  };
+}
+
+function htmlMockupSchema() {
+  return {
+    type: 'object',
+    additionalProperties: false,
+    required: ['title', 'html', 'css'],
+    properties: {
+      title: { type: 'string' },
+      html: { type: 'string' },
+      css: { type: 'string' },
+    },
+  };
+}
+
+async function planBlocksWithOpenAi({ prompt, mockup, analysis }) {
+  const plan = await callOpenAiJson({
+    schemaName: 'block_implementation_plan',
+    schema: blockPlanSchema(),
+    strict: false,
+    instructions: [
+      'You plan how to convert an HTML/CSS mockup into editable WordPress blocks.',
+      'Prefer core WordPress blocks and block supports before custom blocks.',
+      'Use custom static blocks only for the smallest subtree needing custom editor fields, behavior, or a markup contract.',
+      'Use core/html only when neither core nor custom static blocks can preserve both fidelity and editability, and explain why.',
+      'The plan should optimize for rendered visual fidelity while preserving editable text, links, repeated items, and form labels/placeholders.',
+    ].join(' '),
+    inputText: [
+      `User prompt:\n${prompt}`,
+      `Analysis:\n${JSON.stringify(analysis, null, 2)}`,
+      `HTML:\n${truncateMiddle(mockup.html, CONTEXT_CHAR_LIMIT)}`,
+      `CSS:\n${truncateMiddle(mockup.css, CONTEXT_CHAR_LIMIT)}`,
+    ].join('\n\n'),
+  });
+  return normalizePlan(plan, analysis);
+}
+
+function normalizePlan(plan, analysis) {
+  const sections = Array.isArray(plan.sections) && plan.sections.length ? plan.sections : planBlocks(analysis).sections;
+  const customBlocks = Array.isArray(plan.customBlocks) ? plan.customBlocks : [];
+  return {
+    version: Number(plan.version || 1),
+    thesis: String(plan.thesis || 'OpenAI-generated block implementation plan.'),
+    tokens: plan.tokens && typeof plan.tokens === 'object' && !Array.isArray(plan.tokens) ? plan.tokens : analysis.css.customProperties,
+    sections: sections.map((section) => ({
+      id: String(section.id || 'section'),
+      sourceSelector: String(section.sourceSelector || section.id || 'section'),
+      strategy: ['core-assembly', 'custom-block', 'html-block'].includes(section.strategy) ? section.strategy : 'core-assembly',
+      coreAttempt: {
+        considered: Array.isArray(section.coreAttempt && section.coreAttempt.considered) ? section.coreAttempt.considered.map(String) : ['core/group'],
+        verdict: String((section.coreAttempt && section.coreAttempt.verdict) || 'Use editable blocks where possible.'),
+      },
+      customBlock: section.customBlock || null,
+      editableFields: Array.isArray(section.editableFields) ? section.editableFields.map(String) : [],
+    })),
+    customBlocks: customBlocks.map((block) => ({
+      name: String(block.name || `poc/${block.slug || 'custom-static'}`),
+      slug: slug(String(block.slug || block.name || 'custom-static')),
+      reason: String(block.reason || 'OpenAI planned custom block.'),
+      controls: Array.isArray(block.controls) ? block.controls.map(String) : [],
+    })),
+  };
+}
+
+function blockPlanSchema() {
+  return {
+    type: 'object',
+    additionalProperties: false,
+    required: ['version', 'thesis', 'tokens', 'sections', 'customBlocks'],
+    properties: {
+      version: { type: 'number' },
+      thesis: { type: 'string' },
+      tokens: {
+        type: 'object',
+        additionalProperties: { type: 'string' },
+      },
+      sections: {
+        type: 'array',
+        items: {
+          type: 'object',
+          additionalProperties: false,
+          required: ['id', 'sourceSelector', 'strategy', 'coreAttempt', 'customBlock', 'editableFields'],
+          properties: {
+            id: { type: 'string' },
+            sourceSelector: { type: 'string' },
+            strategy: { type: 'string', enum: ['core-assembly', 'custom-block', 'html-block'] },
+            coreAttempt: {
+              type: 'object',
+              additionalProperties: false,
+              required: ['considered', 'verdict'],
+              properties: {
+                considered: { type: 'array', items: { type: 'string' } },
+                verdict: { type: 'string' },
+              },
+            },
+            customBlock: { type: ['string', 'null'] },
+            editableFields: { type: 'array', items: { type: 'string' } },
+          },
+        },
+      },
+      customBlocks: {
+        type: 'array',
+        items: {
+          type: 'object',
+          additionalProperties: false,
+          required: ['name', 'slug', 'reason', 'controls'],
+          properties: {
+            name: { type: 'string' },
+            slug: { type: 'string' },
+            reason: { type: 'string' },
+            controls: { type: 'array', items: { type: 'string' } },
+          },
+        },
+      },
+    },
+  };
+}
+
+async function assembleBlocksWithOpenAi({ prompt, mockup, analysis, plan }) {
+  const result = await callOpenAiJson({
+    schemaName: 'block_tree_assembly',
+    schema: blockTreeAssemblySchema(),
+    strict: false,
+    instructions: [
+      'You assemble a WordPress static block tree JSON for a POC renderer.',
+      'Use only supported block names: core/group, core/columns, core/column, core/heading, core/paragraph, core/buttons, core/button, core/html, poc/kind-marquee, poc/studio-inquiry.',
+      'Extract real text, links, repeated items, and form fields from the HTML mockup.',
+      'Prefer core blocks for layout/text/buttons/columns. Use poc/kind-marquee for marquee-like repeated text. Use poc/studio-inquiry for forms. Use core/html sparingly for visual fragments that cannot fit the supported editable blocks.',
+      'For every block, attributesJson must be a valid JSON object string containing the attributes for that block. Use "{}" when there are no attributes.',
+      'Return a block tree that can render a close visual approximation using the generated CSS and the POC custom block CSS.',
+    ].join(' '),
+    inputText: [
+      `User prompt:\n${prompt}`,
+      `Analysis:\n${JSON.stringify(analysis, null, 2)}`,
+      `Plan:\n${JSON.stringify(plan, null, 2)}`,
+      `HTML:\n${truncateMiddle(mockup.html, CONTEXT_CHAR_LIMIT)}`,
+      `CSS selectors and variables:\n${JSON.stringify(analysis.css, null, 2)}`,
+    ].join('\n\n'),
+  });
+
+  const blockTree = simplifiedToBlocks(result.blockTree || []);
+  return {
+    blockTree,
+    blockMarkup: blocks.serialize(blockTree),
+  };
+}
+
+function blockTreeAssemblySchema() {
+  return {
+    type: 'object',
+    additionalProperties: false,
+    required: ['notes', 'blockTree'],
+    properties: {
+      notes: { type: 'string' },
+      blockTree: {
+        type: 'array',
+        items: blockNodeSchema(0),
+      },
+    },
+  };
+}
+
+function blockNodeSchema(depth) {
+  const childSchema =
+    depth >= 5
+      ? {
+          type: 'array',
+          maxItems: 0,
+          items: {
+            type: 'object',
+            additionalProperties: false,
+            properties: {},
+          },
+        }
+      : {
+          type: 'array',
+          items: blockNodeSchema(depth + 1),
+        };
+
+  return {
+    type: 'object',
+    additionalProperties: false,
+    required: ['name', 'attributesJson', 'innerBlocks'],
+    properties: {
+      name: {
+        type: 'string',
+        enum: ['core/group', 'core/columns', 'core/column', 'core/heading', 'core/paragraph', 'core/buttons', 'core/button', 'core/html', 'poc/kind-marquee', 'poc/studio-inquiry'],
+      },
+      attributesJson: { type: 'string' },
+      innerBlocks: childSchema,
+    },
+  };
+}
+
+function simplifiedToBlocks(blockList) {
+  return blockList
+    .filter((block) => block && SUPPORTED_ASSEMBLY_BLOCKS.has(block.name))
+    .map((block) => {
+      const attributes = parseBlockAttributes(block);
+      return blocks.createBlock(block.name, attributes, simplifiedToBlocks(block.innerBlocks || []));
+    });
+}
+
+function parseBlockAttributes(block) {
+  if (block.attributes && typeof block.attributes === 'object') {
+    return block.attributes;
+  }
+
+  try {
+    const parsed = JSON.parse(block.attributesJson || '{}');
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+  } catch {
+    return {};
+  }
 }
 
 function generateMockup() {
@@ -180,7 +446,7 @@ h2 { font-size: clamp(38px, 5vw, 76px); max-width: 820px; }
 .inquiry { display: grid; grid-template-columns: 1fr 420px; gap: 48px; align-items: start; border-top: 1px solid rgba(20,32,29,.18); }
 .inquiry-form { display: grid; gap: 16px; background: white; padding: 24px; border: 1px solid rgba(20,32,29,.14); }
 .inquiry-form label { display: grid; gap: 8px; font-weight: 700; }
-.inquiry-form input, .inquiry-form select { min-height: 44px; border: 1px solid rgba(20,32,29,.24); padding: 0 12px; font: inherit; background: var(--paper); }
+.inquiry-form input, .inquiry-form select, .inquiry-form textarea { min-height: 44px; border: 1px solid rgba(20,32,29,.24); padding: 0 12px; font: inherit; background: var(--paper); }
 @media (max-width: 760px) {
   .hero, .story, .inquiry, .product-grid { grid-template-columns: 1fr; }
   .hero-object { min-height: 360px; }
@@ -449,6 +715,16 @@ function registerPocBlocks() {
       element.createElement('div', { className: 'wp-block-button' }, element.createElement('a', { className: 'wp-block-button__link wp-element-button', href: attributes.url }, attributes.text)),
   });
 
+  safeRegister('core/html', {
+    apiVersion: 3,
+    title: 'Custom HTML',
+    category: 'widgets',
+    attributes: {
+      html: { type: 'string' },
+    },
+    save: ({ attributes }) => element.createElement('div', { className: 'wp-block-html', dangerouslySetInnerHTML: { __html: attributes.html || '' } }),
+  });
+
   safeRegister('poc/kind-marquee', {
     apiVersion: 3,
     title: 'Kind Marquee',
@@ -516,6 +792,18 @@ function registerPocBlocks() {
 }
 
 function renderField(field) {
+  if (field.type === 'textarea') {
+    return element.createElement(
+      'label',
+      { key: field.label },
+      field.label,
+      element.createElement('textarea', {
+        name: slug(field.label),
+        placeholder: field.placeholder,
+      })
+    );
+  }
+
   if (field.type === 'select') {
     return element.createElement(
       'label',
@@ -605,12 +893,14 @@ function customBlockCss() {
 .wp-block-poc-kind-marquee .marquee-track { display: flex; gap: 46px; width: max-content; animation: drift var(--marquee-speed, 18s) linear infinite; font: 700 18px/1 Inter, sans-serif; text-transform: uppercase; }
 .wp-block-poc-kind-marquee span { white-space: nowrap; }
 .wp-block-poc-studio-inquiry { padding: clamp(48px, 8vw, 104px) clamp(20px, 6vw, 80px); border-top: 1px solid rgba(20,32,29,.18); }
+.wp-block-poc-studio-inquiry textarea { padding-top: 10px; }
 .wp-block-poc-studio-inquiry .inquiry-columns { --wp--columns-count: 2; align-items: start; margin: 0; }`;
 }
 
-function buildReport({ prompt, analysis, plan, assembly }) {
+function buildReport({ prompt, analysis, plan, assembly, providers }) {
   return {
     prompt,
+    providers,
     sectionsAnalyzed: analysis.sections.length,
     sectionStrategies: plan.sections.map((section) => ({
       id: section.id,
@@ -638,6 +928,7 @@ function renderMarkdownReport(report) {
 - Sections analyzed: ${report.sectionsAnalyzed}
 - Blocks in assembled tree: ${report.blockCount}
 - Custom blocks: ${report.customBlocks.join(', ')}
+- LLM providers: html=${report.providers.html}, plan=${report.providers.plan}, assembly=${report.providers.assembly}
 
 ## Section Strategies
 

@@ -13,7 +13,7 @@
     "doctor": "npm run build && node dist/src/cli.js doctor",
     "poc:transform": "node poc/transform-poc/transform.cjs",
     "poc:transform:html": "node poc/transform-poc/run.cjs",
-    "poc:transform:openai": "node poc/transform-poc/transform.cjs --vision-provider=openai",
+    "poc:transform:openai": "node poc/transform-poc/transform.cjs --llm-provider=openai",
     "poc:vision": "node poc/transform-poc/vision.cjs",
     "poc:vision:openai": "node poc/transform-poc/vision.cjs --provider=openai",
     "run-fixture": "npm run build && node dist/src/cli.js run-fixture fixtures/simple-landing --out artifacts/simple-landing",

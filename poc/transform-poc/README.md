@@ -81,14 +81,26 @@ cp .env.example .env.local
 npm run poc:transform:openai
 ```
 
+`npm run poc:transform:openai` uses OpenAI for every LLM-shaped POC stage:
+
+- prompt -> HTML/CSS mockup
+- analysis -> block implementation plan
+- plan/mockup -> supported WordPress block tree
+- screenshots/diffs -> vision repair proposals
+
 Optional settings:
 
+- `OPENAI_TEXT_MODEL`: defaults to `gpt-4.1`.
 - `OPENAI_VISION_MODEL`: defaults to `gpt-4.1`.
 - `OPENAI_BASE_URL`: defaults to `https://api.openai.com/v1`.
 - `OPENAI_API_KEY`: read from the process environment, `.env.local`, `.env`, `poc/transform-poc/.env.local`, or `poc/transform-poc/.env`.
+- `POC_LLM_PROVIDER=openai`: uses OpenAI for HTML, plan, assembly, and vision unless a stage override is passed.
+- `POC_HTML_PROVIDER=openai`: uses OpenAI for the initial HTML/CSS mockup.
+- `POC_PLAN_PROVIDER=openai`: uses OpenAI for the block implementation plan.
+- `POC_ASSEMBLY_PROVIDER=openai`: uses OpenAI for the supported block tree.
 - `POC_VISION_REPAIR_PROVIDER=auto`: uses OpenAI when `OPENAI_API_KEY` is present, otherwise the deterministic proxy.
 - `POC_VISION_REPAIR_PROVIDER=off`: measures visual drift without applying repairs.
 - `POC_PROMPT`: non-interactive design prompt.
 - `POC_PROMPT_FILE`: path to a file containing the design prompt.
 
-The OpenAI mode sends the mockup, rendered screenshot, PNG diff, block plan, block tree, and rendered HTML context to the Responses API. It asks for structured JSON containing an observed discrepancy, likely cause, preferred production repair location, and scoped CSS patch for the current POC. The real implementation should use that diagnosis to decide whether the fix belongs in the block tree, core block attributes/supports, custom block source, or narrow bridge CSS.
+The OpenAI mode sends the brief, generated mockup, deterministic analysis, block plan, block tree, rendered screenshot, PNG diff, and rendered HTML context to the Responses API depending on stage. It asks for structured JSON at each LLM stage. The real implementation should use the same stage boundaries but graduate from this POC's supported block subset to generated custom block source and richer WordPress package rendering.

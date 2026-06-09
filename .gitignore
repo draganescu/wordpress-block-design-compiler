@@ -9,3 +9,7 @@ artifacts/
 .DS_Store
 coverage/
 *.log
+**/brief.md
+**/llm-repair-request.md
+**/llm-repair-response.json
+**/llm-repair-proposal.json

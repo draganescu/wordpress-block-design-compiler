@@ -121,7 +121,7 @@
       ".inquiry",
       ".inquiry-form",
       ".inquiry-form label",
-      ".inquiry-form input,.inquiry-form select",
+      ".inquiry-form input,.inquiry-form select,.inquiry-form textarea",
       ".hero,.story,.inquiry,.product-grid"
     ]
   }

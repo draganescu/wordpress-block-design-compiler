@@ -7,9 +7,18 @@ loadEnvFiles();
 
 const ROOT = __dirname;
 const args = process.argv.slice(2);
+const llmProvider = readOption(args, ['--llm-provider']);
+const htmlProvider = readOption(args, ['--html-provider']);
+const planProvider = readOption(args, ['--plan-provider']);
+const assemblyProvider = readOption(args, ['--assembly-provider']);
 const visionProvider = readOption(args, ['--vision-provider', '--provider']);
-const runArgs = stripOptions(args, ['--vision-provider', '--provider']);
-const visionArgs = visionProvider ? [`--provider=${visionProvider}`] : [];
+const runArgs = stripOptions(args, ['--vision-provider']);
+const visionArgs = [];
+
+if (llmProvider && !htmlProvider) runArgs.push(`--html-provider=${llmProvider}`);
+if (llmProvider && !planProvider) runArgs.push(`--plan-provider=${llmProvider}`);
+if (llmProvider && !assemblyProvider) runArgs.push(`--assembly-provider=${llmProvider}`);
+if (visionProvider || llmProvider) visionArgs.push(`--provider=${visionProvider || llmProvider}`);
 
 runStep('HTML transform', path.join(ROOT, 'run.cjs'), runArgs);
 runStep('Vision comparison', path.join(ROOT, 'vision.cjs'), visionArgs);
