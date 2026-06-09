@@ -53,6 +53,7 @@ async function main() {
     blockTreeChanged: false,
     cssRepairs: [],
     htmlReplacements: [],
+    renderedHtmlOverride: null,
   };
   fs.writeFileSync(BASE_RENDERED_HTML, baseRenderedHtml, 'utf8');
   fs.writeFileSync(path.join(ITERATIONS_OUT, 'pass-0.html'), baseRenderedHtml, 'utf8');
@@ -426,12 +427,13 @@ function buildOpenAiVisionRepairRequest(context) {
     model: process.env.OPENAI_VISION_MODEL || DEFAULT_OPENAI_VISION_MODEL,
     store: false,
     instructions: [
-      'You are the vision repair planner for a WordPress block design compiler POC.',
+      'You are the vision repair artifact generator for a WordPress block design compiler POC.',
       'Use screenshots and diffs to diagnose visual drift between a source HTML mockup and rendered WordPress block HTML.',
-      'Return the smallest executable repair actions for this POC: block tree edits, block attributes/supports/classes, rendered HTML replacements, or scoped CSS.',
-      'Prefer block-tree or block-attribute actions when rendered text shows escaped HTML markup or when the DOM structure is wrong.',
+      'Choose the highest-leverage repair artifact and regenerate that complete artifact instead of returning granular patch actions.',
+      'Prefer a complete block-tree replacement when structure, content, wrappers, editability, forms, or custom-block choices are wrong.',
+      'Use a complete vision-css replacement only when the block structure is already semantically right and the drift is purely cascade, layout, spacing, typography, or color.',
       'Do not propose raw HTML blocks unless core/custom static blocks cannot preserve both fidelity and editability.',
-      'Do not include scripts, imports, network resources, or HTML in css.',
+      'Use rendered-html only as an explicitly justified escape hatch.',
     ].join(' '),
     input: [
       {
@@ -442,7 +444,7 @@ function buildOpenAiVisionRepairRequest(context) {
     text: {
       format: {
         type: 'json_schema',
-        name: 'vision_repair_proposal',
+        name: 'vision_repair_artifact',
         strict: true,
         schema: visionRepairSchema(),
       },
@@ -488,30 +490,28 @@ function buildVisionRepairPrompt({ passReport, appliedRepairs, currentHtmlPath, 
       null,
       2
     )}`,
-    `Already applied repairs: ${JSON.stringify(appliedRepairs.map((repair) => ({ id: repair.id, reason: repair.reason })), null, 2)}`,
+    `Already applied repairs: ${JSON.stringify(appliedRepairs.map((repair) => ({ id: repair.id, artifact: repair.artifact || repair.layer, reason: repair.reason })), null, 2)}`,
     '',
     'Repair constraints:',
-    '- Choose the repair layer that matches the cause: block composition, block styling attributes/supports, or scoped CSS.',
-    '- Prefer core block structure, block attributes, and block supports before custom blocks or CSS.',
-    '- Use custom blocks only for the smallest subtree needing a custom editor model, behavior, or markup contract.',
+    '- Choose one repair artifact that matches the cause: block-tree, vision-css, or rendered-html.',
+    '- Prefer block-tree when block composition, block attributes, core block choice, custom block choice, wrappers, content, forms, links, or editability are wrong.',
+    '- Use vision-css only when the structure is semantically correct and the remaining drift is purely visual styling.',
+    '- Use rendered-html only as an escape hatch when neither block-tree nor vision-css can express the repair in this POC, and explain why.',
+    '- For block-tree, return the complete replacement simplified block tree JSON array. Do not return a patch. Preserve all editable text, links, form labels, placeholders, repeated items, and inspector-style attributes.',
+    '- For block-tree, each node must use {"name":"namespace/block","attributes":{},"innerBlocks":[]}. Do not use markdown code fences.',
+    '- For block-tree, prefer core block structure, block attributes, and block supports before custom blocks or CSS.',
+    '- For block-tree, use custom blocks only for the smallest subtree needing a custom editor model, behavior, or markup contract.',
+    '- For block-tree, do not add generated custom blocks that are disguised HTML blocks with html/sourceHtml/markup/innerHTML/editableFields/sourceSelector blobs.',
+    '- For vision-css, return the complete replacement vision repair stylesheet for this pass. Keep it scoped to existing rendered block classes/selectors.',
+    '- For rendered-html, return the complete replacement HTML document. Do not use scripts, imports, or external URLs.',
     '- Keep rich text, links, fields, labels, placeholders, repeated items, and inspector controls editable.',
-    '- If visible literal markup such as <label>, <a href>, <br>, or closing tags appears in the screenshot, do not use CSS to hide it. Return block-composition or block-attribute actions that make the rendered HTML semantic.',
-    '- For block-composition or block-styling actions, use blockPath values from the indexed block tree.',
-    '- Use css actions only for cascade/layout/spacing/typography problems that should remain CSS.',
-    '- Action formats:',
-    '- Every action field is required by the schema; set unused fields to null.',
-    '  - {"kind":"set-block-attributes","blockPath":[0,1],"parentPath":null,"index":null,"attributesJson":"{\\"className\\":\\"example\\"}","blockJson":null,"find":null,"replace":null,"css":null}',
-    '  - {"kind":"replace-block","blockPath":[0,1],"parentPath":null,"index":null,"attributesJson":null,"blockJson":"{\\"name\\":\\"core/html\\",\\"attributes\\":{\\"html\\":\\"<label>Name</label>\\"},\\"innerBlocks\\":[]}","find":null,"replace":null,"css":null}',
-    '  - {"kind":"insert-block","blockPath":null,"parentPath":[0],"index":2,"attributesJson":null,"blockJson":"{\\"name\\":\\"core/paragraph\\",\\"attributes\\":{\\"content\\":\\"Text\\"},\\"innerBlocks\\":[]}","find":null,"replace":null,"css":null}',
-    '  - {"kind":"delete-block","blockPath":[0,2],"parentPath":null,"index":null,"attributesJson":null,"blockJson":null,"find":null,"replace":null,"css":null}',
-    '  - {"kind":"html-replace","blockPath":null,"parentPath":null,"index":null,"attributesJson":null,"blockJson":null,"find":"escaped text","replace":"semantic html","css":null}',
-    '  - {"kind":"css","blockPath":null,"parentPath":null,"index":null,"attributesJson":null,"blockJson":null,"find":null,"replace":null,"css":".selector { property: value; }"}',
+    '- If visible literal markup such as <label>, <a href>, <br>, or closing tags appears in the screenshot, choose block-tree and make the rendered HTML semantic.',
     '- Explain expectedVisualEffect and editabilityRisk for each repair.',
-    '- Keep CSS scoped to existing rendered block classes/selectors.',
-    '- Do not include </style>, <script>, @import, external URLs, or broad universal resets.',
     '- If no executable repair is appropriate, set stop=true and repairs=[].',
     '',
     `Block implementation plan:\n${readContextFile(PLAN_JSON)}`,
+    '',
+    `Source mockup HTML:\n${readContextFile(MOCKUP_HTML)}`,
     '',
     `Indexed block tree paths:\n${renderIndexedBlockTree(readJsonFile(BLOCK_TREE_JSON, []))}`,
     '',
@@ -533,42 +533,19 @@ function visionRepairSchema() {
       likelyCause: { type: 'string' },
       repairs: {
         type: 'array',
-        maxItems: 3,
+        maxItems: 1,
         items: {
           type: 'object',
           additionalProperties: false,
-          required: ['id', 'layer', 'reason', 'preferredRealAction', 'expectedVisualEffect', 'editabilityRisk', 'css', 'actions'],
+          required: ['id', 'artifact', 'reason', 'preferredRealAction', 'expectedVisualEffect', 'editabilityRisk', 'content'],
           properties: {
             id: { type: 'string' },
-            layer: { type: 'string', enum: ['block-composition', 'block-styling', 'css', 'rendered-html'] },
+            artifact: { type: 'string', enum: ['block-tree', 'vision-css', 'rendered-html'] },
             reason: { type: 'string' },
             preferredRealAction: { type: 'string' },
             expectedVisualEffect: { type: 'string' },
             editabilityRisk: { type: 'string' },
-            css: { type: ['string', 'null'] },
-            actions: {
-              type: 'array',
-              maxItems: 6,
-              items: {
-                type: 'object',
-                additionalProperties: false,
-                required: ['kind', 'blockPath', 'parentPath', 'index', 'attributesJson', 'blockJson', 'find', 'replace', 'css'],
-                properties: {
-                  kind: {
-                    type: 'string',
-                    enum: ['css', 'set-block-attributes', 'replace-block', 'delete-block', 'insert-block', 'html-replace'],
-                  },
-                  blockPath: { type: ['array', 'null'], items: { type: 'number' } },
-                  parentPath: { type: ['array', 'null'], items: { type: 'number' } },
-                  index: { type: ['number', 'null'] },
-                  attributesJson: { type: ['string', 'null'] },
-                  blockJson: { type: ['string', 'null'] },
-                  find: { type: ['string', 'null'] },
-                  replace: { type: ['string', 'null'] },
-                  css: { type: ['string', 'null'] },
-                },
-              },
-            },
+            content: { type: 'string' },
           },
         },
       },
@@ -577,11 +554,11 @@ function visionRepairSchema() {
 }
 
 function normalizeOpenAiRepairProposal(raw, context, proposalPath) {
-  const repairs = raw.stop ? [] : (raw.repairs || []).map(normalizeRepair).filter(Boolean);
+  const repairs = raw.stop ? [] : (raw.repairs || []).map(normalizeArtifactRepair).filter(Boolean);
   return {
     afterPass: context.passReport.pass,
     nextPass: context.passReport.pass + 1,
-    mode: 'openai-vision',
+    mode: 'openai-vision-artifact',
     provider: {
       model: process.env.OPENAI_VISION_MODEL || DEFAULT_OPENAI_VISION_MODEL,
       response: relativeToOutput(path.join(VISION_OUT, `pass-${context.passReport.pass}`, 'llm-repair-response.json')),
@@ -594,6 +571,43 @@ function normalizeOpenAiRepairProposal(raw, context, proposalPath) {
     stop: Boolean(raw.stop),
     repairs,
   };
+}
+
+function normalizeArtifactRepair(repair) {
+  const id = slug(String(repair.id || 'openai-vision-artifact-repair'));
+  const artifact = ['block-tree', 'vision-css', 'rendered-html'].includes(repair.artifact) ? repair.artifact : null;
+  const content = String(repair.content || '').trim();
+  if (!artifact || !content) return null;
+
+  const normalized = {
+    id,
+    source: 'openai-vision',
+    layer: artifactLayer(artifact),
+    artifact,
+    reason: String(repair.reason || '').trim(),
+    preferredRealAction: String(repair.preferredRealAction || '').trim(),
+    expectedVisualEffect: String(repair.expectedVisualEffect || '').trim(),
+    editabilityRisk: String(repair.editabilityRisk || '').trim(),
+  };
+
+  if (artifact === 'block-tree') {
+    const blockTree = normalizeBlockTreeJson(content);
+    return blockTree ? { ...normalized, blockTree } : null;
+  }
+
+  if (artifact === 'vision-css') {
+    const css = normalizeCss(content);
+    return css ? { ...normalized, css } : null;
+  }
+
+  const html = normalizeRenderedHtml(content);
+  return html ? { ...normalized, html } : null;
+}
+
+function artifactLayer(artifact) {
+  if (artifact === 'block-tree') return 'artifact:block-tree';
+  if (artifact === 'vision-css') return 'artifact:vision-css';
+  return 'artifact:rendered-html';
 }
 
 function normalizeRepair(repair) {
@@ -679,7 +693,7 @@ function normalizeRepairAction(action) {
 }
 
 function normalizeCss(value) {
-  const css = value.trim();
+  const css = stripMarkdownFence(value).trim();
   if (!css) return null;
   if (css.length > 12000) return null;
   if (/<\/?style|<\/?script|@import|url\s*\(/i.test(css)) return null;
@@ -715,13 +729,41 @@ function normalizeBlockJson(value) {
   };
 }
 
+function normalizeBlockTreeJson(value) {
+  try {
+    const parsed = JSON.parse(stripMarkdownFence(value));
+    if (!Array.isArray(parsed)) return null;
+    const blockTree = parsed.map((block) => normalizeBlockObject(block)).filter(Boolean);
+    return blockTree.length ? blockTree : null;
+  } catch {
+    return null;
+  }
+}
+
 function normalizeBlockObject(block) {
   if (!block || typeof block.name !== 'string') return null;
+  const attributes = block.attributes && typeof block.attributes === 'object' && !Array.isArray(block.attributes) ? block.attributes : parseJsonObject(block.attributesJson) || {};
   return {
     name: block.name,
-    attributes: block.attributes && typeof block.attributes === 'object' && !Array.isArray(block.attributes) ? block.attributes : {},
+    attributes,
     innerBlocks: Array.isArray(block.innerBlocks) ? block.innerBlocks.map((child) => normalizeBlockObject(child)).filter(Boolean) : [],
   };
+}
+
+function normalizeRenderedHtml(value) {
+  const html = stripMarkdownFence(value).trim();
+  if (!html || html.length > 200000) return null;
+  if (!/<!doctype html>|<html[\s>]/i.test(html) || !/<body[\s>]/i.test(html)) return null;
+  if (/<\/?script|@import|url\s*\(/i.test(html)) return null;
+  return html;
+}
+
+function stripMarkdownFence(value) {
+  return String(value || '')
+    .trim()
+    .replace(/^```(?:json|html|css)?\s*/i, '')
+    .replace(/\s*```$/i, '')
+    .trim();
 }
 
 function inferRepairLayer(actions) {
@@ -828,6 +870,11 @@ function applyRepairProposal(state, proposal) {
   let appliedActionCount = 0;
 
   for (const repair of proposal.repairs || []) {
+    if (repair.artifact && applyArtifactRepair(state, repair)) {
+      appliedActionCount += 1;
+      continue;
+    }
+
     const actions = Array.isArray(repair.actions) && repair.actions.length ? repair.actions : legacyRepairActions(repair);
     for (const action of actions) {
       if (applyRepairAction(state, repair, action)) {
@@ -841,6 +888,33 @@ function applyRepairProposal(state, proposal) {
   }
 
   return appliedActionCount;
+}
+
+function applyArtifactRepair(state, repair) {
+  if (repair.artifact === 'block-tree') {
+    state.blockTree = repair.blockTree;
+    state.blockTreeChanged = true;
+    state.renderedHtmlOverride = null;
+    return true;
+  }
+
+  if (repair.artifact === 'vision-css') {
+    state.cssRepairs = [
+      {
+        id: repair.id,
+        source: repair.source || proposalSource(repair),
+        css: repair.css,
+      },
+    ];
+    return true;
+  }
+
+  if (repair.artifact === 'rendered-html') {
+    state.renderedHtmlOverride = repair.html;
+    return true;
+  }
+
+  return false;
 }
 
 function legacyRepairActions(repair) {
@@ -897,7 +971,7 @@ function proposalSource(repair) {
 }
 
 function renderRepairStateHtml(state) {
-  let html = state.blockTreeChanged ? replaceMainHtml(state.baseRenderedHtml, renderBlockTreeFragment(state.blockTree)) : state.baseRenderedHtml;
+  let html = state.renderedHtmlOverride || (state.blockTreeChanged ? replaceMainHtml(state.baseRenderedHtml, renderBlockTreeFragment(state.blockTree)) : state.baseRenderedHtml);
 
   for (const replacement of state.htmlReplacements) {
     html = html.split(replacement.find).join(replacement.replace);
@@ -1480,7 +1554,7 @@ ${observations}
 ## Comparator Notes
 
 - PNG diff is the score and regression gate.
-- LLM vision is the diagnosis and repair planner when \`POC_VISION_REPAIR_PROVIDER=openai\`.
+- LLM vision regenerates one complete repair artifact per pass when \`POC_VISION_REPAIR_PROVIDER=openai\`.
 - Full-page screenshots are captured with Playwright.
 - Animations and transitions are disabled before capture to reduce noisy marquee diffs.
 - Pixelmatch compares the shared cropped area and reports page-size deltas separately.
@@ -1490,6 +1564,10 @@ ${observations}
 }
 
 function repairActionSummary(repair) {
+  if (repair.artifact) {
+    return `${repair.artifact} replacement`;
+  }
+
   const actions = Array.isArray(repair.actions) && repair.actions.length ? repair.actions : legacyRepairActions(repair);
   return actions.map((action) => action.kind).join(', ') || 'no executable action';
 }
@@ -1518,17 +1596,20 @@ The OpenAI API key is read from the process environment or local env files such 
 
 Interpret the visual differences between the mockup screenshot, rendered block screenshot, and PNG diff. The PNG diff is a measurement signal, not the diagnosis.
 
-The current POC applies executable actions from the returned proposal: block-tree edits, block attribute/style changes, rendered HTML replacements, or scoped CSS. The production implementation should apply the same diagnosis to the correct repair location: core block structure, block attributes/supports, custom static block source, or narrow bridge CSS.
+The current POC asks the LLM to choose and regenerate one complete repair artifact per pass: a full simplified block tree, a complete scoped vision CSS stylesheet, or a full rendered HTML document as a rare escape hatch. The deterministic proxy still supports older local patch actions for cheap debugging.
 
 ## Repair Rules
 
-- Choose an executable action layer: block composition, block styling attributes/supports, rendered HTML replacement, or scoped CSS.
+- Choose one repair artifact: \`block-tree\`, \`vision-css\`, or \`rendered-html\`.
+- Prefer \`block-tree\` when composition, editable content, wrappers, core/custom block choices, forms, or escaped markup are wrong.
+- Use \`vision-css\` only when the block structure is semantically correct and the remaining discrepancy is visual styling.
+- Use \`rendered-html\` only as an explicitly justified escape hatch.
 - Prefer core block structure, block attributes, and block supports before custom blocks.
 - Use custom blocks only for the smallest subtree that needs a custom editor model, behavior, or markup contract.
 - Preserve editable rich text, links, form labels/placeholders, repeated items, and inspector controls.
 - Do not use raw HTML blocks unless the plan explains why core/custom static blocks cannot preserve both fidelity and editability.
 - If escaped markup is visible in the browser, repair the block tree or block attributes rather than styling the text to look less wrong.
-- Keep repairs scoped to the observed discrepancy.
+- Keep regenerated artifacts scoped to the observed discrepancy.
 - Stop after the configured repair pass limit, or earlier when visual drift is acceptable.
 
 ## Output
@@ -1537,7 +1618,8 @@ Return a repair proposal with:
 
 - observed discrepancy
 - likely cause in block tree, block wrapper DOM, CSS cascade, responsive behavior, or missing custom block
-- executable actions: set block attributes, replace/delete/insert blocks, rendered HTML replacement, or scoped CSS
+- artifact: \`block-tree\`, \`vision-css\`, or \`rendered-html\`
+- content: full replacement artifact
 - preferred production repair location
 - expected visual effect
 - editability risk

@@ -84,8 +84,8 @@ The vision loop uses Playwright to render both HTML files in desktop and mobile 
 The intended production split is hybrid:
 
 - PNG diff is the score, regression signal, and trigger.
-- LLM vision is the diagnosis and repair planner.
-- The repair actuator can update block composition, block attributes/classes, rendered HTML escape hatches, or scoped CSS depending on the diagnosis.
+- LLM vision is the diagnosis and artifact repair generator.
+- OpenAI vision repair regenerates one complete repair artifact per pass: `block-tree`, `vision-css`, or the rare `rendered-html` escape hatch. The deterministic proxy still uses older local CSS patch actions for cheap debugging.
 
 By default, this POC runs up to three repair passes with OpenAI vision repair. PNG diff remains the deterministic score and trigger. Override the limit with `--max-repair-passes=N` or `POC_VISION_MAX_REPAIR_PASSES=N`; use `0` to capture comparison screenshots without applying repair passes.
 
