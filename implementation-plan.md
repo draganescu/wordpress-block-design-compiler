@@ -1,0 +1,483 @@
+# Implementation Iterations
+
+This plan turns `spec.md` into small, testable implementation steps. The default rule for every iteration: ship a runnable command, a fixture, and a validation result.
+
+## Strategy
+
+Build the standalone core first. Agent plugins come later as thin wrappers over stable commands and JSON contracts.
+
+The first credible vertical slice should be:
+
+```text
+fixture prompt
+  -> mockup bundle
+  -> analysis JSON
+  -> conversion plan
+  -> core-block-only content.html
+  -> parse/serialize validation
+  -> preview screenshot
+```
+
+Only after that should we add custom static block generation, richer fidelity loops, and agent adapters.
+
+## Iteration 0: Project Skeleton
+
+Goal: create the repo as a real TypeScript/Node package with basic commands and tests.
+
+Build:
+
+- `package.json`;
+- TypeScript config;
+- test runner;
+- lint/format commands;
+- `src/` layout;
+- `fixtures/` layout;
+- `bin` CLI entry;
+- core type definitions.
+
+Commands:
+
+```bash
+wp-block-compiler --help
+wp-block-compiler doctor
+npm test
+```
+
+Acceptance:
+
+- CLI runs locally.
+- Tests pass.
+- No model provider is required.
+- No WordPress dependency is required.
+
+## Iteration 1: Artifact Contract and Fixture Runner
+
+Goal: lock the file contract before building generation.
+
+Build:
+
+- artifact writer;
+- artifact reader;
+- fixture prompt loader;
+- stage event logger;
+- summary report writer;
+- `run-fixture` command using canned mockup files.
+
+Commands:
+
+```bash
+wp-block-compiler run-fixture fixtures/simple-landing --out artifacts/simple-landing
+```
+
+Acceptance:
+
+- Creates the artifact directory structure from `spec.md`.
+- Copies or materializes mockup fixture files.
+- Writes `reports/summary.md`.
+- Emits structured progress events.
+
+## Iteration 2: Mockup Generator V1
+
+Goal: generate a responsive HTML/CSS mockup from a prompt, but do not convert it yet.
+
+Build:
+
+- provider interface for model calls;
+- prompt template for open design generation;
+- output parser for `index.html`, `style.css`, optional `script.js`;
+- browser render check;
+- screenshot capture at desktop/mobile.
+
+Commands:
+
+```bash
+wp-block-compiler design --prompt "A bold homepage for a jazz bar" --out artifacts/jazz/mockup
+wp-block-compiler render-check artifacts/jazz/mockup
+```
+
+Acceptance:
+
+- Mockup renders nonblank.
+- CSS and HTML parse.
+- Desktop and mobile screenshots are saved.
+- Design prompt does not constrain output to WordPress blocks.
+
+## Iteration 3: Analyzer V1
+
+Goal: turn the mockup into structured facts.
+
+Build:
+
+- DOM parser;
+- CSS parser;
+- content inventory;
+- media inventory;
+- section detector;
+- computed layout capture through a browser;
+- interaction detector for links, buttons, forms, and scripts.
+
+Commands:
+
+```bash
+wp-block-compiler analyze artifacts/jazz/mockup --out artifacts/jazz/analysis
+```
+
+Acceptance:
+
+- Writes `analysis/dom.json`, `analysis/css.json`, `analysis/layout.json`, and `analysis/interactions.json`.
+- Layout data includes key boxes for each major section at desktop/mobile.
+- The analyzer does not call a model for basic parsing.
+
+## Iteration 4: Conversion Planner V1
+
+Goal: plan the block tree before emitting markup.
+
+Build:
+
+- conversion-plan schema;
+- planner prompt using mockup and analysis artifacts;
+- plan validator;
+- explicit strategy labels: `core-blocks`, `custom-static-block`, `core-html`;
+- mandatory rationale for every custom/static/html decision.
+
+Commands:
+
+```bash
+wp-block-compiler plan artifacts/jazz --out artifacts/jazz/plan
+wp-block-compiler validate-plan artifacts/jazz/plan/conversion-plan.json
+```
+
+Acceptance:
+
+- Plan validates against schema.
+- Every section maps back to a source selector.
+- Any `core/html` usage has a specific reason.
+- The plan can be reviewed independently of block output.
+
+## Iteration 5: Core-Block Converter V1
+
+Goal: convert simple plans into valid core block markup.
+
+Scope:
+
+- group;
+- heading;
+- paragraph;
+- image;
+- buttons/button;
+- columns/column;
+- spacer;
+- separator.
+
+Build:
+
+- block tree IR;
+- serializer for WordPress block comments;
+- token-to-block-support mapping;
+- basic style preservation through block attributes and classes;
+- block parse/serialize validator using `@wordpress/blocks`.
+
+Commands:
+
+```bash
+wp-block-compiler convert artifacts/jazz/plan --out artifacts/jazz/wordpress
+wp-block-compiler validate-blocks artifacts/jazz/wordpress/content.html
+```
+
+Acceptance:
+
+- Produces `wordpress/content.html`.
+- Round-trips through WordPress block parsing and serialization.
+- Emits no custom blocks yet.
+- Emits no unplanned `core/html` blocks.
+
+## Iteration 6: Preview Without WordPress V1
+
+Goal: preview generated static block content without a WordPress install.
+
+Build:
+
+- local preview app;
+- core block registration;
+- block markup parser;
+- front-end-like render surface;
+- editor-like render surface if feasible in first pass;
+- screenshot capture of generated block output.
+
+Commands:
+
+```bash
+wp-block-compiler preview artifacts/jazz/wordpress --out artifacts/jazz/preview
+```
+
+Acceptance:
+
+- Preview opens from static files or a local dev server.
+- Generated block output renders nonblank.
+- Preview screenshot is saved.
+- Parser failures are visible in `reports/validation.json`.
+
+## Iteration 7: Visual Diff Harness
+
+Goal: compare mockup output against block preview output.
+
+Build:
+
+- screenshot normalizer;
+- desktop/mobile pixel diff;
+- section-level crop diff;
+- threshold config;
+- visual report.
+
+Commands:
+
+```bash
+wp-block-compiler diff artifacts/jazz --out artifacts/jazz/reports
+```
+
+Acceptance:
+
+- Writes `reports/visual-diff.json`.
+- Reports total and section-level differences.
+- Flags unacceptable drift without blocking inspection of artifacts.
+
+## Iteration 8: HTML Block Policy Gate
+
+Goal: make raw HTML use explicit and testable.
+
+Build:
+
+- `core/html` scanner;
+- allowed-vs-actual comparison against conversion plan;
+- reason quality checks;
+- validation report entries.
+
+Commands:
+
+```bash
+wp-block-compiler validate-html-policy artifacts/jazz
+```
+
+Acceptance:
+
+- Fails when `core/html` appears without a plan entry.
+- Fails when normal editable content is dumped into HTML.
+- Passes when a small, justified raw fragment is present.
+
+## Iteration 9: Custom Static Blocks V1
+
+Goal: generate custom static blocks for sections core blocks cannot represent well.
+
+Build:
+
+- generated block package layout;
+- `block.json`;
+- `edit.js`;
+- `save.js`;
+- `style.css`;
+- attribute schema from editable fields;
+- custom block registration in preview;
+- serializer support for custom blocks.
+
+Commands:
+
+```bash
+wp-block-compiler generate-custom-blocks artifacts/jazz/plan --out artifacts/jazz/wordpress/blocks
+wp-block-compiler convert artifacts/jazz/plan --with-custom-blocks --out artifacts/jazz/wordpress
+wp-block-compiler preview artifacts/jazz/wordpress --out artifacts/jazz/preview
+```
+
+Acceptance:
+
+- Planned custom blocks are generated.
+- Generated custom blocks register in preview.
+- Custom blocks round-trip through parser/serializer.
+- Editable fields map to block attributes or inner blocks.
+
+## Iteration 10: Editor Editability Score
+
+Goal: measure whether the result is useful in the editor, not just visually close.
+
+Build:
+
+- editability report;
+- text/image/button field coverage;
+- raw HTML penalty;
+- custom block attribute coverage;
+- repeated content coverage.
+
+Commands:
+
+```bash
+wp-block-compiler score-editability artifacts/jazz --out artifacts/jazz/reports
+```
+
+Acceptance:
+
+- Reports editable vs locked content.
+- Flags sections that are pixel-close but not meaningfully editable.
+- Gives agents concrete repair targets.
+
+## Iteration 11: Repair Loop V1
+
+Goal: allow one inspectable refinement pass without creating an unbounded agent loop.
+
+Build:
+
+- planner repair prompt;
+- diff-aware plan update;
+- conversion rerun from revised plan;
+- cap of one repair pass by default;
+- before/after reports.
+
+Commands:
+
+```bash
+wp-block-compiler repair artifacts/jazz --out artifacts/jazz-repaired
+```
+
+Acceptance:
+
+- Repair consumes validation and visual-diff reports.
+- Writes a new conversion plan, not silent edits.
+- Keeps old and new artifacts available for comparison.
+
+## Iteration 12: WordPress Package Output
+
+Goal: package the result for actual WordPress use.
+
+Build:
+
+- generated plugin wrapper for custom static blocks;
+- optional theme/content export mode;
+- zip packaging;
+- install notes;
+- WordPress Playground/Studio validation hook as optional command.
+
+Commands:
+
+```bash
+wp-block-compiler package artifacts/jazz --out artifacts/jazz/package
+wp-block-compiler validate-wordpress artifacts/jazz/package
+```
+
+Acceptance:
+
+- Produces a plugin zip when custom blocks exist.
+- Produces pasteable/importable block markup.
+- Optional WordPress validation can run when a local WordPress target exists.
+
+## Iteration 13: MCP and CLI Tool Server
+
+Goal: expose the stable core to agents through a tool protocol.
+
+Build:
+
+- MCP server or equivalent tool server;
+- schema for `run`, `design`, `plan`, `convert`, `preview`, `validate`;
+- progress event stream;
+- artifact path returns.
+
+Commands:
+
+```bash
+wp-block-compiler serve-tools
+```
+
+Acceptance:
+
+- A generic agent can call the tool server.
+- Tool responses do not contain huge inline artifacts by default.
+- Artifacts are returned as paths and summaries.
+
+## Iteration 14: Agent Adapters
+
+Goal: wrap the core for specific agents.
+
+Order:
+
+1. Codex plugin.
+2. Claude/OpenCode-compatible wrapper.
+3. Other wrappers after the contract survives real use.
+
+Build:
+
+- adapter manifests;
+- install docs;
+- minimal prompt/tool guidance;
+- adapter smoke tests.
+
+Acceptance:
+
+- Each adapter delegates to the same core commands.
+- No conversion logic lives in adapters.
+- Adapter docs explain prerequisites and artifact paths.
+
+## Iteration 15: Eval Matrix
+
+Goal: prevent regressions and compare design/conversion quality over time.
+
+Build:
+
+- fixture prompts;
+- expected strategy assertions;
+- visual thresholds;
+- editability thresholds;
+- HTML policy assertions;
+- planned-vs-generated custom block checks;
+- summary scorecard.
+
+Fixture categories:
+
+- simple brochure landing page;
+- image-heavy product page;
+- editorial/magazine page;
+- restaurant with reservation form;
+- portfolio with carousel/slideshow;
+- dense SaaS/product page;
+- highly stylized creative page.
+
+Commands:
+
+```bash
+wp-block-compiler eval fixtures/eval --out artifacts/eval-runs/latest
+```
+
+Acceptance:
+
+- Runs without agent interaction.
+- Produces a scorecard.
+- Makes regressions visible before prompt or converter changes ship.
+
+## Preferred First Vertical Slice
+
+The fastest useful path is iterations 0 through 6, but with narrow scope:
+
+1. Hardcoded fixture mockup.
+2. Analyzer V1.
+3. Planner V1.
+4. Core-block converter for a simple landing page.
+5. Parse/serialize validation.
+6. Static preview screenshot.
+
+This proves the architecture before spending time on model prompts, custom blocks, or agent distribution.
+
+## Early Decisions To Make
+
+- Package manager: npm, pnpm, or bun.
+- Runtime baseline: Node version.
+- Test runner: Vitest is the likely default.
+- Browser automation: Playwright is the likely default.
+- CSS parser: pick a structured parser early.
+- Block validation: use `@wordpress/blocks` and `@wordpress/block-library`.
+- Preview app: Vite is the likely simplest first host.
+- Model provider abstraction: define the interface before choosing defaults.
+
+## Risks To Watch
+
+- Block editor preview outside WordPress may diverge from final WordPress rendering.
+- Pixel-perfect conversion can fight editor editability.
+- Generated CSS can leak globally if custom block styles are not scoped.
+- Model-generated plans can overuse custom blocks unless the schema and policy are strict.
+- Raw HTML can creep back in without a hard policy gate.
+- Agent adapters can tempt us to put logic outside the core package.

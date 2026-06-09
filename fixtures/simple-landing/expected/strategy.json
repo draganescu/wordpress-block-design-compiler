@@ -1,0 +1,12 @@
+{
+  "fixture": "simple-landing",
+  "expectedSections": [
+    "hero",
+    "story",
+    "collection",
+    "workshop",
+    "visit"
+  ],
+  "expectedInitialStrategy": "core-blocks-first",
+  "htmlBlockPolicy": "no-unplanned-core-html"
+}

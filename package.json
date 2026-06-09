@@ -1,0 +1,20 @@
+{
+  "name": "wp-block-design-compiler",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "A staged toolchain for compiling prompt-driven HTML/CSS designs into WordPress block artifacts.",
+  "bin": {
+    "wp-block-compiler": "./dist/src/cli.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "doctor": "npm run build && node dist/src/cli.js doctor",
+    "run-fixture": "npm run build && node dist/src/cli.js run-fixture fixtures/simple-landing --out artifacts/simple-landing",
+    "test": "npm run build && node --test dist/tests/*.test.js"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "typescript": "^5.8.3"
+  }
+}
