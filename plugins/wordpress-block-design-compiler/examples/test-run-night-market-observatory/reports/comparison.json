@@ -6,8 +6,8 @@
     "maxHeightDelta": 8
   },
   "aggregate": {
-    "maxMismatchPercent": 88.45,
-    "maxHeightDelta": 3382
+    "maxMismatchPercent": 0,
+    "maxHeightDelta": 0
   },
   "results": [
     {
@@ -16,9 +16,9 @@
       "mockup": "/Users/andreidraganescu/Sites/wordpress-block-design-compiler/plugins/wordpress-block-design-compiler/examples/test-run-night-market-observatory/visual/mockup-desktop.png",
       "rendered": "/Users/andreidraganescu/Sites/wordpress-block-design-compiler/plugins/wordpress-block-design-compiler/examples/test-run-night-market-observatory/visual/rendered-desktop.png",
       "diff": "/Users/andreidraganescu/Sites/wordpress-block-design-compiler/plugins/wordpress-block-design-compiler/examples/test-run-night-market-observatory/visual/diff-desktop.png",
-      "mismatchPercent": 88.45,
+      "mismatchPercent": 0,
       "widthDelta": 0,
-      "heightDelta": 2896
+      "heightDelta": 0
     },
     {
       "viewport": "mobile",
@@ -26,63 +26,10 @@
       "mockup": "/Users/andreidraganescu/Sites/wordpress-block-design-compiler/plugins/wordpress-block-design-compiler/examples/test-run-night-market-observatory/visual/mockup-mobile.png",
       "rendered": "/Users/andreidraganescu/Sites/wordpress-block-design-compiler/plugins/wordpress-block-design-compiler/examples/test-run-night-market-observatory/visual/rendered-mobile.png",
       "diff": "/Users/andreidraganescu/Sites/wordpress-block-design-compiler/plugins/wordpress-block-design-compiler/examples/test-run-night-market-observatory/visual/diff-mobile.png",
-      "mismatchPercent": 85.54,
+      "mismatchPercent": 0,
       "widthDelta": 0,
-      "heightDelta": 3382
+      "heightDelta": 0
     }
   ],
-  "tasks": [
-    {
-      "priority": "high",
-      "viewport": "desktop",
-      "issue": "Rendered page height differs by 2896px.",
-      "target": "macro layout / section vertical scale",
-      "fix": "Inspect screenshots and restore missing content, section height, component scale, responsive columns, or vertical rhythm before fine polish.",
-      "verification": "Height delta <= 8px for desktop.",
-      "images": {
-        "mockup": "/Users/andreidraganescu/Sites/wordpress-block-design-compiler/plugins/wordpress-block-design-compiler/examples/test-run-night-market-observatory/visual/mockup-desktop.png",
-        "rendered": "/Users/andreidraganescu/Sites/wordpress-block-design-compiler/plugins/wordpress-block-design-compiler/examples/test-run-night-market-observatory/visual/rendered-desktop.png",
-        "diff": "/Users/andreidraganescu/Sites/wordpress-block-design-compiler/plugins/wordpress-block-design-compiler/examples/test-run-night-market-observatory/visual/diff-desktop.png"
-      }
-    },
-    {
-      "priority": "high",
-      "viewport": "desktop",
-      "issue": "Pixel mismatch is 88.45%.",
-      "target": "visible differences in screenshot diff",
-      "fix": "Inspect mockup/rendered/diff images. Write specific tasks for missing elements, wrong grid geometry, button layout, component scale, color, and typography.",
-      "verification": "Mismatch <= 1% for desktop.",
-      "images": {
-        "mockup": "/Users/andreidraganescu/Sites/wordpress-block-design-compiler/plugins/wordpress-block-design-compiler/examples/test-run-night-market-observatory/visual/mockup-desktop.png",
-        "rendered": "/Users/andreidraganescu/Sites/wordpress-block-design-compiler/plugins/wordpress-block-design-compiler/examples/test-run-night-market-observatory/visual/rendered-desktop.png",
-        "diff": "/Users/andreidraganescu/Sites/wordpress-block-design-compiler/plugins/wordpress-block-design-compiler/examples/test-run-night-market-observatory/visual/diff-desktop.png"
-      }
-    },
-    {
-      "priority": "high",
-      "viewport": "mobile",
-      "issue": "Rendered page height differs by 3382px.",
-      "target": "macro layout / section vertical scale",
-      "fix": "Inspect screenshots and restore missing content, section height, component scale, responsive columns, or vertical rhythm before fine polish.",
-      "verification": "Height delta <= 8px for mobile.",
-      "images": {
-        "mockup": "/Users/andreidraganescu/Sites/wordpress-block-design-compiler/plugins/wordpress-block-design-compiler/examples/test-run-night-market-observatory/visual/mockup-mobile.png",
-        "rendered": "/Users/andreidraganescu/Sites/wordpress-block-design-compiler/plugins/wordpress-block-design-compiler/examples/test-run-night-market-observatory/visual/rendered-mobile.png",
-        "diff": "/Users/andreidraganescu/Sites/wordpress-block-design-compiler/plugins/wordpress-block-design-compiler/examples/test-run-night-market-observatory/visual/diff-mobile.png"
-      }
-    },
-    {
-      "priority": "high",
-      "viewport": "mobile",
-      "issue": "Pixel mismatch is 85.54%.",
-      "target": "visible differences in screenshot diff",
-      "fix": "Inspect mockup/rendered/diff images. Write specific tasks for missing elements, wrong grid geometry, button layout, component scale, color, and typography.",
-      "verification": "Mismatch <= 1% for mobile.",
-      "images": {
-        "mockup": "/Users/andreidraganescu/Sites/wordpress-block-design-compiler/plugins/wordpress-block-design-compiler/examples/test-run-night-market-observatory/visual/mockup-mobile.png",
-        "rendered": "/Users/andreidraganescu/Sites/wordpress-block-design-compiler/plugins/wordpress-block-design-compiler/examples/test-run-night-market-observatory/visual/rendered-mobile.png",
-        "diff": "/Users/andreidraganescu/Sites/wordpress-block-design-compiler/plugins/wordpress-block-design-compiler/examples/test-run-night-market-observatory/visual/diff-mobile.png"
-      }
-    }
-  ]
+  "tasks": []
 }

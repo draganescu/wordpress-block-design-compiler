@@ -21,10 +21,24 @@ Initial comparison:
 
 Repair iterations:
 
-- `0`
+- `1`
 
-Initial task summary:
+Repair pass 1:
 
-- Recreate macro page styling in `wordpress/style.css`.
-- Restore section vertical scale, layout grids, mobile breakpoints, colors, typography, and component sizing.
-- Keep block composition and custom block save markup data-only; do not reintroduce `mockup/style.css` into rendered preview.
+- Wrote generated WordPress preview CSS to `wordpress/style.css`.
+- Kept `mockup/style.css` excluded from the rendered WordPress preview.
+- Preserved the data-only `wordpress/block-tree.json` source of truth and official WordPress serialization.
+
+Current comparison:
+
+- Max mismatch: `0%`
+- Max height delta: `0px`
+- Desktop mismatch: `0%`
+- Desktop height delta: `0px`
+- Mobile mismatch: `0%`
+- Mobile height delta: `0px`
+
+Current task summary:
+
+- No deterministic visual drift tasks remain.
+- Inspect screenshots for residual subjective polish.
