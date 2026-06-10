@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Maison Clouet Compare</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: #141311;
+        color: #fff5df;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      }
+
+      .compare-shell {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        min-height: 100vh;
+      }
+
+      .compare-pane {
+        min-width: 0;
+        border-right: 1px solid rgba(255, 245, 223, 0.28);
+      }
+
+      .compare-pane:last-child {
+        border-right: 0;
+      }
+
+      .compare-title {
+        position: sticky;
+        top: 0;
+        z-index: 2;
+        display: flex;
+        justify-content: space-between;
+        gap: 1rem;
+        align-items: center;
+        height: 44px;
+        padding: 0 0.85rem;
+        border-bottom: 1px solid rgba(255, 245, 223, 0.28);
+        background: #141311;
+        font-size: 0.74rem;
+        font-weight: 800;
+        letter-spacing: 0.11em;
+        text-transform: uppercase;
+      }
+
+      .compare-title a {
+        color: #f8d56b;
+        text-decoration: none;
+      }
+
+      iframe {
+        display: block;
+        width: 100%;
+        height: calc(100vh - 44px);
+        border: 0;
+        background: #fff5df;
+      }
+
+      @media (max-width: 900px) {
+        .compare-shell {
+          grid-template-columns: 1fr;
+        }
+
+        .compare-pane {
+          border-right: 0;
+          border-bottom: 1px solid rgba(255, 245, 223, 0.28);
+        }
+
+        iframe {
+          height: 86vh;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="compare-shell">
+      <section class="compare-pane">
+        <div class="compare-title">
+          <span>Mockup</span>
+          <a href="./mockup/index.html">open</a>
+        </div>
+        <iframe title="Maison Clouet HTML mockup" src="./mockup/index.html"></iframe>
+      </section>
+      <section class="compare-pane">
+        <div class="compare-title">
+          <span>Block Render</span>
+          <a href="./rendered/rendered-blocks.html">open</a>
+        </div>
+        <iframe title="Maison Clouet rendered block output" src="./rendered/rendered-blocks.html"></iframe>
+      </section>
+      <section class="compare-pane">
+        <div class="compare-title">
+          <span>Editable Blocks</span>
+          <a href="./editor/block-editor.html">open</a>
+        </div>
+        <iframe title="Maison Clouet editable block editor" src="./editor/block-editor.html"></iframe>
+      </section>
+    </main>
+  </body>
+</html>

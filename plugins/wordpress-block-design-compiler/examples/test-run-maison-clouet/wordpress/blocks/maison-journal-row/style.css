@@ -1,0 +1,44 @@
+.maison-journal {
+  padding: clamp(3.5rem, 7vw, 7rem) clamp(1rem, 4vw, 4rem);
+  border-bottom: 1px solid var(--line);
+}
+
+.maison-journal h2 {
+  margin: 0;
+  font-size: clamp(2.8rem, 7vw, 7.5rem);
+  line-height: 0.82;
+}
+
+.maison-journal-row {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr 0.8fr;
+  gap: 0.75rem;
+  margin-top: 2rem;
+}
+
+.maison-journal article {
+  min-height: 16rem;
+  padding: 1rem;
+  border: 1px solid var(--ink);
+  background: var(--cream);
+}
+
+.maison-journal article span {
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.maison-journal h3 {
+  margin: 1rem 0 0;
+  font-size: clamp(2rem, 4vw, 4rem);
+  line-height: 0.86;
+}
+
+@media (max-width: 760px) {
+  .maison-journal-row {
+    grid-template-columns: 1fr;
+  }
+}

@@ -1,0 +1,125 @@
+.maison-hero {
+  display: grid;
+  grid-template-columns: 0.95fr 1.05fr;
+  gap: clamp(1rem, 4vw, 4rem);
+  min-height: 86vh;
+  padding: clamp(3rem, 7vw, 7rem) clamp(1rem, 4vw, 4rem);
+  border-bottom: 1px solid var(--line);
+}
+
+.maison-hero-copy {
+  align-self: end;
+}
+
+.maison-hero h1 {
+  max-width: 9ch;
+  margin: 0;
+  font-size: clamp(4.6rem, 13vw, 13rem);
+  line-height: 0.72;
+  text-transform: lowercase;
+}
+
+.maison-intro {
+  max-width: 36rem;
+  margin: 2rem 0 0 22%;
+  font-size: clamp(1.05rem, 1.7vw, 1.45rem);
+  line-height: 1.35;
+}
+
+.maison-flatlay {
+  position: relative;
+  align-self: center;
+  min-height: clamp(28rem, 56vw, 42rem);
+  margin: 0;
+  border: 1px solid var(--ink);
+  background:
+    radial-gradient(circle at 30% 22%, rgba(178, 71, 47, 0.72) 0 9rem, transparent 9.2rem),
+    radial-gradient(circle at 72% 72%, rgba(139, 157, 120, 0.8) 0 6rem, transparent 6.2rem),
+    linear-gradient(135deg, transparent 0 42%, var(--ink) 42% 48%, transparent 48%),
+    var(--paper);
+  box-shadow: 1.1rem 1.1rem 0 var(--ink);
+  overflow: hidden;
+}
+
+.paper-tag {
+  position: absolute;
+  top: 1.5rem;
+  left: 1.5rem;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid var(--ink);
+  background: var(--cream);
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+}
+
+.maison-flatlay-object {
+  position: absolute;
+  display: block;
+  border: 1px solid var(--ink);
+}
+
+.maison-flatlay-object.plate {
+  top: 12%;
+  right: 9%;
+  width: 13rem;
+  height: 13rem;
+  border-radius: 50%;
+  background: var(--cream);
+}
+
+.maison-flatlay-object.lamp {
+  top: 31%;
+  left: 21%;
+  width: 5rem;
+  height: 20rem;
+  transform: rotate(-21deg);
+  background: var(--rouge);
+}
+
+.maison-flatlay-object.linen {
+  right: 14%;
+  bottom: 12%;
+  width: 19rem;
+  height: 9rem;
+  background: repeating-linear-gradient(0deg, #173a5c 0 12px, #f3e2bd 12px 15px);
+}
+
+.maison-flatlay-object.vase {
+  left: 12%;
+  bottom: 11%;
+  width: 7rem;
+  height: 11rem;
+  border-radius: 45% 45% 22% 22%;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.maison-flatlay figcaption {
+  position: absolute;
+  right: 1.5rem;
+  bottom: 1.4rem;
+  max-width: 12rem;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+}
+
+@media (max-width: 760px) {
+  .maison-hero {
+    grid-template-columns: 1fr;
+    min-height: auto;
+  }
+
+  .maison-hero h1 {
+    font-size: clamp(4rem, 22vw, 7rem);
+  }
+
+  .maison-intro {
+    margin-left: 0;
+  }
+
+  .maison-flatlay {
+    min-height: 28rem;
+    box-shadow: 0.55rem 0.55rem 0 var(--ink);
+  }
+}

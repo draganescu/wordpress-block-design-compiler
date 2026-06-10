@@ -1,0 +1,142 @@
+{
+  "generatedAt": "2026-06-10T19:48:25.553Z",
+  "blockCount": 9,
+  "coreBlockCount": 1,
+  "customBlockCount": 8,
+  "blocksWithSupportAttrs": 9,
+  "supportStyledPercent": 100,
+  "supportAttributeCounts": {
+    "style": 9,
+    "layout": 1,
+    "align": 0,
+    "backgroundColor": 0,
+    "textColor": 0,
+    "gradient": 0,
+    "fontSize": 0,
+    "borderColor": 0
+  },
+  "stylePaths": [
+    {
+      "path": "border.bottom.color",
+      "count": 8
+    },
+    {
+      "path": "border.bottom.style",
+      "count": 8
+    },
+    {
+      "path": "border.bottom.width",
+      "count": 8
+    },
+    {
+      "path": "color.background",
+      "count": 2
+    },
+    {
+      "path": "color.text",
+      "count": 2
+    },
+    {
+      "path": "dimensions.minHeight",
+      "count": 1
+    },
+    {
+      "path": "spacing.blockGap",
+      "count": 1
+    },
+    {
+      "path": "spacing.padding.bottom",
+      "count": 8
+    },
+    {
+      "path": "spacing.padding.left",
+      "count": 8
+    },
+    {
+      "path": "spacing.padding.right",
+      "count": 8
+    },
+    {
+      "path": "spacing.padding.top",
+      "count": 8
+    }
+  ],
+  "css": {
+    "totalBytes": 13141,
+    "totalLines": 582,
+    "totalRules": 99,
+    "pageCssBytes": 1303,
+    "pageCssLines": 69,
+    "pageCssRules": 11,
+    "blockCssBytes": 11838,
+    "blockCssLines": 513,
+    "blockCssRules": 88,
+    "files": [
+      {
+        "path": "wordpress/style.css",
+        "bytes": 1303,
+        "lines": 69,
+        "rules": 11
+      },
+      {
+        "path": "wordpress/blocks/maison-arrivals/style.css",
+        "bytes": 900,
+        "lines": 42,
+        "rules": 7
+      },
+      {
+        "path": "wordpress/blocks/maison-footer/style.css",
+        "bytes": 291,
+        "lines": 15,
+        "rules": 3
+      },
+      {
+        "path": "wordpress/blocks/maison-header/style.css",
+        "bytes": 1288,
+        "lines": 60,
+        "rules": 9
+      },
+      {
+        "path": "wordpress/blocks/maison-hero/style.css",
+        "bytes": 2517,
+        "lines": 110,
+        "rules": 16
+      },
+      {
+        "path": "wordpress/blocks/maison-journal-row/style.css",
+        "bytes": 818,
+        "lines": 38,
+        "rules": 7
+      },
+      {
+        "path": "wordpress/blocks/maison-newsletter/style.css",
+        "bytes": 1482,
+        "lines": 66,
+        "rules": 11
+      },
+      {
+        "path": "wordpress/blocks/maison-object-card/style.css",
+        "bytes": 2641,
+        "lines": 97,
+        "rules": 20
+      },
+      {
+        "path": "wordpress/blocks/maison-scent-story/style.css",
+        "bytes": 509,
+        "lines": 24,
+        "rules": 4
+      },
+      {
+        "path": "wordpress/blocks/maison-visit/style.css",
+        "bytes": 1392,
+        "lines": 61,
+        "rules": 11
+      }
+    ]
+  },
+  "guidance": [
+    "Prefer attrs.style, layout, align, color, spacing, typography, border, and dimensions support settings for block-level design.",
+    "Keep wordpress/style.css for tokens, document-level defaults, responsive grid behavior, and selectors that WordPress supports cannot express.",
+    "Keep wordpress/blocks/*/style.css scoped to custom block internals such as pseudo-elements, nested controls, horizontal rails, and ornamental geometry."
+  ]
+}

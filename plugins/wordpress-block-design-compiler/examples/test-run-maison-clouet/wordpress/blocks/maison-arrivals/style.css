@@ -1,0 +1,48 @@
+.maison-arrivals {
+  padding: clamp(3.5rem, 7vw, 7rem) clamp(1rem, 4vw, 4rem);
+  border-bottom: 1px solid var(--line);
+}
+
+.maison-section-head {
+  display: grid;
+  grid-template-columns: 0.5fr 1fr;
+  gap: 2rem;
+  align-items: end;
+  margin-bottom: 2rem;
+}
+
+.maison-section-head h2 {
+  margin: 0;
+  font-size: clamp(2.8rem, 7vw, 7.5rem);
+  line-height: 0.82;
+}
+
+.maison-filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.maison-filter-row button {
+  padding: 0.7rem 0.9rem;
+  border: 1px solid var(--ink);
+  background: transparent;
+  color: var(--ink);
+  font: 800 0.72rem/1 var(--mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.maison-object-grid {
+  display: grid;
+  grid-template-columns: 1.1fr 0.8fr 1fr;
+  gap: 0.75rem;
+}
+
+@media (max-width: 760px) {
+  .maison-section-head,
+  .maison-object-grid {
+    grid-template-columns: 1fr;
+  }
+}

@@ -1,0 +1,80 @@
+/* Maison Clouet WordPress preview tokens and document defaults. */
+
+:root {
+  --ink: #071d33;
+  --ink-2: #102f4b;
+  --cream: #fff5df;
+  --paper: #f4e6c8;
+  --butter: #f8d56b;
+  --rouge: #b2472f;
+  --sage: #8b9d78;
+  --line: rgba(7, 29, 51, 0.22);
+  --serif: Georgia, "Times New Roman", serif;
+  --sans: "Gill Sans", "Avenir Next", "Trebuchet MS", sans-serif;
+  --mono: "SFMono-Regular", Consolas, monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body,
+.editor-styles-wrapper {
+  margin: 0;
+  background:
+    linear-gradient(90deg, rgba(7, 29, 51, 0.07) 1px, transparent 1px) 0 0 / 6.5rem 6.5rem,
+    linear-gradient(rgba(7, 29, 51, 0.05) 1px, transparent 1px) 0 0 / 6.5rem 6.5rem,
+    var(--cream);
+  color: var(--ink);
+  font-family: var(--sans);
+  letter-spacing: 0;
+}
+
+body {
+  min-height: 100vh;
+}
+
+a {
+  color: inherit;
+}
+
+h1,
+h2,
+h3,
+p {
+  margin-top: 0;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--serif);
+  letter-spacing: 0;
+}
+
+.eyebrow,
+.maison-meta,
+.maison-footer,
+.maison-label {
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    transition: none !important;
+  }
+}

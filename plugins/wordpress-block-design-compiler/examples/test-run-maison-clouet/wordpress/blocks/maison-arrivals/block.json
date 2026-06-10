@@ -1,0 +1,25 @@
+{
+  "apiVersion": 3,
+  "name": "wbdc/maison-arrivals",
+  "title": "Maison Arrivals",
+  "category": "design",
+  "description": "Newest arrivals grid driven by structured object-card data.",
+  "editorScript": "file:./index.js",
+  "style": "file:./style.css",
+  "attributes": {
+    "sectionId": { "type": "string", "default": "shop" },
+    "eyebrow": { "type": "string", "default": "newest arrivals / synced from objets" },
+    "heading": { "type": "string", "default": "Eight pieces that did not want a white background." },
+    "filters": { "type": "array", "default": [] },
+    "objects": { "type": "array", "default": [] },
+    "style": { "type": "object", "default": {} }
+  },
+  "supports": {
+    "anchor": true,
+    "className": true,
+    "spacing": { "padding": true, "margin": true, "blockGap": true },
+    "color": { "text": true, "background": true },
+    "typography": { "fontSize": true, "lineHeight": true },
+    "border": { "color": true, "style": true, "width": true }
+  }
+}

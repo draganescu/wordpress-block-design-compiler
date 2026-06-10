@@ -1,0 +1,26 @@
+{
+  "apiVersion": 3,
+  "name": "wbdc/maison-hero",
+  "title": "Maison Hero",
+  "category": "design",
+  "description": "Asymmetric editorial hero with a CSS flatlay of current finds.",
+  "editorScript": "file:./index.js",
+  "style": "file:./style.css",
+  "attributes": {
+    "eyebrow": { "type": "string", "default": "objects, scents, stories / friday arrivals" },
+    "title": { "type": "string", "default": "A tiny room of provence, edited with nerve." },
+    "intro": { "type": "string", "default": "Maison Clouet gathers estate-sale finds, market fragments, and back-room scent blends for people who prefer their objects with a past." },
+    "tag": { "type": "string", "default": "this week" },
+    "caption": { "type": "string", "default": "Opaline, brass, linen, smoke, fig leaf." },
+    "style": { "type": "object", "default": {} }
+  },
+  "supports": {
+    "anchor": true,
+    "className": true,
+    "spacing": { "padding": true, "margin": true, "blockGap": true },
+    "color": { "text": true, "background": true },
+    "typography": { "fontSize": true, "lineHeight": true },
+    "dimensions": { "minHeight": true },
+    "border": { "color": true, "style": true, "width": true }
+  }
+}

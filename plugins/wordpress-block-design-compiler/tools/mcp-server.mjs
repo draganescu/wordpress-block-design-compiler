@@ -412,13 +412,9 @@ function editorPreviewHtml({ workspaceRoot, editorPath, treePath, cssSources }) 
         min-height: 100%;
       }
 
-      body {
-        background: #111;
-      }
-
       .wbdc-editor-shell {
         min-height: 100vh;
-        background: #111;
+        background: inherit;
       }
 
       .wbdc-editor-toolbar {
@@ -450,9 +446,11 @@ function editorPreviewHtml({ workspaceRoot, editorPath, treePath, cssSources }) 
 
       .block-editor-block-list__layout {
         min-height: calc(100vh - 44px);
+        padding: 0;
       }
 
       .block-editor-block-list__block {
+        max-width: none;
         margin-top: 0;
         margin-bottom: 0;
       }
@@ -1311,7 +1309,8 @@ function editorComparisonCss() {
     .wbdc-editor-toolbar{display:none!important}
     .wbdc-editor-shell,.wbdc-editor-canvas,.block-editor-block-list__layout{min-height:0!important}
     .block-editor-block-list__layout{padding:0!important}
-    .block-editor-block-list__block{margin-top:0!important;margin-bottom:0!important}
+    .block-editor-block-list__block{max-width:none!important;margin-top:0!important;margin-bottom:0!important}
+    .editor-styles-wrapper{padding:0!important}
     .block-editor-block-list__block::before,
     .block-editor-block-list__block::after,
     .block-editor-block-list__breadcrumb,

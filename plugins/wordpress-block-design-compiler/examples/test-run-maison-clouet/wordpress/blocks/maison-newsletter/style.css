@@ -1,0 +1,76 @@
+.maison-newsletter {
+  display: grid;
+  grid-template-columns: 0.9fr 1.1fr;
+  gap: 2rem;
+  padding: clamp(3.5rem, 7vw, 7rem) clamp(1rem, 4vw, 4rem);
+  border-bottom: 1px solid var(--line);
+}
+
+.maison-newsletter h2 {
+  margin: 0;
+  font-size: clamp(2.8rem, 7vw, 7.5rem);
+  line-height: 0.82;
+}
+
+.maison-newsletter p {
+  line-height: 1.45;
+}
+
+.maison-newsletter form {
+  align-self: end;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border: 1px solid var(--ink);
+  background: var(--paper);
+  box-shadow: 0.7rem 0.7rem 0 var(--rouge);
+}
+
+.maison-newsletter label {
+  display: grid;
+  gap: 0.35rem;
+  padding: 0.8rem;
+  border-bottom: 1px solid var(--ink);
+}
+
+.maison-newsletter label:first-child {
+  border-right: 1px solid var(--ink);
+}
+
+.maison-newsletter label span {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.maison-newsletter input {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+}
+
+.maison-newsletter button {
+  grid-column: span 2;
+  min-height: 3rem;
+  border: 1px solid var(--ink);
+  background: var(--ink);
+  color: var(--cream);
+  font: 800 0.72rem/1 var(--mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+@media (max-width: 760px) {
+  .maison-newsletter,
+  .maison-newsletter form {
+    grid-template-columns: 1fr;
+  }
+
+  .maison-newsletter label:first-child,
+  .maison-newsletter button {
+    grid-column: auto;
+    border-right: 0;
+  }
+}

@@ -1,0 +1,90 @@
+{
+  "sections": [
+    {
+      "id": "header",
+      "sourceSelector": ".site-header",
+      "strategy": "custom-block",
+      "coreBlocks": [],
+      "customBlocks": ["wbdc/maison-header"],
+      "styleResponsibilities": {
+        "blockSupports": ["style.spacing.padding", "style.color"],
+        "blockCss": [".site-header", ".site-nav"],
+        "pageCss": [":root tokens", "body background"]
+      },
+      "editableModel": "Brand, tagline, nav labels, and URLs are attributes; labels inline editable.",
+      "editorParity": "edit() uses the same header/nav structure as save(); mobile grid handled by scoped CSS.",
+      "reason": "Core Navigation is dynamic and not predictable in the local static serializer."
+    },
+    {
+      "id": "hero",
+      "sourceSelector": ".hero",
+      "strategy": "custom-block",
+      "coreBlocks": [],
+      "customBlocks": ["wbdc/maison-hero"],
+      "styleResponsibilities": {
+        "blockSupports": ["style.spacing.padding"],
+        "blockCss": [".hero", ".flatlay", ".object"],
+        "pageCss": []
+      },
+      "editableModel": "Eyebrow, title, intro, tag, and caption are inline editable.",
+      "editorParity": "Flatlay decoration is identical in edit/save; RichText replaces text only.",
+      "reason": "The hero is a semantic section with an image-like flatlay composition."
+    },
+    {
+      "id": "arrivals",
+      "sourceSelector": ".arrivals",
+      "strategy": "custom-block",
+      "coreBlocks": [],
+      "customBlocks": ["wbdc/maison-arrivals", "wbdc/maison-object-card"],
+      "styleResponsibilities": {
+        "blockSupports": ["style.spacing.padding"],
+        "blockCss": [".arrivals", ".object-grid", ".object-card"],
+        "pageCss": []
+      },
+      "editableModel": "Heading and intro are inline editable; object array models seeded CPT results.",
+      "editorParity": "Cards use the same grid/card structure as the reusable object-card block.",
+      "reason": "Newest arrivals are a query-like repeated data component."
+    },
+    {
+      "id": "scent",
+      "sourceSelector": ".scent",
+      "strategy": "custom-block",
+      "coreBlocks": [],
+      "customBlocks": ["wbdc/maison-scent-story"],
+      "styleResponsibilities": {
+        "blockSupports": ["style.color", "style.spacing.padding"],
+        "blockCss": [".scent"],
+        "pageCss": []
+      },
+      "editableModel": "Eyebrow, heading, and body copy inline editable.",
+      "editorParity": "edit() and save() share the same section grid.",
+      "reason": "The scent page needs a reusable narrative block."
+    },
+    {
+      "id": "visit",
+      "sourceSelector": ".visit",
+      "strategy": "custom-block",
+      "coreBlocks": [],
+      "customBlocks": ["wbdc/maison-visit"],
+      "styleResponsibilities": {
+        "blockSupports": ["style.spacing.padding"],
+        "blockCss": [".visit", ".storefront"],
+        "pageCss": []
+      },
+      "editableModel": "Story, address, hours, and finding note inline editable.",
+      "editorParity": "Storefront visual and definition list remain identical.",
+      "reason": "The location story combines semantic address metadata with an illustration-like storefront."
+    }
+  ],
+  "customBlocks": [
+    {
+      "name": "wbdc/maison-object-card",
+      "reason": "Reusable object card for shop grids and journal embeds with structured object metadata and story reveal.",
+      "attributes": ["title", "price", "category", "dimensions", "condition", "story", "photoVariant"],
+      "supports": ["spacing", "color", "typography", "border", "anchor", "className"],
+      "editorModel": "RichText title/category/price/story in canvas; photo variant is an attribute.",
+      "editorParity": "Same article/details structure in edit and save; story reveal remains details/summary.",
+      "saveContract": "article.object-card with semantic heading, price, metadata, details story"
+    }
+  ]
+}
