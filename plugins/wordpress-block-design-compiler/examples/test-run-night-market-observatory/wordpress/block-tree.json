@@ -1,0 +1,188 @@
+{
+  "version": 2,
+  "contract": "data-only",
+  "blocks": [
+    {
+      "blockName": "wbdc/market-nav",
+      "attrs": {
+        "ariaLabel": "Night Market Observatory navigation",
+        "homeUrl": "#top",
+        "homeLabel": "Night Market Observatory home",
+        "sigil": "NMO",
+        "title": "Night Market Observatory",
+        "routeTag": "Route 07 / dusk to moonset / rotating city edition",
+        "navLabel": "Primary",
+        "links": [
+          { "label": "Stalls", "url": "#stalls" },
+          { "label": "Sky Clock", "url": "#sky-clock" },
+          { "label": "Reserve", "url": "#rsvp" }
+        ],
+        "actionText": "Join tonight",
+        "actionUrl": "#rsvp"
+      },
+      "innerBlocks": []
+    },
+    {
+      "blockName": "core/group",
+      "attrs": { "tagName": "main", "anchor": "top" },
+      "innerBlocks": [
+        {
+          "blockName": "wbdc/orbit-hero",
+          "attrs": {
+            "titleId": "hero-title",
+            "eyebrow": "Travelling food observatory / 41.8781 N / market opens at civil twilight",
+            "titleLines": ["Eat", "under", "moving stars."],
+            "thesis": "A night market that treats telescopes like street lamps and every stall as a coordinate in a temporary sky map.",
+            "boardAriaLabel": "Tonight's field readings",
+            "boardLabel": "Tonight's field",
+            "boardStatus": "Cloud gap predicted at 21:14",
+            "metrics": [
+              { "label": "stalls", "value": "18" },
+              { "label": "scopes", "value": "06" },
+              { "label": "meteor odds", "value": "34%" }
+            ],
+            "visualAriaLabel": "Market orbit map",
+            "nodes": [
+              { "label": "Dumpling Moon", "className": "dumpling" },
+              { "label": "Comet Tea", "className": "tea" },
+              { "label": "Lens Dock", "className": "lens" },
+              { "label": "Noodle Transit", "className": "noodle" }
+            ]
+          },
+          "innerBlocks": []
+        },
+        {
+          "blockName": "core/group",
+          "attrs": { "tagName": "section", "anchor": "stalls", "className": "stall-section" },
+          "innerBlocks": [
+            {
+              "blockName": "core/group",
+              "attrs": { "tagName": "div", "className": "section-copy" },
+              "innerBlocks": [
+                { "blockName": "core/paragraph", "attrs": { "className": "micro", "content": "Market constellation / edible wayfinding" }, "innerBlocks": [] },
+                { "blockName": "core/heading", "attrs": { "level": 2, "content": "Follow the smell of charcoal, then the telescope line." }, "innerBlocks": [] },
+                { "blockName": "core/paragraph", "attrs": { "content": "The route is deliberately uneven: dense food heat near the entrance, quiet optical stations at the edge, and one loud dessert stall where people naturally gather after Saturn." }, "innerBlocks": [] }
+              ]
+            },
+            {
+              "blockName": "wbdc/stall-constellation",
+              "attrs": {
+                "ariaLabel": "Featured market stalls",
+                "stalls": [
+                  { "kicker": "01 / hearth", "title": "Dumpling Moon", "body": "Black vinegar steam, crescent folds, and a viewfinder pointed at Mare Crisium.", "meta": "Queue heat: high", "variant": "wide" },
+                  { "kicker": "02 / signal", "title": "Comet Tea", "body": "Cold oolong poured over citrus ice while a volunteer calls out satellite passes.", "meta": "Best at 20:40", "variant": "" },
+                  { "kicker": "03 / optical", "title": "Lens Dock", "body": "A repair bench for borrowed binoculars, fogged glasses, and first-time observers.", "meta": "Focus checks free", "variant": "dark" },
+                  { "kicker": "04 / flame", "title": "Noodle Transit", "body": "Hand-pulled noodles thrown under a copper lamp with a live sky clock above the counter.", "meta": "Last bowl 23:10", "variant": "tall" }
+                ]
+              },
+              "innerBlocks": []
+            }
+          ]
+        },
+        {
+          "blockName": "core/group",
+          "attrs": { "tagName": "section", "anchor": "sky-clock", "className": "sky-clock-section" },
+          "innerBlocks": [
+            {
+              "blockName": "core/group",
+              "attrs": { "tagName": "div", "className": "clock-heading" },
+              "innerBlocks": [
+                { "blockName": "core/paragraph", "attrs": { "className": "micro", "content": "Sky clock / move when the city darkens" }, "innerBlocks": [] },
+                { "blockName": "core/heading", "attrs": { "level": 2, "content": "The evening is scheduled by appetite and altitude." }, "innerBlocks": [] }
+              ]
+            },
+            {
+              "blockName": "wbdc/sky-rail",
+              "attrs": {
+                "ariaLabel": "Tonight's route schedule",
+                "items": [
+                  { "time": "19:42", "datetime": "2026-06-10T19:42:00", "title": "Lantern ignition", "body": "The market grid wakes up before the first telescope points above the roofline.", "hot": false },
+                  { "time": "21:14", "datetime": "2026-06-10T21:14:00", "title": "Cloud gap", "body": "All scopes swing east for the predicted break and the tea stall goes silent.", "hot": true },
+                  { "time": "22:03", "datetime": "2026-06-10T22:03:00", "title": "Saturn queue", "body": "Volunteers cap the line, pass around sesame cakes, and teach people how to look slowly.", "hot": false },
+                  { "time": "23:10", "datetime": "2026-06-10T23:10:00", "title": "Last bowl", "body": "Noodle Transit closes when the last planned object clears the billboard glare.", "hot": false }
+                ]
+              },
+              "innerBlocks": []
+            }
+          ]
+        },
+        {
+          "blockName": "core/group",
+          "attrs": { "tagName": "section", "className": "field-notes" },
+          "innerBlocks": [
+            { "blockName": "core/paragraph", "attrs": { "className": "vertical-label", "content": "field etiquette" }, "innerBlocks": [] },
+            { "blockName": "core/heading", "attrs": { "level": 2, "content": "Bright screens down. Bowls close. Eyes up." }, "innerBlocks": [] },
+            {
+              "blockName": "core/group",
+              "attrs": { "tagName": "div", "className": "note-grid" },
+              "innerBlocks": [
+                {
+                  "blockName": "core/group",
+                  "attrs": { "tagName": "article" },
+                  "innerBlocks": [
+                    { "blockName": "core/heading", "attrs": { "level": 3, "content": "Red light only" }, "innerBlocks": [] },
+                    { "blockName": "core/paragraph", "attrs": { "content": "Every table has a red film sleeve for phones so dark adaptation survives the menu." }, "innerBlocks": [] }
+                  ]
+                },
+                {
+                  "blockName": "core/group",
+                  "attrs": { "tagName": "article" },
+                  "innerBlocks": [
+                    { "blockName": "core/heading", "attrs": { "level": 3, "content": "Shared eyepieces" }, "innerBlocks": [] },
+                    { "blockName": "core/paragraph", "attrs": { "content": "Scope hosts explain the object, then step back so the line can build its own language." }, "innerBlocks": [] }
+                  ]
+                },
+                {
+                  "blockName": "core/group",
+                  "attrs": { "tagName": "article" },
+                  "innerBlocks": [
+                    { "blockName": "core/heading", "attrs": { "level": 3, "content": "Waste returns" }, "innerBlocks": [] },
+                    { "blockName": "core/paragraph", "attrs": { "content": "Bowls, cups, chopsticks, and lens cloths are routed through one visible return spine." }, "innerBlocks": [] }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "blockName": "core/group",
+          "attrs": { "tagName": "section", "anchor": "rsvp", "className": "rsvp-section" },
+          "innerBlocks": [
+            {
+              "blockName": "core/group",
+              "attrs": { "tagName": "div" },
+              "innerBlocks": [
+                { "blockName": "core/paragraph", "attrs": { "className": "micro", "content": "Reserve a route card" }, "innerBlocks": [] },
+                { "blockName": "core/heading", "attrs": { "level": 2, "content": "Get the next coordinates before the market moves." }, "innerBlocks": [] },
+                { "blockName": "core/paragraph", "attrs": { "content": "We send the city, stall roster, cloud model, and viewing targets forty-eight hours before each edition." }, "innerBlocks": [] }
+              ]
+            },
+            {
+              "blockName": "wbdc/market-rsvp-form",
+              "attrs": {
+                "action": "/night-market-rsvp",
+                "method": "post",
+                "fields": [
+                  { "label": "Name", "type": "text", "name": "name", "placeholder": "Your name", "required": true, "wide": false },
+                  { "label": "Email", "type": "email", "name": "email", "placeholder": "you@example.com", "required": true, "wide": false },
+                  { "label": "City preference", "type": "text", "name": "city", "placeholder": "Chicago, Rotterdam, Seoul...", "required": false, "wide": true }
+                ],
+                "buttonText": "Send route signal"
+              },
+              "innerBlocks": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "blockName": "wbdc/market-footer",
+      "attrs": {
+        "text": "Night Market Observatory / moving kitchens, public telescopes, temporary maps",
+        "url": "#top",
+        "linkText": "Return to the first lantern"
+      },
+      "innerBlocks": []
+    }
+  ]
+}

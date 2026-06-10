@@ -1,0 +1,19 @@
+{
+  "apiVersion": 3,
+  "name": "wbdc/sky-rail",
+  "title": "Sky Rail",
+  "category": "design",
+  "description": "Editable horizontal sky schedule rail.",
+  "editorScript": "file:./index.js",
+  "style": "file:./style.css",
+  "attributes": {
+    "ariaLabel": { "type": "string", "default": "Tonight's route schedule" },
+    "items": { "type": "array", "default": [] }
+  },
+  "supports": {
+    "anchor": true,
+    "className": true,
+    "spacing": { "margin": true, "padding": true },
+    "html": false
+  }
+}

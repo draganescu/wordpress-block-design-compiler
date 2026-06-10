@@ -1,0 +1,62 @@
+{
+  "sections": [
+    {
+      "id": "market-nav",
+      "source": "header.market-nav",
+      "strategy": "custom",
+      "blockName": "wbdc/market-nav",
+      "reason": "The nav combines brand, route metadata, nav links, and an action link. A custom block preserves semantic header/nav markup and exposes each visible text item through RichText-backed attributes."
+    },
+    {
+      "id": "orbit-hero",
+      "source": "section.orbit-hero",
+      "strategy": "custom",
+      "blockName": "wbdc/orbit-hero",
+      "reason": "The hero contains a multi-line editorial heading, a definition-list sensor board, and positioned orbit map nodes. Core blocks would either lose the semantic map structure or require arbitrary HTML."
+    },
+    {
+      "id": "stalls",
+      "source": "section.stall-section",
+      "strategy": "core plus custom",
+      "blocks": ["core/group", "core/paragraph", "core/heading", "wbdc/stall-constellation"],
+      "reason": "The section copy is ordinary editable heading/paragraph content. The asymmetric repeated stall set is a custom array-backed block because each item has a stable semantic article contract and visual variant."
+    },
+    {
+      "id": "sky-clock",
+      "source": "section.sky-clock-section",
+      "strategy": "core plus custom",
+      "blocks": ["core/group", "core/paragraph", "core/heading", "wbdc/sky-rail"],
+      "reason": "The heading copy maps cleanly to core blocks. The horizontal rail needs repeated time/title/body entries with a highlighted item and semantic time elements."
+    },
+    {
+      "id": "field-notes",
+      "source": "section.field-notes",
+      "strategy": "core",
+      "blocks": ["core/group", "core/paragraph", "core/heading"],
+      "reason": "The structure is simple text blocks inside section/article containers. Core group containers plus heading/paragraph blocks keep the content editable without a custom block."
+    },
+    {
+      "id": "rsvp",
+      "source": "section.rsvp-section",
+      "strategy": "core plus custom form",
+      "blocks": ["core/group", "core/paragraph", "core/heading", "wbdc/market-rsvp-form"],
+      "reason": "The explanatory copy is core. The RSVP component must render a real form on save and expose field labels/button text as editable content."
+    },
+    {
+      "id": "footer",
+      "source": "footer.market-footer",
+      "strategy": "custom",
+      "blockName": "wbdc/market-footer",
+      "reason": "The footer is a simple semantic p plus anchor layout. A custom block avoids inventing core/link and keeps the saved markup identical to the mockup."
+    }
+  ],
+  "customBlocks": [
+    "wbdc/market-nav",
+    "wbdc/orbit-hero",
+    "wbdc/stall-constellation",
+    "wbdc/sky-rail",
+    "wbdc/market-rsvp-form",
+    "wbdc/market-footer"
+  ],
+  "htmlBlockUsage": []
+}

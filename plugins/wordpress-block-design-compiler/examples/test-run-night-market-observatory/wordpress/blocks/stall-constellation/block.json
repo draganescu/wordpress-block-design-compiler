@@ -1,0 +1,19 @@
+{
+  "apiVersion": 3,
+  "name": "wbdc/stall-constellation",
+  "title": "Stall Constellation",
+  "category": "design",
+  "description": "Editable asymmetric market stall constellation.",
+  "editorScript": "file:./index.js",
+  "style": "file:./style.css",
+  "attributes": {
+    "ariaLabel": { "type": "string", "default": "Featured market stalls" },
+    "stalls": { "type": "array", "default": [] }
+  },
+  "supports": {
+    "anchor": true,
+    "className": true,
+    "spacing": { "margin": true, "padding": true },
+    "html": false
+  }
+}

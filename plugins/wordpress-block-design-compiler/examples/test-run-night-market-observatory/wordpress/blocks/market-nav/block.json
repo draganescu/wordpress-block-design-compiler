@@ -1,0 +1,27 @@
+{
+  "apiVersion": 3,
+  "name": "wbdc/market-nav",
+  "title": "Market Navigation",
+  "category": "design",
+  "description": "Semantic navigation for the Night Market Observatory example.",
+  "editorScript": "file:./index.js",
+  "style": "file:./style.css",
+  "attributes": {
+    "ariaLabel": { "type": "string", "default": "Night Market Observatory navigation" },
+    "homeUrl": { "type": "string", "default": "#top" },
+    "homeLabel": { "type": "string", "default": "Night Market Observatory home" },
+    "sigil": { "type": "string", "default": "NMO" },
+    "title": { "type": "string", "default": "Night Market Observatory" },
+    "routeTag": { "type": "string", "default": "Route 07 / dusk to moonset / rotating city edition" },
+    "navLabel": { "type": "string", "default": "Primary" },
+    "links": { "type": "array", "default": [] },
+    "actionText": { "type": "string", "default": "Join tonight" },
+    "actionUrl": { "type": "string", "default": "#rsvp" }
+  },
+  "supports": {
+    "anchor": true,
+    "className": true,
+    "spacing": { "margin": true, "padding": true },
+    "html": false
+  }
+}

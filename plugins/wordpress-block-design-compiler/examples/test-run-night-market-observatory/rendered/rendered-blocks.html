@@ -1,0 +1,712 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Rendered WordPress Blocks</title>
+    <style>
+/* mockup/style.css */
+:root {
+  --night: #08070d;
+  --ink: #0f1020;
+  --violet: #241437;
+  --plum: #4b1f52;
+  --paper: #fff7df;
+  --steam: #f4dfbd;
+  --muted: #b9adc3;
+  --line: rgba(255, 247, 223, 0.24);
+  --acid: #d7ff38;
+  --pink: #ff4fa3;
+  --orange: #ff7a2f;
+  --cyan: #52e7ff;
+  --max: 1420px;
+  --radius: 6px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 18% 8%, rgba(255, 79, 163, 0.24), transparent 18rem),
+    radial-gradient(circle at 82% 10%, rgba(82, 231, 255, 0.18), transparent 20rem),
+    linear-gradient(90deg, rgba(255, 247, 223, 0.055) 1px, transparent 1px) 0 0 / 9vw 100%,
+    linear-gradient(180deg, rgba(255, 247, 223, 0.05) 1px, transparent 1px) 0 0 / 100% 90px,
+    var(--night);
+  color: var(--paper);
+  font-family: "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  letter-spacing: 0;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.market-nav {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: grid;
+  grid-template-columns: minmax(260px, 0.9fr) minmax(0, 1.2fr) auto auto;
+  gap: 1rem;
+  align-items: center;
+  border-bottom: 1px solid var(--line);
+  background: rgba(8, 7, 13, 0.82);
+  backdrop-filter: blur(18px);
+  padding: 0.8rem clamp(1rem, 3vw, 3rem);
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.brand,
+.nav-links,
+.nav-action {
+  display: inline-flex;
+  align-items: center;
+}
+
+.brand {
+  gap: 0.75rem;
+}
+
+.brand-sigil {
+  display: grid;
+  width: 46px;
+  height: 46px;
+  place-items: center;
+  border: 1px solid var(--paper);
+  background: var(--acid);
+  color: var(--night);
+}
+
+.route-tag {
+  margin: 0;
+  color: var(--muted);
+}
+
+.nav-links {
+  gap: 1rem;
+}
+
+.nav-action {
+  justify-self: end;
+  border: 1px solid var(--acid);
+  padding: 0.76rem 0.95rem;
+  color: var(--acid);
+  transition: background 180ms ease, color 180ms ease, transform 180ms ease;
+}
+
+.nav-action:hover {
+  background: var(--acid);
+  color: var(--night);
+  transform: translateY(-2px);
+}
+
+main {
+  overflow: clip;
+}
+
+.orbit-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(280px, 0.55fr);
+  grid-template-areas:
+    "copy board"
+    "visual visual";
+  gap: clamp(1.2rem, 4vw, 3rem);
+  max-width: var(--max);
+  margin: 0 auto;
+  min-height: calc(100vh - 72px);
+  padding: clamp(3.5rem, 8vw, 7rem) clamp(1rem, 4vw, 3rem) 4rem;
+}
+
+.hero-copy {
+  grid-area: copy;
+  align-self: end;
+}
+
+.micro,
+.stall-card span,
+.sky-rail time,
+.vertical-label {
+  margin: 0;
+  color: var(--acid);
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+h1,
+h2,
+h3,
+p {
+  margin-top: 0;
+}
+
+h1,
+h2 {
+  font-family: Georgia, "Times New Roman", serif;
+  font-weight: 900;
+  line-height: 0.86;
+}
+
+h1 {
+  margin: 0.6rem 0 0;
+  font-size: clamp(5.5rem, 14.5vw, 16rem);
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+h1 span {
+  display: block;
+}
+
+h1 span:nth-child(2) {
+  margin-left: clamp(2rem, 12vw, 12rem);
+  color: transparent;
+  -webkit-text-stroke: 2px var(--paper);
+}
+
+h1 span:nth-child(3) {
+  color: var(--orange);
+}
+
+h2 {
+  font-size: clamp(2.6rem, 6vw, 6.8rem);
+}
+
+h3 {
+  font-size: clamp(1.4rem, 2.4vw, 2.5rem);
+  line-height: 0.96;
+  text-transform: uppercase;
+}
+
+.thesis {
+  max-width: 620px;
+  margin: 1.6rem 0 0 clamp(0rem, 12vw, 10rem);
+  color: var(--steam);
+  font-size: clamp(1.05rem, 1.8vw, 1.45rem);
+  line-height: 1.22;
+}
+
+.sensor-board {
+  grid-area: board;
+  align-self: start;
+  border: 1px solid var(--line);
+  background: rgba(255, 247, 223, 0.08);
+  padding: 1rem;
+  box-shadow: 12px 12px 0 rgba(255, 79, 163, 0.42);
+}
+
+.sensor-board p {
+  margin-bottom: 0.75rem;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.sensor-board strong {
+  display: block;
+  max-width: 280px;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 2rem;
+  line-height: 0.98;
+}
+
+.sensor-board dl {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.8rem;
+  margin: 2rem 0 0;
+}
+
+.sensor-board div {
+  border-top: 1px solid var(--line);
+  padding-top: 0.75rem;
+}
+
+.sensor-board dt {
+  color: var(--muted);
+  font-size: 0.64rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.sensor-board dd {
+  margin: 0.2rem 0 0;
+  color: var(--acid);
+  font-size: 1.35rem;
+  font-weight: 900;
+}
+
+.orbit-visual {
+  position: relative;
+  grid-area: visual;
+  min-height: 470px;
+  border: 1px solid var(--line);
+  background:
+    linear-gradient(135deg, transparent 0 48%, rgba(255, 122, 47, 0.36) 48% 50%, transparent 50%),
+    radial-gradient(circle at 50% 50%, rgba(82, 231, 255, 0.18), transparent 24%),
+    rgba(255, 247, 223, 0.035);
+  overflow: hidden;
+}
+
+.ring,
+.axis,
+.market-node {
+  position: absolute;
+}
+
+.ring {
+  border: 1px solid var(--paper);
+  border-radius: 999px;
+  transform: translate(-50%, -50%);
+}
+
+.ring-one {
+  top: 50%;
+  left: 50%;
+  width: min(74vw, 760px);
+  aspect-ratio: 1;
+}
+
+.ring-two {
+  top: 50%;
+  left: 50%;
+  width: min(42vw, 430px);
+  aspect-ratio: 1;
+  border-style: dashed;
+}
+
+.axis {
+  background: var(--pink);
+}
+
+.axis-x {
+  top: 50%;
+  left: 4%;
+  right: 4%;
+  height: 2px;
+}
+
+.axis-y {
+  top: 8%;
+  bottom: 8%;
+  left: 50%;
+  width: 2px;
+}
+
+.market-node {
+  min-width: 120px;
+  border: 1px solid var(--paper);
+  background: var(--night);
+  color: var(--paper);
+  padding: 0.7rem;
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.market-node::before {
+  content: "";
+  position: absolute;
+  top: -8px;
+  left: -8px;
+  width: 14px;
+  height: 14px;
+  background: var(--acid);
+}
+
+.dumpling {
+  top: 16%;
+  left: 18%;
+}
+
+.tea {
+  top: 28%;
+  right: 16%;
+}
+
+.lens {
+  bottom: 22%;
+  left: 38%;
+}
+
+.noodle {
+  right: 9%;
+  bottom: 12%;
+}
+
+.stall-section,
+.sky-clock-section,
+.field-notes,
+.rsvp-section {
+  max-width: var(--max);
+  margin: 0 auto;
+  padding: 5rem clamp(1rem, 4vw, 3rem);
+  border-top: 1px solid var(--line);
+}
+
+.stall-section {
+  display: grid;
+  grid-template-columns: minmax(0, 0.62fr) minmax(0, 1.38fr);
+  gap: 1rem;
+}
+
+.section-copy {
+  position: sticky;
+  top: 6rem;
+  align-self: start;
+}
+
+.section-copy p:last-child,
+.clock-heading + p,
+.rsvp-section p {
+  color: var(--muted);
+  font-size: 1.05rem;
+  line-height: 1.35;
+}
+
+.stall-constellation {
+  display: grid;
+  grid-template-columns: 1.2fr 0.8fr;
+  gap: 1rem;
+}
+
+.stall-card {
+  display: grid;
+  min-height: 310px;
+  align-content: space-between;
+  border: 1px solid var(--line);
+  background: rgba(255, 247, 223, 0.08);
+  padding: 1.1rem;
+}
+
+.stall-card.wide {
+  grid-row: span 2;
+  min-height: 640px;
+  background:
+    radial-gradient(circle at 30% 22%, rgba(255, 122, 47, 0.42) 0 13%, transparent 14%),
+    radial-gradient(circle at 70% 78%, rgba(215, 255, 56, 0.34) 0 10%, transparent 11%),
+    rgba(255, 247, 223, 0.1);
+}
+
+.stall-card.dark {
+  background: var(--paper);
+  color: var(--night);
+}
+
+.stall-card.tall {
+  min-height: 420px;
+  background: rgba(82, 231, 255, 0.1);
+}
+
+.stall-card p {
+  color: var(--steam);
+  font-size: 1.05rem;
+  line-height: 1.32;
+}
+
+.stall-card.dark p {
+  color: var(--plum);
+}
+
+.stall-card strong {
+  color: var(--acid);
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.stall-card.dark strong {
+  color: var(--night);
+}
+
+.sky-clock-section {
+  overflow: hidden;
+}
+
+.clock-heading {
+  max-width: 980px;
+  margin-bottom: 2rem;
+}
+
+.sky-rail {
+  display: grid;
+  grid-auto-columns: minmax(340px, 42vw);
+  grid-auto-flow: column;
+  gap: 1rem;
+  overflow-x: auto;
+  padding-bottom: 1rem;
+  scroll-snap-type: x mandatory;
+}
+
+.sky-rail article {
+  min-height: 410px;
+  border: 1px solid var(--line);
+  background: rgba(8, 7, 13, 0.72);
+  padding: 1rem;
+  scroll-snap-align: start;
+}
+
+.sky-rail article.hot {
+  background: var(--acid);
+  color: var(--night);
+}
+
+.sky-rail article.hot time {
+  color: var(--plum);
+}
+
+.sky-rail p {
+  color: var(--muted);
+  line-height: 1.36;
+}
+
+.sky-rail article.hot p {
+  color: var(--ink);
+}
+
+.field-notes {
+  display: grid;
+  grid-template-columns: 120px minmax(0, 0.9fr) minmax(0, 1fr);
+  gap: 1.2rem;
+  align-items: start;
+}
+
+.vertical-label {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+}
+
+.note-grid {
+  display: grid;
+  gap: 1rem;
+}
+
+.note-grid article {
+  border-top: 6px solid var(--pink);
+  padding-top: 1rem;
+}
+
+.note-grid article:nth-child(2) {
+  border-color: var(--cyan);
+  margin-left: 3rem;
+}
+
+.note-grid p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.35;
+}
+
+.rsvp-section {
+  display: grid;
+  grid-template-columns: minmax(0, 0.78fr) minmax(360px, 1fr);
+  gap: 2rem;
+  align-items: start;
+}
+
+.rsvp-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  border: 1px solid var(--paper);
+  background: var(--paper);
+  color: var(--night);
+  padding: 1rem;
+  box-shadow: 10px 10px 0 var(--pink);
+}
+
+.rsvp-form label,
+.rsvp-form span {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.rsvp-form span {
+  font-size: 0.7rem;
+  font-weight: 900;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+}
+
+.wide-field,
+.rsvp-form button {
+  grid-column: 1 / -1;
+}
+
+.rsvp-form input {
+  width: 100%;
+  border: 1px solid rgba(8, 7, 13, 0.24);
+  background: #f3ead1;
+  color: var(--night);
+  font: inherit;
+  padding: 0.9rem;
+}
+
+.rsvp-form button {
+  border: 0;
+  background: var(--night);
+  color: var(--acid);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  padding: 1rem;
+  text-transform: uppercase;
+}
+
+.market-footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  max-width: var(--max);
+  margin: 0 auto;
+  padding: 1.5rem clamp(1rem, 4vw, 3rem) 3rem;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+}
+
+.market-footer p {
+  margin: 0;
+}
+
+.market-footer a {
+  color: var(--acid);
+  font-weight: 900;
+}
+
+@media (max-width: 900px) {
+  .market-nav,
+  .orbit-hero,
+  .stall-section,
+  .field-notes,
+  .rsvp-section {
+    grid-template-columns: 1fr;
+  }
+
+  .market-nav {
+    position: static;
+  }
+
+  .nav-links {
+    flex-wrap: wrap;
+  }
+
+  .nav-action {
+    justify-self: start;
+  }
+
+  .orbit-hero {
+    grid-template-areas:
+      "copy"
+      "board"
+      "visual";
+    min-height: 0;
+  }
+
+  h1 {
+    font-size: clamp(4.1rem, 23vw, 8rem);
+  }
+
+  h1 span:nth-child(2),
+  .thesis {
+    margin-left: 0;
+  }
+
+  .sensor-board dl,
+  .stall-constellation,
+  .rsvp-form {
+    grid-template-columns: 1fr;
+  }
+
+  .orbit-visual {
+    min-height: 560px;
+  }
+
+  .section-copy {
+    position: static;
+  }
+
+  .stall-card.wide {
+    min-height: 430px;
+  }
+
+  .sky-rail {
+    grid-auto-columns: minmax(295px, 86vw);
+  }
+
+  .vertical-label {
+    writing-mode: horizontal-tb;
+    transform: none;
+  }
+
+  .note-grid article:nth-child(2) {
+    margin-left: 0;
+  }
+
+  .market-footer {
+    display: block;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    transition: none !important;
+  }
+}
+
+
+/* wordpress/blocks/market-footer/style.css */
+/* Example styling is inherited from mockup/style.css. */
+
+
+/* wordpress/blocks/market-nav/style.css */
+/* Example styling is inherited from mockup/style.css. */
+
+
+/* wordpress/blocks/market-rsvp-form/style.css */
+/* Example styling is inherited from mockup/style.css. */
+
+
+/* wordpress/blocks/orbit-hero/style.css */
+/* Example styling is inherited from mockup/style.css. */
+
+
+/* wordpress/blocks/sky-rail/style.css */
+/* Example styling is inherited from mockup/style.css. */
+
+
+/* wordpress/blocks/stall-constellation/style.css */
+/* Example styling is inherited from mockup/style.css. */
+
+    </style>
+  </head>
+  <body>
+<header class="market-nav" aria-label="Night Market Observatory navigation"><a class="brand" href="#top" aria-label="Night Market Observatory home"><span class="brand-sigil">NMO</span><strong>Night Market Observatory</strong></a><p class="route-tag">Route 07 / dusk to moonset / rotating city edition</p><nav class="nav-links" aria-label="Primary"><a href="#stalls"><span>Stalls</span></a><a href="#sky-clock"><span>Sky Clock</span></a><a href="#rsvp"><span>Reserve</span></a></nav><a class="nav-action" href="#rsvp"><span>Join tonight</span></a></header><main id="top" class="wp-block-group"><section class="orbit-hero" aria-labelledby="hero-title"><div class="hero-copy"><p class="micro">Travelling food observatory / 41.8781 N / market opens at civil twilight</p><h1 id="hero-title"><span>Eat</span><span>under</span><span>moving stars.</span></h1><p class="thesis">A night market that treats telescopes like street lamps and every stall as a coordinate in a temporary sky map.</p></div><aside class="sensor-board" aria-label="Tonight's field readings"><p>Tonight's field</p><strong>Cloud gap predicted at 21:14</strong><dl><div><dt>stalls</dt><dd>18</dd></div><div><dt>scopes</dt><dd>06</dd></div><div><dt>meteor odds</dt><dd>34%</dd></div></dl></aside><div class="orbit-visual" aria-label="Market orbit map"><span class="ring ring-one"></span><span class="ring ring-two"></span><span class="axis axis-x"></span><span class="axis axis-y"></span><span class="market-node dumpling">Dumpling Moon</span><span class="market-node tea">Comet Tea</span><span class="market-node lens">Lens Dock</span><span class="market-node noodle">Noodle Transit</span></div></section><section id="stalls" class="wp-block-group stall-section"><div class="wp-block-group section-copy"><p class="micro">Market constellation / edible wayfinding</p><h2 class="wp-block-heading">Follow the smell of charcoal, then the telescope line.</h2><p>The route is deliberately uneven: dense food heat near the entrance, quiet optical stations at the edge, and one loud dessert stall where people naturally gather after Saturn.</p></div><div class="stall-constellation" aria-label="Featured market stalls"><article class="stall-card wide"><span>01 / hearth</span><h3>Dumpling Moon</h3><p>Black vinegar steam, crescent folds, and a viewfinder pointed at Mare Crisium.</p><strong>Queue heat: high</strong></article><article class="stall-card "><span>02 / signal</span><h3>Comet Tea</h3><p>Cold oolong poured over citrus ice while a volunteer calls out satellite passes.</p><strong>Best at 20:40</strong></article><article class="stall-card dark"><span>03 / optical</span><h3>Lens Dock</h3><p>A repair bench for borrowed binoculars, fogged glasses, and first-time observers.</p><strong>Focus checks free</strong></article><article class="stall-card tall"><span>04 / flame</span><h3>Noodle Transit</h3><p>Hand-pulled noodles thrown under a copper lamp with a live sky clock above the counter.</p><strong>Last bowl 23:10</strong></article></div></section><section id="sky-clock" class="wp-block-group sky-clock-section"><div class="wp-block-group clock-heading"><p class="micro">Sky clock / move when the city darkens</p><h2 class="wp-block-heading">The evening is scheduled by appetite and altitude.</h2></div><div class="sky-rail" tabindex="0" aria-label="Tonight's route schedule"><article><time datetime="2026-06-10T19:42:00">19:42</time><h3>Lantern ignition</h3><p>The market grid wakes up before the first telescope points above the roofline.</p></article><article class="hot"><time datetime="2026-06-10T21:14:00">21:14</time><h3>Cloud gap</h3><p>All scopes swing east for the predicted break and the tea stall goes silent.</p></article><article><time datetime="2026-06-10T22:03:00">22:03</time><h3>Saturn queue</h3><p>Volunteers cap the line, pass around sesame cakes, and teach people how to look slowly.</p></article><article><time datetime="2026-06-10T23:10:00">23:10</time><h3>Last bowl</h3><p>Noodle Transit closes when the last planned object clears the billboard glare.</p></article></div></section><section class="wp-block-group field-notes"><p class="vertical-label">field etiquette</p><h2 class="wp-block-heading">Bright screens down. Bowls close. Eyes up.</h2><div class="wp-block-group note-grid"><article class="wp-block-group"><h3 class="wp-block-heading">Red light only</h3><p>Every table has a red film sleeve for phones so dark adaptation survives the menu.</p></article><article class="wp-block-group"><h3 class="wp-block-heading">Shared eyepieces</h3><p>Scope hosts explain the object, then step back so the line can build its own language.</p></article><article class="wp-block-group"><h3 class="wp-block-heading">Waste returns</h3><p>Bowls, cups, chopsticks, and lens cloths are routed through one visible return spine.</p></article></div></section><section id="rsvp" class="wp-block-group rsvp-section"><div class="wp-block-group"><p class="micro">Reserve a route card</p><h2 class="wp-block-heading">Get the next coordinates before the market moves.</h2><p>We send the city, stall roster, cloud model, and viewing targets forty-eight hours before each edition.</p></div><form class="rsvp-form" action="/night-market-rsvp" method="post"><label><span>Name</span><input type="text" name="name" placeholder="Your name" required/></label><label><span>Email</span><input type="email" name="email" placeholder="you@example.com" required/></label><label class="wide-field"><span>City preference</span><input type="text" name="city" placeholder="Chicago, Rotterdam, Seoul..."/></label><button type="submit">Send route signal</button></form></section></main><footer class="market-footer"><p>Night Market Observatory / moving kitchens, public telescopes, temporary maps</p><a href="#top"><span>Return to the first lantern</span></a></footer>
+
+  </body>
+</html>

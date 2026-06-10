@@ -1,0 +1,647 @@
+{
+  "sections": [
+    {
+      "id": "market-nav",
+      "selector": ".market-nav",
+      "tagName": "header",
+      "className": "market-nav",
+      "text": "NMO Night Market Observatory Route 07 / dusk to moonset / rotating city edition Stalls Sky Clock Reserve Join tonight",
+      "headings": [],
+      "paragraphs": [
+        {
+          "className": "route-tag",
+          "content": "Route 07 / dusk to moonset / rotating city edition"
+        }
+      ],
+      "links": [
+        {
+          "className": "brand",
+          "url": "#top",
+          "text": "NMO Night Market Observatory"
+        },
+        {
+          "className": "",
+          "url": "#stalls",
+          "text": "Stalls"
+        },
+        {
+          "className": "",
+          "url": "#sky-clock",
+          "text": "Sky Clock"
+        },
+        {
+          "className": "",
+          "url": "#rsvp",
+          "text": "Reserve"
+        },
+        {
+          "className": "nav-action",
+          "url": "#rsvp",
+          "text": "Join tonight"
+        }
+      ],
+      "forms": [],
+      "cards": [],
+      "html": "<header class=\"market-nav\" aria-label=\"Night Market Observatory navigation\">\n      <a class=\"brand\" href=\"#top\" aria-label=\"Night Market Observatory home\">\n        <span class=\"brand-sigil\">NMO</span>\n        <strong>Night Market Observatory</strong>\n      </a>\n      <p class=\"route-tag\">Route 07 / dusk to moonset / rotating city edition</p>\n      <nav class=\"nav-links\" aria-label=\"Primary\">\n        <a href=\"#stalls\">Stalls</a>\n        <a href=\"#sky-clock\">Sky Clock</a>\n        <a href=\"#rsvp\">Reserve</a>\n      </nav>\n      <a class=\"nav-action\" href=\"#rsvp\">Join tonight</a>\n    </header>"
+    },
+    {
+      "id": "top",
+      "selector": "#top",
+      "tagName": "main",
+      "className": "",
+      "text": "Travelling food observatory / 41.8781 N / market opens at civil twilight Eat under moving stars. A night market that treats telescopes like street lamps and every stall as a coordinate in a temporary sky map. Tonight's field Cloud gap predicted at 21:14 stalls 18 scopes 06 meteor odds 34% Dumpling Moon Comet Tea Lens Dock Noodle Transit Market constellation / edible wayfinding Follow the smell of charcoal, then the telescope line. The route is deliberately uneven: dense food heat near the entrance, quiet optical stations at the edge, and one loud dessert stall where people naturally gather after Saturn. 01 / hearth Dumpling Moon Black vinegar steam, crescent folds, and a viewfinder pointed at Mare Crisium. Queue heat: high 02 / signal Comet Tea Cold oolong poured over citrus ice while a volunteer calls out satellite passes. Best at 20:40 03 / optical Lens Dock A repair bench for borrowed binoculars, fogged glasses, and first-time observers. Focus checks free 04 / flame Noodle Transit Hand-pulled noodles thrown under a copper lamp with a live sky clock above the counter. Last bowl 23:10 Sky clock / move when the city darkens The evening is scheduled by appetite and altitude. 19:42 Lantern ignition The market grid wakes up before the first telescope points above the roofline. 21:14 Cloud gap All scopes swing east for the predicted break and the tea stall goes silent. 22:03 Saturn queue Volunteers cap the line, pass around sesame cakes, and teach people how to look slowly. 23:10 Last bowl Noodle Transit closes when the last planned object clears the billboard glare. field etiquette Bright screens down. Bowls close. Eyes up. Red light only Every table has a red film sleeve for phones so dark adaptation survives the menu. Shared eyepieces Scope hosts explain the object, then step back so the line can build its own language. Waste returns Bowls, cups, chopsticks, and lens cloths are routed through one visible return spine. Reserve a route card Get the next coordinates before the market moves. We send the city, stall roster, cloud model, and viewing targets forty-eight hours before each edition. Name Email City preference Send route signal",
+      "headings": [
+        {
+          "level": 1,
+          "className": "",
+          "content": "Eat under moving stars."
+        },
+        {
+          "level": 2,
+          "className": "",
+          "content": "Follow the smell of charcoal, then the telescope line."
+        },
+        {
+          "level": 3,
+          "className": "",
+          "content": "Dumpling Moon"
+        },
+        {
+          "level": 3,
+          "className": "",
+          "content": "Comet Tea"
+        },
+        {
+          "level": 3,
+          "className": "",
+          "content": "Lens Dock"
+        },
+        {
+          "level": 3,
+          "className": "",
+          "content": "Noodle Transit"
+        },
+        {
+          "level": 2,
+          "className": "",
+          "content": "The evening is scheduled by appetite and altitude."
+        },
+        {
+          "level": 3,
+          "className": "",
+          "content": "Lantern ignition"
+        },
+        {
+          "level": 3,
+          "className": "",
+          "content": "Cloud gap"
+        },
+        {
+          "level": 3,
+          "className": "",
+          "content": "Saturn queue"
+        },
+        {
+          "level": 3,
+          "className": "",
+          "content": "Last bowl"
+        },
+        {
+          "level": 2,
+          "className": "",
+          "content": "Bright screens down. Bowls close. Eyes up."
+        },
+        {
+          "level": 3,
+          "className": "",
+          "content": "Red light only"
+        },
+        {
+          "level": 3,
+          "className": "",
+          "content": "Shared eyepieces"
+        },
+        {
+          "level": 3,
+          "className": "",
+          "content": "Waste returns"
+        },
+        {
+          "level": 2,
+          "className": "",
+          "content": "Get the next coordinates before the market moves."
+        }
+      ],
+      "paragraphs": [
+        {
+          "className": "micro",
+          "content": "Travelling food observatory / 41.8781 N / market opens at civil twilight"
+        },
+        {
+          "className": "thesis",
+          "content": "A night market that treats telescopes like street lamps and every stall as a coordinate in a temporary sky map."
+        },
+        {
+          "className": "",
+          "content": "Tonight's field"
+        },
+        {
+          "className": "micro",
+          "content": "Market constellation / edible wayfinding"
+        },
+        {
+          "className": "",
+          "content": "The route is deliberately uneven: dense food heat near the entrance, quiet optical stations at the edge, and one loud dessert stall where people naturally gather after Saturn."
+        },
+        {
+          "className": "",
+          "content": "Black vinegar steam, crescent folds, and a viewfinder pointed at Mare Crisium."
+        },
+        {
+          "className": "",
+          "content": "Cold oolong poured over citrus ice while a volunteer calls out satellite passes."
+        },
+        {
+          "className": "",
+          "content": "A repair bench for borrowed binoculars, fogged glasses, and first-time observers."
+        },
+        {
+          "className": "",
+          "content": "Hand-pulled noodles thrown under a copper lamp with a live sky clock above the counter."
+        },
+        {
+          "className": "micro",
+          "content": "Sky clock / move when the city darkens"
+        },
+        {
+          "className": "",
+          "content": "The market grid wakes up before the first telescope points above the roofline."
+        },
+        {
+          "className": "",
+          "content": "All scopes swing east for the predicted break and the tea stall goes silent."
+        },
+        {
+          "className": "",
+          "content": "Volunteers cap the line, pass around sesame cakes, and teach people how to look slowly."
+        },
+        {
+          "className": "",
+          "content": "Noodle Transit closes when the last planned object clears the billboard glare."
+        },
+        {
+          "className": "vertical-label",
+          "content": "field etiquette"
+        },
+        {
+          "className": "",
+          "content": "Every table has a red film sleeve for phones so dark adaptation survives the menu."
+        },
+        {
+          "className": "",
+          "content": "Scope hosts explain the object, then step back so the line can build its own language."
+        },
+        {
+          "className": "",
+          "content": "Bowls, cups, chopsticks, and lens cloths are routed through one visible return spine."
+        },
+        {
+          "className": "micro",
+          "content": "Reserve a route card"
+        },
+        {
+          "className": "",
+          "content": "We send the city, stall roster, cloud model, and viewing targets forty-eight hours before each edition."
+        }
+      ],
+      "links": [],
+      "forms": [
+        {
+          "className": "rsvp-form",
+          "action": "/night-market-rsvp",
+          "method": "post",
+          "fields": [
+            {
+              "label": "Name",
+              "type": "text",
+              "name": "name",
+              "placeholder": "Your name",
+              "required": true
+            },
+            {
+              "label": "Email",
+              "type": "email",
+              "name": "email",
+              "placeholder": "you@example.com",
+              "required": true
+            },
+            {
+              "label": "City preference",
+              "type": "text",
+              "name": "city",
+              "placeholder": "Chicago, Rotterdam, Seoul...",
+              "required": false
+            }
+          ],
+          "buttonText": "Send route signal"
+        }
+      ],
+      "cards": [
+        {
+          "className": "stall-card wide",
+          "title": "Dumpling Moon",
+          "text": "Black vinegar steam, crescent folds, and a viewfinder pointed at Mare Crisium.",
+          "links": []
+        },
+        {
+          "className": "stall-card",
+          "title": "Comet Tea",
+          "text": "Cold oolong poured over citrus ice while a volunteer calls out satellite passes.",
+          "links": []
+        },
+        {
+          "className": "stall-card dark",
+          "title": "Lens Dock",
+          "text": "A repair bench for borrowed binoculars, fogged glasses, and first-time observers.",
+          "links": []
+        },
+        {
+          "className": "stall-card tall",
+          "title": "Noodle Transit",
+          "text": "Hand-pulled noodles thrown under a copper lamp with a live sky clock above the counter.",
+          "links": []
+        },
+        {
+          "className": "",
+          "title": "Lantern ignition",
+          "text": "The market grid wakes up before the first telescope points above the roofline.",
+          "links": []
+        },
+        {
+          "className": "hot",
+          "title": "Cloud gap",
+          "text": "All scopes swing east for the predicted break and the tea stall goes silent.",
+          "links": []
+        },
+        {
+          "className": "",
+          "title": "Saturn queue",
+          "text": "Volunteers cap the line, pass around sesame cakes, and teach people how to look slowly.",
+          "links": []
+        },
+        {
+          "className": "",
+          "title": "Last bowl",
+          "text": "Noodle Transit closes when the last planned object clears the billboard glare.",
+          "links": []
+        },
+        {
+          "className": "",
+          "title": "Red light only",
+          "text": "Every table has a red film sleeve for phones so dark adaptation survives the menu.",
+          "links": []
+        },
+        {
+          "className": "",
+          "title": "Shared eyepieces",
+          "text": "Scope hosts explain the object, then step back so the line can build its own language.",
+          "links": []
+        },
+        {
+          "className": "",
+          "title": "Waste returns",
+          "text": "Bowls, cups, chopsticks, and lens cloths are routed through one visible return spine.",
+          "links": []
+        }
+      ],
+      "html": "<main id=\"top\">\n      <section class=\"orbit-hero\" aria-labelledby=\"hero-title\">\n        <div class=\"hero-copy\">\n          <p class=\"micro\">Travelling food observatory / 41.8781 N / market opens at civil twilight</p>\n          <h1 id=\"hero-title\">\n            <span>Eat</span>\n            <span>under</span>\n            <span>moving stars.</span>\n          </h1>\n          <p class=\"thesis\">A night market that treats telescopes like street lamps and every stall as a coordinate in a temporary sky map.</p>\n        </div>\n        <aside class=\"sensor-board\" aria-label=\"Tonight's field readings\">\n          <p>Tonight's field</p>\n          <strong>Cloud gap predicted at 21:14</strong>\n          <dl>\n            <div><dt>stalls</dt><dd>18</dd></div>\n            <div><dt>scopes</dt><dd>06</dd></div>\n            <div><dt>meteor odds</dt><dd>34%</dd></div>\n          </dl>\n        </aside>\n        <div class=\"orbit-visual\" aria-label=\"Market orbit map\">\n          <span class=\"ring ring-one\"></span>\n          <span class=\"ring ring-two\"></span>\n          <span class=\"axis axis-x\"></span>\n          <span class=\"axis axis-y\"></span>\n          <span class=\"market-node dumpling\">Dumpling Moon</span>\n          <span class=\"market-node tea\">Comet Tea</span>\n          <span class=\"market-node lens\">Lens Dock</span>\n          <span class=\"market-node noodle\">Noodle Transit</span>\n        </div>\n      </section>\n\n      <section id=\"stalls\" class=\"stall-section\">\n        <div class=\"section-copy\">\n          <p class=\"micro\">Market constellation / edible wayfinding</p>\n          <h2>Follow the smell of charcoal, then the telescope line.</h2>\n          <p>The route is deliberately uneven: dense food heat near the entrance, quiet optical stations at the edge, and one loud dessert stall where people naturally gather after Saturn.</p>\n        </div>\n        <div class=\"stall-constellation\" aria-label=\"Featured market stalls\">\n          <article class=\"stall-card wide\">\n            <span>01 / hearth</span>\n            <h3>Dumpling Moon</h3>\n            <p>Black vinegar steam, crescent folds, and a viewfinder pointed at Mare Crisium.</p>\n            <strong>Queue heat: high</strong>\n          </article>\n          <article class=\"stall-card\">\n            <span>02 / signal</span>\n            <h3>Comet Tea</h3>\n            <p>Cold oolong poured over citrus ice while a volunteer calls out satellite passes.</p>\n            <strong>Best at 20:40</strong>\n          </article>\n          <article class=\"stall-card dark\">\n            <span>03 / optical</span>\n            <h3>Lens Dock</h3>\n            <p>A repair bench for borrowed binoculars, fogged glasses, and first-time observers.</p>\n            <strong>Focus checks free</strong>\n          </article>\n          <article class=\"stall-card tall\">\n            <span>04 / flame</span>\n            <h3>Noodle Transit</h3>\n            <p>Hand-pulled noodles thrown under a copper lamp with a live sky clock above the counter.</p>\n            <strong>Last bowl 23:10</strong>\n          </article>\n        </div>\n      </section>\n\n      <section id=\"sky-clock\" class=\"sky-clock-section\">\n        <div class=\"clock-heading\">\n          <p class=\"micro\">Sky clock / move when the city darkens</p>\n          <h2>The evening is scheduled by appetite and altitude.</h2>\n        </div>\n        <div class=\"sky-rail\" tabindex=\"0\" aria-label=\"Tonight's route schedule\">\n          <article>\n            <time datetime=\"2026-06-10T19:42:00\">19:42</time>\n            <h3>Lantern ignition</h3>\n            <p>The market grid wakes up before the first telescope points above the roofline.</p>\n          </article>\n          <article class=\"hot\">\n            <time datetime=\"2026-06-10T21:14:00\">21:14</time>\n            <h3>Cloud gap</h3>\n            <p>All scopes swing east for the predicted break and the tea stall goes silent.</p>\n          </article>\n          <article>\n            <time datetime=\"2026-06-10T22:03:00\">22:03</time>\n            <h3>Saturn queue</h3>\n            <p>Volunteers cap the line, pass around sesame cakes, and teach people how to look slowly.</p>\n          </article>\n          <article>\n            <time datetime=\"2026-06-10T23:10:00\">23:10</time>\n            <h3>Last bowl</h3>\n            <p>Noodle Transit closes when the last planned object clears the billboard glare.</p>\n          </article>\n        </div>\n      </section>\n\n      <section class=\"field-notes\">\n        <p class=\"vertical-label\">field etiquette</p>\n        <h2>Bright screens down. Bowls close. Eyes up.</h2>\n        <div class=\"note-grid\">\n          <article>\n            <h3>Red light only</h3>\n            <p>Every table has a red film sleeve for phones so dark adaptation survives the menu.</p>\n          </article>\n          <article>\n            <h3>Shared eyepieces</h3>\n            <p>Scope hosts explain the object, then step back so the line can build its own language.</p>\n          </article>\n          <article>\n            <h3>Waste returns</h3>\n            <p>Bowls, cups, chopsticks, and lens cloths are routed through one visible return spine.</p>\n          </article>\n        </div>\n      </section>\n\n      <section id=\"rsvp\" class=\"rsvp-section\">\n        <div>\n          <p class=\"micro\">Reserve a route card</p>\n          <h2>Get the next coordinates before the market moves.</h2>\n          <p>We send the city, stall roster, cloud model, and viewing targets forty-eight hours before each edition.</p>\n        </div>\n        <form class=\"rsvp-form\" action=\"/night-market-rsvp\" method=\"post\">\n          <label>\n            <span>Name</span>\n            <input type=\"text\" name=\"name\" placeholder=\"Your name\" required>\n          </label>\n          <label>\n            <span>Email</span>\n            <input type=\"email\" name=\"email\" placeholder=\"you@example.com\" required>\n          </label>\n          <label class=\"wide-field\">\n            <span>City preference</span>\n            <input type=\"text\" name=\"city\" placeholder=\"Chicago, Rotterdam, Seoul...\">\n          </label>\n          <button type=\"submit\">Send route signal</button>\n        </form>\n      </section>\n    </main>"
+    },
+    {
+      "id": "market-footer",
+      "selector": ".market-footer",
+      "tagName": "footer",
+      "className": "market-footer",
+      "text": "Night Market Observatory / moving kitchens, public telescopes, temporary maps Return to the first lantern",
+      "headings": [],
+      "paragraphs": [
+        {
+          "className": "",
+          "content": "Night Market Observatory / moving kitchens, public telescopes, temporary maps"
+        }
+      ],
+      "links": [
+        {
+          "className": "",
+          "url": "#top",
+          "text": "Return to the first lantern"
+        }
+      ],
+      "forms": [],
+      "cards": [],
+      "html": "<footer class=\"market-footer\">\n      <p>Night Market Observatory / moving kitchens, public telescopes, temporary maps</p>\n      <a href=\"#top\">Return to the first lantern</a>\n    </footer>"
+    }
+  ],
+  "headings": [
+    {
+      "level": 1,
+      "className": "",
+      "content": "Eat under moving stars."
+    },
+    {
+      "level": 2,
+      "className": "",
+      "content": "Follow the smell of charcoal, then the telescope line."
+    },
+    {
+      "level": 3,
+      "className": "",
+      "content": "Dumpling Moon"
+    },
+    {
+      "level": 3,
+      "className": "",
+      "content": "Comet Tea"
+    },
+    {
+      "level": 3,
+      "className": "",
+      "content": "Lens Dock"
+    },
+    {
+      "level": 3,
+      "className": "",
+      "content": "Noodle Transit"
+    },
+    {
+      "level": 2,
+      "className": "",
+      "content": "The evening is scheduled by appetite and altitude."
+    },
+    {
+      "level": 3,
+      "className": "",
+      "content": "Lantern ignition"
+    },
+    {
+      "level": 3,
+      "className": "",
+      "content": "Cloud gap"
+    },
+    {
+      "level": 3,
+      "className": "",
+      "content": "Saturn queue"
+    },
+    {
+      "level": 3,
+      "className": "",
+      "content": "Last bowl"
+    },
+    {
+      "level": 2,
+      "className": "",
+      "content": "Bright screens down. Bowls close. Eyes up."
+    },
+    {
+      "level": 3,
+      "className": "",
+      "content": "Red light only"
+    },
+    {
+      "level": 3,
+      "className": "",
+      "content": "Shared eyepieces"
+    },
+    {
+      "level": 3,
+      "className": "",
+      "content": "Waste returns"
+    },
+    {
+      "level": 2,
+      "className": "",
+      "content": "Get the next coordinates before the market moves."
+    }
+  ],
+  "paragraphs": [
+    {
+      "className": "route-tag",
+      "content": "Route 07 / dusk to moonset / rotating city edition"
+    },
+    {
+      "className": "micro",
+      "content": "Travelling food observatory / 41.8781 N / market opens at civil twilight"
+    },
+    {
+      "className": "thesis",
+      "content": "A night market that treats telescopes like street lamps and every stall as a coordinate in a temporary sky map."
+    },
+    {
+      "className": "",
+      "content": "Tonight's field"
+    },
+    {
+      "className": "micro",
+      "content": "Market constellation / edible wayfinding"
+    },
+    {
+      "className": "",
+      "content": "The route is deliberately uneven: dense food heat near the entrance, quiet optical stations at the edge, and one loud dessert stall where people naturally gather after Saturn."
+    },
+    {
+      "className": "",
+      "content": "Black vinegar steam, crescent folds, and a viewfinder pointed at Mare Crisium."
+    },
+    {
+      "className": "",
+      "content": "Cold oolong poured over citrus ice while a volunteer calls out satellite passes."
+    },
+    {
+      "className": "",
+      "content": "A repair bench for borrowed binoculars, fogged glasses, and first-time observers."
+    },
+    {
+      "className": "",
+      "content": "Hand-pulled noodles thrown under a copper lamp with a live sky clock above the counter."
+    },
+    {
+      "className": "micro",
+      "content": "Sky clock / move when the city darkens"
+    },
+    {
+      "className": "",
+      "content": "The market grid wakes up before the first telescope points above the roofline."
+    },
+    {
+      "className": "",
+      "content": "All scopes swing east for the predicted break and the tea stall goes silent."
+    },
+    {
+      "className": "",
+      "content": "Volunteers cap the line, pass around sesame cakes, and teach people how to look slowly."
+    },
+    {
+      "className": "",
+      "content": "Noodle Transit closes when the last planned object clears the billboard glare."
+    },
+    {
+      "className": "vertical-label",
+      "content": "field etiquette"
+    },
+    {
+      "className": "",
+      "content": "Every table has a red film sleeve for phones so dark adaptation survives the menu."
+    },
+    {
+      "className": "",
+      "content": "Scope hosts explain the object, then step back so the line can build its own language."
+    },
+    {
+      "className": "",
+      "content": "Bowls, cups, chopsticks, and lens cloths are routed through one visible return spine."
+    },
+    {
+      "className": "micro",
+      "content": "Reserve a route card"
+    },
+    {
+      "className": "",
+      "content": "We send the city, stall roster, cloud model, and viewing targets forty-eight hours before each edition."
+    },
+    {
+      "className": "",
+      "content": "Night Market Observatory / moving kitchens, public telescopes, temporary maps"
+    }
+  ],
+  "links": [
+    {
+      "className": "brand",
+      "url": "#top",
+      "text": "NMO Night Market Observatory"
+    },
+    {
+      "className": "",
+      "url": "#stalls",
+      "text": "Stalls"
+    },
+    {
+      "className": "",
+      "url": "#sky-clock",
+      "text": "Sky Clock"
+    },
+    {
+      "className": "",
+      "url": "#rsvp",
+      "text": "Reserve"
+    },
+    {
+      "className": "nav-action",
+      "url": "#rsvp",
+      "text": "Join tonight"
+    },
+    {
+      "className": "",
+      "url": "#top",
+      "text": "Return to the first lantern"
+    }
+  ],
+  "forms": [
+    {
+      "className": "rsvp-form",
+      "action": "/night-market-rsvp",
+      "method": "post",
+      "fields": [
+        {
+          "label": "Name",
+          "type": "text",
+          "name": "name",
+          "placeholder": "Your name",
+          "required": true
+        },
+        {
+          "label": "Email",
+          "type": "email",
+          "name": "email",
+          "placeholder": "you@example.com",
+          "required": true
+        },
+        {
+          "label": "City preference",
+          "type": "text",
+          "name": "city",
+          "placeholder": "Chicago, Rotterdam, Seoul...",
+          "required": false
+        }
+      ],
+      "buttonText": "Send route signal"
+    }
+  ],
+  "cards": [
+    {
+      "className": "stall-card wide",
+      "title": "Dumpling Moon",
+      "text": "Black vinegar steam, crescent folds, and a viewfinder pointed at Mare Crisium.",
+      "links": []
+    },
+    {
+      "className": "stall-card",
+      "title": "Comet Tea",
+      "text": "Cold oolong poured over citrus ice while a volunteer calls out satellite passes.",
+      "links": []
+    },
+    {
+      "className": "stall-card dark",
+      "title": "Lens Dock",
+      "text": "A repair bench for borrowed binoculars, fogged glasses, and first-time observers.",
+      "links": []
+    },
+    {
+      "className": "stall-card tall",
+      "title": "Noodle Transit",
+      "text": "Hand-pulled noodles thrown under a copper lamp with a live sky clock above the counter.",
+      "links": []
+    },
+    {
+      "className": "",
+      "title": "Lantern ignition",
+      "text": "The market grid wakes up before the first telescope points above the roofline.",
+      "links": []
+    },
+    {
+      "className": "hot",
+      "title": "Cloud gap",
+      "text": "All scopes swing east for the predicted break and the tea stall goes silent.",
+      "links": []
+    },
+    {
+      "className": "",
+      "title": "Saturn queue",
+      "text": "Volunteers cap the line, pass around sesame cakes, and teach people how to look slowly.",
+      "links": []
+    },
+    {
+      "className": "",
+      "title": "Last bowl",
+      "text": "Noodle Transit closes when the last planned object clears the billboard glare.",
+      "links": []
+    },
+    {
+      "className": "",
+      "title": "Red light only",
+      "text": "Every table has a red film sleeve for phones so dark adaptation survives the menu.",
+      "links": []
+    },
+    {
+      "className": "",
+      "title": "Shared eyepieces",
+      "text": "Scope hosts explain the object, then step back so the line can build its own language.",
+      "links": []
+    },
+    {
+      "className": "",
+      "title": "Waste returns",
+      "text": "Bowls, cups, chopsticks, and lens cloths are routed through one visible return spine.",
+      "links": []
+    }
+  ]
+}

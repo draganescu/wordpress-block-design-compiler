@@ -1,0 +1,20 @@
+{
+  "apiVersion": 3,
+  "name": "wbdc/market-footer",
+  "title": "Market Footer",
+  "category": "design",
+  "description": "Semantic editable footer for the Night Market Observatory example.",
+  "editorScript": "file:./index.js",
+  "style": "file:./style.css",
+  "attributes": {
+    "text": { "type": "string", "default": "" },
+    "url": { "type": "string", "default": "#top" },
+    "linkText": { "type": "string", "default": "" }
+  },
+  "supports": {
+    "anchor": true,
+    "className": true,
+    "spacing": { "margin": true, "padding": true },
+    "html": false
+  }
+}
