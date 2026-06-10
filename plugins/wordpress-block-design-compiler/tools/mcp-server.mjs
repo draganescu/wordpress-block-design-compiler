@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import fs from 'node:fs';
+import http from 'node:http';
 import path from 'node:path';
 import vm from 'node:vm';
 import { createRequire } from 'node:module';
@@ -96,7 +97,7 @@ const TOOLS = [
   },
   {
     name: 'compare_html',
-    description: 'Capture mockup/rendered screenshots, generate pixel diffs, and write reports/comparison.json plus reports/repair-tasks.md.',
+    description: 'Capture mockup/rendered/editor screenshots, generate pixel diffs, and write reports/comparison.json plus reports/repair-tasks.md.',
     inputSchema: {
       type: 'object',
       additionalProperties: false,
@@ -105,6 +106,8 @@ const TOOLS = [
         workspaceRoot: { type: 'string' },
         mockupPath: { type: 'string', default: 'mockup/index.html' },
         renderedPath: { type: 'string', default: 'rendered/rendered-blocks.html' },
+        editorPath: { type: 'string', default: 'editor/block-editor.html' },
+        compareEditor: { type: 'boolean', default: true },
         maxMismatchPercent: { type: 'number', default: 1 },
         maxHeightDelta: { type: 'number', default: 8 },
         viewports: {
@@ -1102,11 +1105,14 @@ async function compareHtml(args) {
 
   const mockupPath = path.join(workspaceRoot, args.mockupPath || 'mockup/index.html');
   const renderedPath = path.join(workspaceRoot, args.renderedPath || 'rendered/rendered-blocks.html');
+  const editorPath = path.join(workspaceRoot, args.editorPath || 'editor/block-editor.html');
+  const shouldCompareEditor = args.compareEditor !== false && fs.existsSync(editorPath);
   const outDir = path.join(workspaceRoot, 'visual');
   fs.mkdirSync(outDir, { recursive: true });
   const viewports = Array.isArray(args.viewports) && args.viewports.length ? args.viewports : DEFAULT_VIEWPORTS;
   const browser = await chromium.launch({ headless: true });
   const results = [];
+  const server = shouldCompareEditor ? await startStaticServer(workspaceRoot) : null;
 
   try {
     for (const viewport of viewports) {
@@ -1115,22 +1121,57 @@ async function compareHtml(args) {
       const diffShot = path.join(outDir, `diff-${viewport.name}.png`);
       await capture(browser, mockupPath, mockupShot, viewport);
       await capture(browser, renderedPath, renderedShot, viewport);
-      results.push(comparePngs({ mockupShot, renderedShot, diffShot, viewport, PNG, pixelmatch }));
+      results.push(comparePngs({
+        target: 'rendered',
+        mockupShot,
+        candidateShot: renderedShot,
+        diffShot,
+        viewport,
+        PNG,
+        pixelmatch,
+      }));
+
+      if (shouldCompareEditor) {
+        const editorShot = path.join(outDir, `editor-${viewport.name}.png`);
+        const editorDiffShot = path.join(outDir, `diff-editor-${viewport.name}.png`);
+        await captureEditor(browser, server.urlFor(editorPath), editorShot, viewport);
+        results.push(comparePngs({
+          target: 'editor',
+          mockupShot,
+          candidateShot: editorShot,
+          diffShot: editorDiffShot,
+          viewport,
+          PNG,
+          pixelmatch,
+        }));
+      }
     }
   } finally {
     await browser.close();
+    if (server) await server.close();
   }
 
   const thresholds = {
     maxMismatchPercent: Number(args.maxMismatchPercent ?? 1),
     maxHeightDelta: Number(args.maxHeightDelta ?? 8),
   };
-  const aggregate = {
-    maxMismatchPercent: Math.max(...results.map((result) => result.mismatchPercent)),
-    maxHeightDelta: Math.max(...results.map((result) => result.heightDelta)),
+  const aggregate = aggregateComparisonResults(results);
+  const aggregates = {
+    all: aggregate,
+    rendered: aggregateComparisonResults(results.filter((result) => result.target === 'rendered')),
+    editor: aggregateComparisonResults(results.filter((result) => result.target === 'editor')),
   };
   const tasks = comparisonTasks(results, thresholds);
-  const report = { mockupPath, renderedPath, thresholds, aggregate, results, tasks };
+  const report = {
+    mockupPath,
+    renderedPath,
+    editorPath: shouldCompareEditor ? editorPath : null,
+    thresholds,
+    aggregate,
+    aggregates,
+    results,
+    tasks,
+  };
   writeJson(path.join(workspaceRoot, 'reports/comparison.json'), report);
   writeFile(path.join(workspaceRoot, 'reports/repair-tasks.md'), renderRepairTasks(tasks, report));
 
@@ -1141,6 +1182,89 @@ async function compareHtml(args) {
     passed: aggregate.maxMismatchPercent <= thresholds.maxMismatchPercent && aggregate.maxHeightDelta <= thresholds.maxHeightDelta,
     tasks,
   };
+}
+
+function aggregateComparisonResults(results) {
+  if (!results.length) return { maxMismatchPercent: 0, maxHeightDelta: 0 };
+  return {
+    maxMismatchPercent: Math.max(...results.map((result) => result.mismatchPercent)),
+    maxHeightDelta: Math.max(...results.map((result) => result.heightDelta)),
+  };
+}
+
+async function startStaticServer(rootDir) {
+  const root = path.resolve(rootDir);
+  const server = http.createServer((request, response) => {
+    if (!['GET', 'HEAD'].includes(request.method || '')) {
+      response.writeHead(405, { Allow: 'GET, HEAD' });
+      response.end('Method not allowed');
+      return;
+    }
+
+    const requestUrl = new URL(request.url || '/', 'http://127.0.0.1');
+    const pathname = decodeURIComponent(requestUrl.pathname);
+    const filePath = path.resolve(root, `.${pathname.endsWith('/') ? `${pathname}index.html` : pathname}`);
+    if (!isPathInside(root, filePath)) {
+      response.writeHead(403);
+      response.end('Forbidden');
+      return;
+    }
+
+    if (!fs.existsSync(filePath) || !fs.statSync(filePath).isFile()) {
+      response.writeHead(404);
+      response.end('Not found');
+      return;
+    }
+
+    response.writeHead(200, { 'Content-Type': mimeType(filePath) });
+    if (request.method === 'HEAD') {
+      response.end();
+      return;
+    }
+    fs.createReadStream(filePath).pipe(response);
+  });
+
+  await new Promise((resolve, reject) => {
+    server.once('error', reject);
+    server.listen(0, '127.0.0.1', () => {
+      server.off('error', reject);
+      resolve();
+    });
+  });
+
+  const address = server.address();
+  const port = typeof address === 'object' && address ? address.port : 0;
+  return {
+    urlFor(filePath) {
+      const relative = path.relative(root, filePath).split(path.sep).map(encodeURIComponent).join('/');
+      return `http://127.0.0.1:${port}/${relative}`;
+    },
+    close() {
+      return new Promise((resolve, reject) => {
+        server.close((error) => error ? reject(error) : resolve());
+      });
+    },
+  };
+}
+
+function isPathInside(parent, child) {
+  const relative = path.relative(parent, child);
+  return relative === '' || (relative && !relative.startsWith('..') && !path.isAbsolute(relative));
+}
+
+function mimeType(filePath) {
+  const ext = path.extname(filePath).toLowerCase();
+  return {
+    '.css': 'text/css; charset=utf-8',
+    '.html': 'text/html; charset=utf-8',
+    '.js': 'text/javascript; charset=utf-8',
+    '.json': 'application/json; charset=utf-8',
+    '.svg': 'image/svg+xml',
+    '.png': 'image/png',
+    '.jpg': 'image/jpeg',
+    '.jpeg': 'image/jpeg',
+    '.webp': 'image/webp',
+  }[ext] || 'application/octet-stream';
 }
 
 async function capture(browser, htmlPath, screenshotPath, viewport) {
@@ -1160,15 +1284,57 @@ async function capture(browser, htmlPath, screenshotPath, viewport) {
   }
 }
 
-function comparePngs({ mockupShot, renderedShot, diffShot, viewport, PNG, pixelmatch }) {
+async function captureEditor(browser, editorUrl, screenshotPath, viewport) {
+  const page = await browser.newPage({
+    viewport: { width: Number(viewport.width), height: Number(viewport.height) },
+    deviceScaleFactor: 1,
+  });
+  try {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.goto(editorUrl, { waitUntil: 'networkidle', timeout: 60000 });
+    await page.waitForSelector('.block-editor-block-list__layout', { timeout: 60000 });
+    const errorText = await page.locator('.wbdc-editor-error').textContent({ timeout: 250 }).catch(() => '');
+    if (errorText && !/Loading WordPress block editor/i.test(errorText)) {
+      throw new Error(`Editor preview failed before screenshot: ${errorText}`);
+    }
+    await page.addStyleTag({ content: editorComparisonCss() });
+    await page.screenshot({ path: screenshotPath, fullPage: true, animations: 'disabled' });
+  } finally {
+    await page.close();
+  }
+}
+
+function editorComparisonCss() {
+  return `
+    *,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}
+    .wbdc-editor-toolbar{display:none!important}
+    .wbdc-editor-shell,.wbdc-editor-canvas,.block-editor-block-list__layout{min-height:0!important}
+    .block-editor-block-list__layout{padding:0!important}
+    .block-editor-block-list__block{margin-top:0!important;margin-bottom:0!important}
+    .block-editor-block-list__block::before,
+    .block-editor-block-list__block::after,
+    .block-editor-block-list__breadcrumb,
+    .block-editor-block-list__insertion-point,
+    .block-editor-block-contextual-toolbar,
+    .block-editor-block-toolbar,
+    .block-editor-inserter,
+    .block-editor-warning,
+    .components-popover{display:none!important}
+    .block-editor-block-list__block,
+    .block-editor-block-list__block.is-selected,
+    .block-editor-block-list__block.has-child-selected{outline:0!important;box-shadow:none!important}
+  `;
+}
+
+function comparePngs({ target, mockupShot, candidateShot, diffShot, viewport, PNG, pixelmatch }) {
   const mockup = PNG.sync.read(fs.readFileSync(mockupShot));
-  const rendered = PNG.sync.read(fs.readFileSync(renderedShot));
-  const width = Math.min(mockup.width, rendered.width);
-  const height = Math.min(mockup.height, rendered.height);
+  const candidate = PNG.sync.read(fs.readFileSync(candidateShot));
+  const width = Math.min(mockup.width, candidate.width);
+  const height = Math.min(mockup.height, candidate.height);
   const diff = new PNG({ width, height });
   const mismatch = pixelmatch(
     cropPng(mockup, width, height, PNG).data,
-    cropPng(rendered, width, height, PNG).data,
+    cropPng(candidate, width, height, PNG).data,
     diff.data,
     width,
     height,
@@ -1176,14 +1342,17 @@ function comparePngs({ mockupShot, renderedShot, diffShot, viewport, PNG, pixelm
   );
   fs.writeFileSync(diffShot, PNG.sync.write(diff));
   return {
+    target,
     viewport: viewport.name,
     size: `${viewport.width}x${viewport.height}`,
     mockup: mockupShot,
-    rendered: renderedShot,
+    candidate: candidateShot,
+    ...(target === 'rendered' ? { rendered: candidateShot } : {}),
+    ...(target === 'editor' ? { editor: candidateShot } : {}),
     diff: diffShot,
     mismatchPercent: Number(((mismatch / (width * height)) * 100).toFixed(2)),
-    widthDelta: Math.abs(mockup.width - rendered.width),
-    heightDelta: Math.abs(mockup.height - rendered.height),
+    widthDelta: Math.abs(mockup.width - candidate.width),
+    heightDelta: Math.abs(mockup.height - candidate.height),
   };
 }
 
@@ -1201,26 +1370,34 @@ function cropPng(source, width, height, PNG) {
 function comparisonTasks(results, thresholds) {
   const tasks = [];
   for (const result of results) {
+    const surface = result.target === 'editor' ? 'editor preview' : 'rendered frontend';
+    const label = result.target === 'editor' ? 'Editor preview' : 'Rendered page';
     if (result.heightDelta > thresholds.maxHeightDelta) {
       tasks.push({
         priority: 'high',
+        surface,
         viewport: result.viewport,
-        issue: `Rendered page height differs by ${result.heightDelta}px.`,
-        target: 'macro layout / section vertical scale',
-        fix: 'Inspect screenshots and restore missing content, section height, component scale, responsive columns, or vertical rhythm before fine polish.',
+        issue: `${label} height differs by ${result.heightDelta}px.`,
+        target: result.target === 'editor' ? 'editable editor canvas / block edit output' : 'macro layout / section vertical scale',
+        fix: result.target === 'editor'
+          ? 'Inspect mockup/editor/diff screenshots and restore edit render structure, wrapper scale, missing block content, responsive behavior, or editor-only CSS drift.'
+          : 'Inspect screenshots and restore missing content, section height, component scale, responsive columns, or vertical rhythm before fine polish.',
         verification: `Height delta <= ${thresholds.maxHeightDelta}px for ${result.viewport}.`,
-        images: { mockup: result.mockup, rendered: result.rendered, diff: result.diff },
+        images: { mockup: result.mockup, candidate: result.candidate, rendered: result.rendered, editor: result.editor, diff: result.diff },
       });
     }
     if (result.mismatchPercent > thresholds.maxMismatchPercent) {
       tasks.push({
         priority: result.mismatchPercent > thresholds.maxMismatchPercent * 3 ? 'high' : 'medium',
+        surface,
         viewport: result.viewport,
-        issue: `Pixel mismatch is ${result.mismatchPercent}%.`,
-        target: 'visible differences in screenshot diff',
-        fix: 'Inspect mockup/rendered/diff images. Write specific tasks for missing elements, wrong grid geometry, button layout, component scale, color, and typography.',
+        issue: `${label} pixel mismatch is ${result.mismatchPercent}%.`,
+        target: result.target === 'editor' ? 'visible editor canvas differences in screenshot diff' : 'visible frontend differences in screenshot diff',
+        fix: result.target === 'editor'
+          ? 'Inspect mockup/editor/diff images. Write specific tasks for edit component output, missing editable text, wrapper classes, wrong grids, button layout, component scale, color, and typography.'
+          : 'Inspect mockup/rendered/diff images. Write specific tasks for missing elements, wrong grid geometry, button layout, component scale, color, and typography.',
         verification: `Mismatch <= ${thresholds.maxMismatchPercent}% for ${result.viewport}.`,
-        images: { mockup: result.mockup, rendered: result.rendered, diff: result.diff },
+        images: { mockup: result.mockup, candidate: result.candidate, rendered: result.rendered, editor: result.editor, diff: result.diff },
       });
     }
   }
@@ -1233,6 +1410,7 @@ function renderRepairTasks(tasks, report) {
     '',
     `Mockup: ${report.mockupPath}`,
     `Rendered: ${report.renderedPath}`,
+    ...(report.editorPath ? [`Editor: ${report.editorPath}`] : []),
     `Max mismatch: ${report.aggregate.maxMismatchPercent}%`,
     `Max height delta: ${report.aggregate.maxHeightDelta}px`,
     '',
@@ -1243,17 +1421,18 @@ function renderRepairTasks(tasks, report) {
     for (const task of tasks) {
       lines.push(
         `- [ ] Priority: ${task.priority}`,
+        `  Surface: ${task.surface}`,
         `  Viewport: ${task.viewport}`,
         `  Issue: ${task.issue}`,
         `  Target: ${task.target}`,
         `  Fix: ${task.fix}`,
         `  Verify: ${task.verification}`,
-        `  Images: ${task.images.mockup}, ${task.images.rendered}, ${task.images.diff}`,
+        `  Images: ${task.images.mockup}, ${task.images.candidate}, ${task.images.diff}`,
         ''
       );
     }
   }
-  return `${lines.join('\n')}\n`;
+  return `${lines.join('\n').replace(/\n+$/g, '')}\n`;
 }
 
 function extractInventory(html) {

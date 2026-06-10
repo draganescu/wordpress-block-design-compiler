@@ -6,7 +6,7 @@ Loop:
 
 1. Run `serialize_wordpress_blocks`.
 2. Run `compare_html`.
-3. Inspect mockup screenshot, rendered screenshot, and diff for each viewport.
+3. Inspect mockup screenshot, rendered screenshot, editor screenshot, and diff for each viewport.
 4. Write `reports/repair-tasks.md`.
 5. Fix tasks as code changes.
 6. Repeat until thresholds pass.
@@ -44,3 +44,4 @@ Rules:
 - If CSS repairs are fighting prior CSS, replace the repair stylesheet instead of stacking patches.
 - Use block-tree changes when the issue is missing content, wrong order, wrong block choice, broken editability, or semantic markup.
 - Use CSS when structure and content are correct but visual mapping is off.
+- Treat editor-surface diffs as first-class failures when the saved frontend looks right but the block `edit()` output, editable text, wrapper classes, or editor-only CSS drift from the mockup.

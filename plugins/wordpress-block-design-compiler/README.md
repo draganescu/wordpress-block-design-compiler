@@ -51,7 +51,7 @@ Use `claude/CLAUDE.md` as the Claude project instruction file when running this 
 - `analyze_mockup`: extracts a content inventory, sections, forms, links, cards, headings, CSS custom properties, and selectors.
 - `scaffold_custom_block`: writes `block.json`, `index.js`, and `style.css` for a vanilla JavaScript static block.
 - `serialize_wordpress_blocks`: boots a jsdom environment, registers official core blocks with `@wordpress/block-library`, registers custom blocks from `wordpress/blocks/*/index.js`, serializes `wordpress/block-tree.json` with `@wordpress/blocks`, writes canonical block markup to `wordpress/content.html`, writes frontend preview HTML to `rendered/rendered-blocks.html`, writes a no-build editable block editor preview to `editor/block-editor.html`, and writes `reports/style-audit.json`. Preview CSS is concatenated from `wordpress/style.css` and `wordpress/blocks/*/style.css`; the tool returns that source list. `mockup/style.css` is not included unless `includeMockupCss: true` is explicitly passed for debugging. It rejects source trees that contain `htmlLines`, `innerHTML`, `innerContent`, `html`, `markup`, or `sourceHtml`; unregistered core block names; attributes absent from WordPress block metadata; or `core/group` tag names outside block-level layout containers.
-- `compare_html`: captures mockup/rendered screenshots, generates diffs, and writes `reports/comparison.json` plus `reports/repair-tasks.md`.
+- `compare_html`: captures mockup/rendered screenshots plus mockup/editor screenshots when `editor/block-editor.html` exists, generates diffs, and writes `reports/comparison.json` plus `reports/repair-tasks.md`.
 
 ## Workflow
 

@@ -1,19 +1,36 @@
 {
   "mockupPath": "/Users/andreidraganescu/Sites/wordpress-block-design-compiler/plugins/wordpress-block-design-compiler/examples/test-run-night-market-observatory/mockup/index.html",
   "renderedPath": "/Users/andreidraganescu/Sites/wordpress-block-design-compiler/plugins/wordpress-block-design-compiler/examples/test-run-night-market-observatory/rendered/rendered-blocks.html",
+  "editorPath": "/Users/andreidraganescu/Sites/wordpress-block-design-compiler/plugins/wordpress-block-design-compiler/examples/test-run-night-market-observatory/editor/block-editor.html",
   "thresholds": {
     "maxMismatchPercent": 1,
     "maxHeightDelta": 8
   },
   "aggregate": {
-    "maxMismatchPercent": 0.36,
-    "maxHeightDelta": 0
+    "maxMismatchPercent": 25.99,
+    "maxHeightDelta": 905
+  },
+  "aggregates": {
+    "all": {
+      "maxMismatchPercent": 25.99,
+      "maxHeightDelta": 905
+    },
+    "rendered": {
+      "maxMismatchPercent": 0.36,
+      "maxHeightDelta": 0
+    },
+    "editor": {
+      "maxMismatchPercent": 25.99,
+      "maxHeightDelta": 905
+    }
   },
   "results": [
     {
+      "target": "rendered",
       "viewport": "desktop",
       "size": "1440x1200",
       "mockup": "/Users/andreidraganescu/Sites/wordpress-block-design-compiler/plugins/wordpress-block-design-compiler/examples/test-run-night-market-observatory/visual/mockup-desktop.png",
+      "candidate": "/Users/andreidraganescu/Sites/wordpress-block-design-compiler/plugins/wordpress-block-design-compiler/examples/test-run-night-market-observatory/visual/rendered-desktop.png",
       "rendered": "/Users/andreidraganescu/Sites/wordpress-block-design-compiler/plugins/wordpress-block-design-compiler/examples/test-run-night-market-observatory/visual/rendered-desktop.png",
       "diff": "/Users/andreidraganescu/Sites/wordpress-block-design-compiler/plugins/wordpress-block-design-compiler/examples/test-run-night-market-observatory/visual/diff-desktop.png",
       "mismatchPercent": 0.13,
@@ -21,15 +38,102 @@
       "heightDelta": 0
     },
     {
+      "target": "editor",
+      "viewport": "desktop",
+      "size": "1440x1200",
+      "mockup": "/Users/andreidraganescu/Sites/wordpress-block-design-compiler/plugins/wordpress-block-design-compiler/examples/test-run-night-market-observatory/visual/mockup-desktop.png",
+      "candidate": "/Users/andreidraganescu/Sites/wordpress-block-design-compiler/plugins/wordpress-block-design-compiler/examples/test-run-night-market-observatory/visual/editor-desktop.png",
+      "editor": "/Users/andreidraganescu/Sites/wordpress-block-design-compiler/plugins/wordpress-block-design-compiler/examples/test-run-night-market-observatory/visual/editor-desktop.png",
+      "diff": "/Users/andreidraganescu/Sites/wordpress-block-design-compiler/plugins/wordpress-block-design-compiler/examples/test-run-night-market-observatory/visual/diff-editor-desktop.png",
+      "mismatchPercent": 21.91,
+      "widthDelta": 0,
+      "heightDelta": 528
+    },
+    {
+      "target": "rendered",
       "viewport": "mobile",
       "size": "390x1200",
       "mockup": "/Users/andreidraganescu/Sites/wordpress-block-design-compiler/plugins/wordpress-block-design-compiler/examples/test-run-night-market-observatory/visual/mockup-mobile.png",
+      "candidate": "/Users/andreidraganescu/Sites/wordpress-block-design-compiler/plugins/wordpress-block-design-compiler/examples/test-run-night-market-observatory/visual/rendered-mobile.png",
       "rendered": "/Users/andreidraganescu/Sites/wordpress-block-design-compiler/plugins/wordpress-block-design-compiler/examples/test-run-night-market-observatory/visual/rendered-mobile.png",
       "diff": "/Users/andreidraganescu/Sites/wordpress-block-design-compiler/plugins/wordpress-block-design-compiler/examples/test-run-night-market-observatory/visual/diff-mobile.png",
       "mismatchPercent": 0.36,
       "widthDelta": 0,
       "heightDelta": 0
+    },
+    {
+      "target": "editor",
+      "viewport": "mobile",
+      "size": "390x1200",
+      "mockup": "/Users/andreidraganescu/Sites/wordpress-block-design-compiler/plugins/wordpress-block-design-compiler/examples/test-run-night-market-observatory/visual/mockup-mobile.png",
+      "candidate": "/Users/andreidraganescu/Sites/wordpress-block-design-compiler/plugins/wordpress-block-design-compiler/examples/test-run-night-market-observatory/visual/editor-mobile.png",
+      "editor": "/Users/andreidraganescu/Sites/wordpress-block-design-compiler/plugins/wordpress-block-design-compiler/examples/test-run-night-market-observatory/visual/editor-mobile.png",
+      "diff": "/Users/andreidraganescu/Sites/wordpress-block-design-compiler/plugins/wordpress-block-design-compiler/examples/test-run-night-market-observatory/visual/diff-editor-mobile.png",
+      "mismatchPercent": 25.99,
+      "widthDelta": 0,
+      "heightDelta": 905
     }
   ],
-  "tasks": []
+  "tasks": [
+    {
+      "priority": "high",
+      "surface": "editor preview",
+      "viewport": "desktop",
+      "issue": "Editor preview height differs by 528px.",
+      "target": "editable editor canvas / block edit output",
+      "fix": "Inspect mockup/editor/diff screenshots and restore edit render structure, wrapper scale, missing block content, responsive behavior, or editor-only CSS drift.",
+      "verification": "Height delta <= 8px for desktop.",
+      "images": {
+        "mockup": "/Users/andreidraganescu/Sites/wordpress-block-design-compiler/plugins/wordpress-block-design-compiler/examples/test-run-night-market-observatory/visual/mockup-desktop.png",
+        "candidate": "/Users/andreidraganescu/Sites/wordpress-block-design-compiler/plugins/wordpress-block-design-compiler/examples/test-run-night-market-observatory/visual/editor-desktop.png",
+        "editor": "/Users/andreidraganescu/Sites/wordpress-block-design-compiler/plugins/wordpress-block-design-compiler/examples/test-run-night-market-observatory/visual/editor-desktop.png",
+        "diff": "/Users/andreidraganescu/Sites/wordpress-block-design-compiler/plugins/wordpress-block-design-compiler/examples/test-run-night-market-observatory/visual/diff-editor-desktop.png"
+      }
+    },
+    {
+      "priority": "high",
+      "surface": "editor preview",
+      "viewport": "desktop",
+      "issue": "Editor preview pixel mismatch is 21.91%.",
+      "target": "visible editor canvas differences in screenshot diff",
+      "fix": "Inspect mockup/editor/diff images. Write specific tasks for edit component output, missing editable text, wrapper classes, wrong grids, button layout, component scale, color, and typography.",
+      "verification": "Mismatch <= 1% for desktop.",
+      "images": {
+        "mockup": "/Users/andreidraganescu/Sites/wordpress-block-design-compiler/plugins/wordpress-block-design-compiler/examples/test-run-night-market-observatory/visual/mockup-desktop.png",
+        "candidate": "/Users/andreidraganescu/Sites/wordpress-block-design-compiler/plugins/wordpress-block-design-compiler/examples/test-run-night-market-observatory/visual/editor-desktop.png",
+        "editor": "/Users/andreidraganescu/Sites/wordpress-block-design-compiler/plugins/wordpress-block-design-compiler/examples/test-run-night-market-observatory/visual/editor-desktop.png",
+        "diff": "/Users/andreidraganescu/Sites/wordpress-block-design-compiler/plugins/wordpress-block-design-compiler/examples/test-run-night-market-observatory/visual/diff-editor-desktop.png"
+      }
+    },
+    {
+      "priority": "high",
+      "surface": "editor preview",
+      "viewport": "mobile",
+      "issue": "Editor preview height differs by 905px.",
+      "target": "editable editor canvas / block edit output",
+      "fix": "Inspect mockup/editor/diff screenshots and restore edit render structure, wrapper scale, missing block content, responsive behavior, or editor-only CSS drift.",
+      "verification": "Height delta <= 8px for mobile.",
+      "images": {
+        "mockup": "/Users/andreidraganescu/Sites/wordpress-block-design-compiler/plugins/wordpress-block-design-compiler/examples/test-run-night-market-observatory/visual/mockup-mobile.png",
+        "candidate": "/Users/andreidraganescu/Sites/wordpress-block-design-compiler/plugins/wordpress-block-design-compiler/examples/test-run-night-market-observatory/visual/editor-mobile.png",
+        "editor": "/Users/andreidraganescu/Sites/wordpress-block-design-compiler/plugins/wordpress-block-design-compiler/examples/test-run-night-market-observatory/visual/editor-mobile.png",
+        "diff": "/Users/andreidraganescu/Sites/wordpress-block-design-compiler/plugins/wordpress-block-design-compiler/examples/test-run-night-market-observatory/visual/diff-editor-mobile.png"
+      }
+    },
+    {
+      "priority": "high",
+      "surface": "editor preview",
+      "viewport": "mobile",
+      "issue": "Editor preview pixel mismatch is 25.99%.",
+      "target": "visible editor canvas differences in screenshot diff",
+      "fix": "Inspect mockup/editor/diff images. Write specific tasks for edit component output, missing editable text, wrapper classes, wrong grids, button layout, component scale, color, and typography.",
+      "verification": "Mismatch <= 1% for mobile.",
+      "images": {
+        "mockup": "/Users/andreidraganescu/Sites/wordpress-block-design-compiler/plugins/wordpress-block-design-compiler/examples/test-run-night-market-observatory/visual/mockup-mobile.png",
+        "candidate": "/Users/andreidraganescu/Sites/wordpress-block-design-compiler/plugins/wordpress-block-design-compiler/examples/test-run-night-market-observatory/visual/editor-mobile.png",
+        "editor": "/Users/andreidraganescu/Sites/wordpress-block-design-compiler/plugins/wordpress-block-design-compiler/examples/test-run-night-market-observatory/visual/editor-mobile.png",
+        "diff": "/Users/andreidraganescu/Sites/wordpress-block-design-compiler/plugins/wordpress-block-design-compiler/examples/test-run-night-market-observatory/visual/diff-editor-mobile.png"
+      }
+    }
+  ]
 }
