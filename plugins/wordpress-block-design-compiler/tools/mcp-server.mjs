@@ -79,7 +79,7 @@ const TOOLS = [
   },
   {
     name: 'serialize_wordpress_blocks',
-    description: 'Serialize wordpress/block-tree.json with @wordpress/blocks into canonical wordpress/content.html and frontend rendered/rendered-blocks.html plus CSS.',
+    description: 'Serialize wordpress/block-tree.json with @wordpress/blocks into canonical wordpress/content.html, frontend rendered/rendered-blocks.html, editor/block-editor.html, and CSS reports.',
     inputSchema: {
       type: 'object',
       additionalProperties: false,
@@ -89,6 +89,7 @@ const TOOLS = [
         treePath: { type: 'string', default: 'wordpress/block-tree.json' },
         contentPath: { type: 'string', default: 'wordpress/content.html' },
         outPath: { type: 'string', default: 'rendered/rendered-blocks.html' },
+        editorPath: { type: 'string', default: 'editor/block-editor.html' },
         includeMockupCss: { type: 'boolean', default: false },
       },
     },
@@ -334,6 +335,7 @@ async function serializeWordPressBlocks(args) {
   const treePath = path.join(workspaceRoot, args.treePath || 'wordpress/block-tree.json');
   const contentPath = path.join(workspaceRoot, args.contentPath || 'wordpress/content.html');
   const outPath = path.join(workspaceRoot, args.outPath || 'rendered/rendered-blocks.html');
+  const editorPath = path.join(workspaceRoot, args.editorPath || 'editor/block-editor.html');
   const treeExists = fs.existsSync(treePath);
   const tree = treeExists ? readJson(treePath) : null;
   const blockMarkup = treeExists
@@ -349,11 +351,13 @@ async function serializeWordPressBlocks(args) {
 
   if (treeExists) writeFile(contentPath, `${blockMarkup.trim()}\n`);
   writeFile(outPath, fullHtml('Rendered WordPress Blocks', previewCss, stripBlockComments(blockMarkup)));
+  if (treeExists) writeFile(editorPath, editorPreviewHtml({ workspaceRoot, editorPath, treePath, cssSources }));
   writeJson(path.join(workspaceRoot, 'reports/style-audit.json'), styleAudit);
   return {
     treePath: treeExists ? treePath : null,
     contentPath,
     renderedPath: outPath,
+    editorPath: treeExists ? editorPath : null,
     cssSources: cssSources.map((source) => source.relativePath),
     styleAuditPath: path.join(workspaceRoot, 'reports/style-audit.json'),
     styleAudit,
@@ -368,6 +372,319 @@ function cssSource(workspaceRoot, filePath) {
     relativePath: path.relative(workspaceRoot, filePath),
     css,
   };
+}
+
+function editorPreviewHtml({ workspaceRoot, editorPath, treePath, cssSources }) {
+  const editorDir = path.dirname(editorPath);
+  const treeUrl = relativeUrl(editorDir, treePath);
+  const cssLinks = cssSources
+    .map((source) => `<link rel="stylesheet" href="${escapeAttr(relativeUrl(editorDir, source.path))}">`)
+    .join('\n    ');
+  const customBlockAssets = findFiles(path.join(workspaceRoot, 'wordpress/blocks'), 'index.js')
+    .map((file) => ({
+      script: relativeUrl(editorDir, file),
+      metadata: relativeUrl(editorDir, path.join(path.dirname(file), 'block.json')),
+    }));
+  const scriptTags = wordpressBrowserScripts()
+    .map((src) => `<script src="${src}"></script>`)
+    .join('\n    ');
+
+  return `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Editable WordPress Block Tree</title>
+    <link rel="stylesheet" href="https://s.w.org/wp-includes/css/dist/components/style.min.css">
+    <link rel="stylesheet" href="https://s.w.org/wp-includes/css/dist/block-editor/style.min.css">
+    <link rel="stylesheet" href="https://s.w.org/wp-includes/css/dist/block-editor/content.min.css">
+    <link rel="stylesheet" href="https://s.w.org/wp-includes/css/dist/block-editor/default-editor-styles.min.css">
+    <link rel="stylesheet" href="https://s.w.org/wp-includes/css/dist/block-library/style.min.css">
+    ${cssLinks}
+    <style>
+      html,
+      body {
+        margin: 0;
+        min-height: 100%;
+      }
+
+      body {
+        background: #111;
+      }
+
+      .wbdc-editor-shell {
+        min-height: 100vh;
+        background: #111;
+      }
+
+      .wbdc-editor-toolbar {
+        position: sticky;
+        top: 0;
+        z-index: 40;
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        align-items: center;
+        min-height: 44px;
+        padding: 0 12px;
+        border-bottom: 1px solid #333;
+        background: #181818;
+        color: #f7f1df;
+        font: 700 12px/1.2 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+
+      .wbdc-editor-toolbar a {
+        color: #d7ff38;
+        text-decoration: none;
+      }
+
+      .wbdc-editor-canvas {
+        min-height: calc(100vh - 44px);
+      }
+
+      .block-editor-block-list__layout {
+        min-height: calc(100vh - 44px);
+      }
+
+      .block-editor-block-list__block {
+        margin-top: 0;
+        margin-bottom: 0;
+      }
+
+      .block-editor-block-list__layout .block-editor-block-list__block::before {
+        outline-color: rgba(215, 255, 56, 0.65);
+      }
+
+      .wbdc-editor-error {
+        margin: 0;
+        padding: 24px;
+        color: #ffe6e6;
+        background: #290d0d;
+        font: 14px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        white-space: pre-wrap;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="editor-root">
+      <pre class="wbdc-editor-error">Loading WordPress block editor...</pre>
+    </div>
+    ${scriptTags}
+    <script>
+      window.wpEditorL10n = window.wpEditorL10n || {};
+      window.__unstableAutoRegisterBlocks = false;
+    </script>
+    <script>
+      (async function () {
+        const el = wp.element.createElement;
+        const rootEl = document.getElementById('editor-root');
+        const customBlockAssets = ${JSON.stringify(customBlockAssets)};
+
+        function renderError(error) {
+          rootEl.innerHTML = '';
+          const pre = document.createElement('pre');
+          pre.className = 'wbdc-editor-error';
+          pre.textContent = error && error.stack ? error.stack : String(error);
+          rootEl.appendChild(pre);
+        }
+
+        function toWpBlock(block) {
+          const name = block.blockName || block.name;
+          const attrs = block.attrs || block.attributes || {};
+          const innerBlocks = (block.innerBlocks || []).map(toWpBlock);
+          return wp.blocks.createBlock(name, attrs, innerBlocks);
+        }
+
+        function fallbackTitle(name) {
+          return String(name || 'Custom block')
+            .split('/').pop()
+            .split('-')
+            .filter(Boolean)
+            .map(function (part) { return part.charAt(0).toUpperCase() + part.slice(1); })
+            .join(' ');
+        }
+
+        async function fetchJson(url) {
+          const response = await fetch(url);
+          if (!response.ok) return {};
+          return response.json();
+        }
+
+        async function registerCustomBlocks() {
+          const originalBlocks = window.wp.blocks;
+          const originalRegisterBlockType = originalBlocks.registerBlockType;
+          for (const asset of customBlockAssets) {
+            const metadata = await fetchJson(asset.metadata);
+            const wrappedBlocks = Object.assign({}, originalBlocks, {
+              registerBlockType: function (name, settings) {
+                const blockName = name || metadata.name;
+                const normalized = Object.assign(
+                  {
+                    apiVersion: 3,
+                    title: metadata.title || fallbackTitle(blockName),
+                    category: metadata.category || 'design',
+                    attributes: metadata.attributes || {},
+                    supports: metadata.supports || {}
+                  },
+                  metadata,
+                  settings || {}
+                );
+                normalized.apiVersion = normalized.apiVersion || 3;
+                normalized.title = normalized.title || fallbackTitle(blockName);
+                normalized.category = normalized.category || 'design';
+                normalized.attributes = Object.assign({}, metadata.attributes || {}, (settings && settings.attributes) || {});
+                normalized.supports = Object.assign({}, metadata.supports || {}, (settings && settings.supports) || {});
+                return originalRegisterBlockType.call(originalBlocks, blockName, normalized);
+              }
+            });
+            const response = await fetch(asset.script);
+            if (!response.ok) throw new Error('Could not load custom block script: ' + asset.script);
+            const source = await response.text();
+            try {
+              window.wp.blocks = wrappedBlocks;
+              Function(source + '\\n//# sourceURL=' + asset.script)();
+            } finally {
+              window.wp.blocks = originalBlocks;
+            }
+          }
+        }
+
+        function EditorApp() {
+          const useState = wp.element.useState;
+          const treeState = window.__wbdcInitialBlocks || [];
+          const state = useState(treeState);
+          const blocks = state[0];
+          const setBlocks = state[1];
+          const BlockEditorProvider = wp.blockEditor.BlockEditorProvider;
+          const BlockList = wp.blockEditor.BlockList;
+          const BlockTools = wp.blockEditor.BlockTools;
+          const WritingFlow = wp.blockEditor.WritingFlow;
+          const ObserveTyping = wp.blockEditor.ObserveTyping;
+          const BlockEditorKeyboardShortcuts = wp.blockEditor.BlockEditorKeyboardShortcuts;
+          const SlotFillProvider = wp.components.SlotFillProvider;
+          const Popover = wp.components.Popover;
+
+          return el(SlotFillProvider, null,
+            el('div', { className: 'wbdc-editor-shell' },
+              el('div', { className: 'wbdc-editor-toolbar' },
+                el('span', null, 'Editable block tree'),
+                el('a', { href: '../rendered/rendered-blocks.html', target: '_blank', rel: 'noreferrer' }, 'Open render')
+              ),
+              el('div', { className: 'wbdc-editor-canvas editor-styles-wrapper' },
+                el(BlockEditorProvider, {
+                  value: blocks,
+                  onInput: setBlocks,
+                  onChange: setBlocks,
+                  settings: {
+                    alignWide: true,
+                    supportsLayout: true,
+                    hasFixedToolbar: false,
+                    bodyPlaceholder: 'Add blocks'
+                  }
+                },
+                  el(BlockEditorKeyboardShortcuts, null),
+                  el(BlockTools, null,
+                    el(WritingFlow, null,
+                      el(ObserveTyping, null,
+                        el(BlockList, null)
+                      )
+                    )
+                  )
+                )
+              ),
+              el(Popover.Slot, null)
+            )
+          );
+        }
+
+        try {
+          if (!window.wp || !wp.blockEditor || !wp.blocks || !wp.element) {
+            throw new Error('WordPress block editor globals did not load.');
+          }
+          if (wp.blockLibrary && wp.blockLibrary.registerCoreBlocks) {
+            wp.blockLibrary.registerCoreBlocks();
+          }
+          await registerCustomBlocks();
+          const response = await fetch(${JSON.stringify(treeUrl)});
+          if (!response.ok) throw new Error('Could not load block tree: ' + response.status + ' ' + response.statusText);
+          const tree = await response.json();
+          window.__wbdcInitialBlocks = (Array.isArray(tree) ? tree : tree.blocks || []).map(toWpBlock);
+          wp.element.createRoot(rootEl).render(el(EditorApp));
+        } catch (error) {
+          renderError(error);
+        }
+      })();
+    </script>
+  </body>
+</html>
+`;
+}
+
+function wordpressBrowserScripts() {
+  const base = 'https://s.w.org/wp-includes/js/dist';
+  return [
+    `${base}/vendor/react.min.js`,
+    `${base}/vendor/react-dom.min.js`,
+    `${base}/vendor/react-jsx-runtime.min.js`,
+    `${base}/vendor/moment.min.js`,
+    `${base}/element.min.js`,
+    `${base}/hooks.min.js`,
+    `${base}/deprecated.min.js`,
+    `${base}/i18n.min.js`,
+    `${base}/warning.min.js`,
+    `${base}/escape-html.min.js`,
+    `${base}/is-shallow-equal.min.js`,
+    `${base}/priority-queue.min.js`,
+    `${base}/private-apis.min.js`,
+    `${base}/compose.min.js`,
+    `${base}/dom.min.js`,
+    `${base}/dom-ready.min.js`,
+    `${base}/html-entities.min.js`,
+    `${base}/url.min.js`,
+    `${base}/a11y.min.js`,
+    `${base}/blob.min.js`,
+    `${base}/autop.min.js`,
+    `${base}/shortcode.min.js`,
+    `${base}/token-list.min.js`,
+    `${base}/redux-routine.min.js`,
+    `${base}/data.min.js`,
+    `${base}/rich-text.min.js`,
+    `${base}/date.min.js`,
+    `${base}/primitives.min.js`,
+    `${base}/keycodes.min.js`,
+    `${base}/keyboard-shortcuts.min.js`,
+    `${base}/notices.min.js`,
+    `${base}/components.min.js`,
+    `${base}/preferences.min.js`,
+    `${base}/viewport.min.js`,
+    `${base}/api-fetch.min.js`,
+    `${base}/upload-media.min.js`,
+    `${base}/block-serialization-default-parser.min.js`,
+    `${base}/blocks.min.js`,
+    `${base}/undo-manager.min.js`,
+    `${base}/commands.min.js`,
+    `${base}/style-engine.min.js`,
+    `${base}/server-side-render.min.js`,
+    `${base}/wordcount.min.js`,
+    `${base}/block-editor.min.js`,
+    `${base}/core-data.min.js`,
+    `${base}/patterns.min.js`,
+    `${base}/block-library.min.js`,
+  ];
+}
+
+function relativeUrl(fromDir, targetPath) {
+  const relative = path.relative(fromDir, targetPath).split(path.sep).join('/');
+  return relative.startsWith('.') ? relative : `./${relative}`;
+}
+
+function escapeAttr(value) {
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/</g, '&lt;');
 }
 
 function stripBlockComments(markup) {
@@ -1107,6 +1424,8 @@ function generateIndexJs({ name, slug, attributes, form }) {
   const ToggleControl = components.ToggleControl;
 
   registerBlockType(${JSON.stringify(name)}, {
+    apiVersion: 3,
+
     edit: function Edit(props) {
       const attributes = props.attributes;
       const setAttributes = props.setAttributes;

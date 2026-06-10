@@ -15,7 +15,7 @@ Use this skill when the user wants a website that should end as editable WordPre
 4. Write `plan/block-plan.md` and `plan/block-plan.json`.
 5. Generate custom blocks only where core blocks cannot preserve both fidelity and editability.
 6. Assemble editable block content in `wordpress/block-tree.json`; put custom block source in `wordpress/blocks/<slug>/`; put styling in block support/style attributes first, custom block scoped CSS second, and tiny page CSS last.
-7. Run `serialize_wordpress_blocks`; it registers official core blocks with `@wordpress/block-library`, registers custom blocks from `wordpress/blocks/*/index.js`, serializes `wordpress/block-tree.json` with `@wordpress/blocks`, writes canonical block markup to `wordpress/content.html`, writes frontend preview HTML to `rendered/rendered-blocks.html`, and writes `reports/style-audit.json`. The preview CSS source list comes from `wordpress/style.css` and custom block `style.css` files. `mockup/style.css` is intentionally excluded from rendered block preview by default.
+7. Run `serialize_wordpress_blocks`; it registers official core blocks with `@wordpress/block-library`, registers custom blocks from `wordpress/blocks/*/index.js`, serializes `wordpress/block-tree.json` with `@wordpress/blocks`, writes canonical block markup to `wordpress/content.html`, writes frontend preview HTML to `rendered/rendered-blocks.html`, writes a no-build editable block editor preview to `editor/block-editor.html`, and writes `reports/style-audit.json`. The preview CSS source list comes from `wordpress/style.css` and custom block `style.css` files. `mockup/style.css` is intentionally excluded from rendered block preview by default.
 8. Run `compare_html`.
 9. Inspect screenshots and diffs, write `reports/repair-tasks.md`, fix each task as an agent, then repeat preview/compare until thresholds are met.
 
@@ -110,5 +110,6 @@ When done, leave the workspace with:
 - `wordpress/style.css`
 - `wordpress/blocks/*`
 - `rendered/rendered-blocks.html`
+- `editor/block-editor.html`
 - `reports/comparison.json`
 - `reports/repair-tasks.md`
