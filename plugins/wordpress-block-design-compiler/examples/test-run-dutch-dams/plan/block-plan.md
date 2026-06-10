@@ -20,4 +20,4 @@ Build the "Mastering the Water" homepage as editable block data while preserving
 
 ## Data Contract
 
-`wordpress/block-tree.json` is version 2, `contract: "data-only"`. It contains no `htmlLines`, `innerHTML`, `innerContent`, `html`, `markup`, `sourceHtml`, or raw tag fragments inside attributes. Preview HTML is derived from attrs, classes, styles, nested blocks, and custom `render.mjs` functions.
+`wordpress/block-tree.json` is version 2, `contract: "data-only"`. It contains no `htmlLines`, `innerHTML`, `innerContent`, `html`, `markup`, `sourceHtml`, or raw tag fragments inside attributes. `wordpress/content.html` and `rendered/rendered-blocks.html` are derived by registering the custom block `save()` implementations and serializing the tree with `@wordpress/blocks`.

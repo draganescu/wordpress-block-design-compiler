@@ -4,7 +4,7 @@ The comparison tool measures screenshots. The agent decides what to fix.
 
 Loop:
 
-1. Run `build_rendered_preview`.
+1. Run `serialize_wordpress_blocks`.
 2. Run `compare_html`.
 3. Inspect mockup screenshot, rendered screenshot, and diff for each viewport.
 4. Write `reports/repair-tasks.md`.

@@ -6,8 +6,8 @@
     "maxHeightDelta": 8
   },
   "aggregate": {
-    "maxMismatchPercent": 0.43,
-    "maxHeightDelta": 3
+    "maxMismatchPercent": 0,
+    "maxHeightDelta": 0
   },
   "results": [
     {
@@ -16,7 +16,7 @@
       "mockup": "/Users/andreidraganescu/Sites/wordpress-block-design-compiler/plugins/wordpress-block-design-compiler/examples/test-run-vellum-volt/visual/mockup-desktop.png",
       "rendered": "/Users/andreidraganescu/Sites/wordpress-block-design-compiler/plugins/wordpress-block-design-compiler/examples/test-run-vellum-volt/visual/rendered-desktop.png",
       "diff": "/Users/andreidraganescu/Sites/wordpress-block-design-compiler/plugins/wordpress-block-design-compiler/examples/test-run-vellum-volt/visual/diff-desktop.png",
-      "mismatchPercent": 0.12,
+      "mismatchPercent": 0,
       "widthDelta": 0,
       "heightDelta": 0
     },
@@ -26,9 +26,9 @@
       "mockup": "/Users/andreidraganescu/Sites/wordpress-block-design-compiler/plugins/wordpress-block-design-compiler/examples/test-run-vellum-volt/visual/mockup-mobile.png",
       "rendered": "/Users/andreidraganescu/Sites/wordpress-block-design-compiler/plugins/wordpress-block-design-compiler/examples/test-run-vellum-volt/visual/rendered-mobile.png",
       "diff": "/Users/andreidraganescu/Sites/wordpress-block-design-compiler/plugins/wordpress-block-design-compiler/examples/test-run-vellum-volt/visual/diff-mobile.png",
-      "mismatchPercent": 0.43,
+      "mismatchPercent": 0,
       "widthDelta": 0,
-      "heightDelta": 3
+      "heightDelta": 0
     }
   ],
   "tasks": []

@@ -2,7 +2,7 @@
 
 The block plan translates the source HTML mockup into an editable WordPress block model.
 
-The assembled artifact is `wordpress/block-tree.json`. It must be a data-only block tree. The renderer turns block names, attributes, styles, classes, and inner blocks into preview HTML; hand-written block comments and saved HTML are generated output, not source.
+The assembled artifact is `wordpress/block-tree.json`. It must be a data-only block tree. WordPress packages serialize block names, attributes, styles, classes, and inner blocks into canonical block markup; hand-written block comments and saved HTML are generated output, not source.
 
 Core-first means:
 
@@ -104,8 +104,8 @@ Tree shape:
 }
 ```
 
-Custom block preview requirements:
+Custom block serialization requirements:
 
-- Each generated custom block must include `render.mjs`.
-- `render.mjs` exports `render(attrs, helpers)` and renders from attributes only.
+- Each generated custom block must implement `save()` in `index.js`; that `save()` is the single source of frontend markup for WordPress and preview comparison.
+- The local serializer registers `wordpress/blocks/*/index.js` and calls WordPress package serialization. Do not create a parallel markup-generation layer.
 - The block tree references custom blocks by `blockName` and `attrs`; it never embeds the custom block's saved HTML.

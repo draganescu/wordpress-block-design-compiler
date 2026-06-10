@@ -15,7 +15,6 @@ Use:
 Block requirements:
 
 - `block.json` uses `apiVersion: 3`.
-- Include `render.mjs` for standalone preview rendering from attributes. It must export `render(attrs, helpers)` and must not read raw HTML from attributes.
 - Declare all attributes with types and defaults where useful.
 - Declare supports for style controls: spacing, color, typography, border, align, anchor, className.
 - `edit` should render like the frontend while being editable.
@@ -23,7 +22,7 @@ Block requirements:
 - Repeated visible items should render in canvas; if item management is needed, use inspector controls or a small toolbar, not raw JSON textareas.
 - URLs, method, required flags, speed, style variants, and other behavior/settings go to InspectorControls or BlockControls.
 - `save` returns semantic frontend markup and preserves accessibility.
-- `render.mjs` returns the same semantic frontend structure from the same attributes so `build_rendered_preview` can compare outside WordPress.
+- `save()` is the single source of frontend structure; the local preview serializes it through `@wordpress/blocks`.
 - Do not output attribute metadata as visible text.
 - Do not use `dangerouslySetInnerHTML` or HTML blob attributes for generated custom blocks.
 

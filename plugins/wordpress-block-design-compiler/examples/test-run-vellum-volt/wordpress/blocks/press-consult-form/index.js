@@ -37,7 +37,7 @@
                   onChange: function (value) { updateField(index, 'label', value); }
                 }),
                 field.type === 'textarea'
-                  ? el('textarea', { name: field.name || '', placeholder: field.placeholder || '', required: !!field.required, disabled: true })
+                  ? el('textarea', { name: field.name || '', placeholder: field.placeholder || '', rows: field.rows || 5, required: !!field.required, disabled: true })
                   : el('input', { type: field.type || 'text', name: field.name || '', placeholder: field.placeholder || '', required: !!field.required, disabled: true })
               );
             }),
@@ -65,7 +65,7 @@
               return el('label', { key: name, className: field.type === 'textarea' ? 'wide-field' : undefined },
                 el('span', null, field.label || name),
                 field.type === 'textarea'
-                  ? el('textarea', { name: name, placeholder: field.placeholder || '', required: !!field.required })
+                  ? el('textarea', { name: name, placeholder: field.placeholder || '', rows: field.rows || 5, required: !!field.required })
                   : el('input', { type: field.type || 'text', name: name, placeholder: field.placeholder || '', required: !!field.required })
               );
             }),

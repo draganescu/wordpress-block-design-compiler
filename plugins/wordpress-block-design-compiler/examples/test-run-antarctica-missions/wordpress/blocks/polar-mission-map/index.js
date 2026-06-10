@@ -21,7 +21,7 @@
     };
 
     return [
-      el('div', { className: 'map-grid', 'aria-hidden': true },
+      el('div', { key: 'grid', className: 'map-grid', 'aria-hidden': true },
         el('span', { className: 'orbit orbit-a' }),
         el('span', { className: 'orbit orbit-b' }),
         el('span', { className: 'axis axis-x' }),
@@ -39,7 +39,7 @@
             : el('span', { key: index, className: 'node ' + (node.className || '') }, node.label || '');
         })
       ),
-      el('figcaption', null,
+      el('figcaption', { key: 'caption' },
         editable
           ? el(RichText, {
               tagName: 'strong',

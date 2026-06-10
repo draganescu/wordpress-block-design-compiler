@@ -10,7 +10,7 @@ The plugin does not try to make an autonomous server-side orchestrator. It gives
 - plan core blocks, custom blocks, and styling responsibilities
 - scaffold vanilla JavaScript static custom blocks
 - assemble editable `wordpress/block-tree.json`
-- render a standalone preview from data-only block attributes, inner blocks, styles, classes, and custom block renderers
+- serialize the block tree through `@wordpress/blocks` and registered custom-block `save()` functions
 - compare mockup and rendered output with screenshots and pixel diffs
 - return concrete repair tasks for the agent to fix
 
@@ -50,7 +50,7 @@ Use `claude/CLAUDE.md` as the Claude project instruction file when running this 
 - `create_workspace`: creates `mockup`, `analysis`, `plan`, `wordpress`, `rendered`, `reports`, and `visual` folders.
 - `analyze_mockup`: extracts a content inventory, sections, forms, links, cards, headings, CSS custom properties, and selectors.
 - `scaffold_custom_block`: writes `block.json`, `index.js`, and `style.css` for a vanilla JavaScript static block.
-- `build_rendered_preview`: renders data-only `wordpress/block-tree.json` into generated `wordpress/content.html` and wraps the result with CSS into `rendered/rendered-blocks.html`. It rejects source trees that contain `htmlLines`, `innerHTML`, `innerContent`, `html`, `markup`, or `sourceHtml`.
+- `serialize_wordpress_blocks`: registers custom blocks from `wordpress/blocks/*/index.js`, serializes `wordpress/block-tree.json` with `@wordpress/blocks`, writes canonical block markup to `wordpress/content.html`, and writes frontend preview HTML to `rendered/rendered-blocks.html`. It rejects source trees that contain `htmlLines`, `innerHTML`, `innerContent`, `html`, `markup`, or `sourceHtml`.
 - `compare_html`: captures mockup/rendered screenshots, generates diffs, and writes `reports/comparison.json` plus `reports/repair-tasks.md`.
 
 ## Workflow

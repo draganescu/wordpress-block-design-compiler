@@ -15,7 +15,7 @@ Use this skill when the user wants a website that should end as editable WordPre
 4. Write `plan/block-plan.md` and `plan/block-plan.json`.
 5. Generate custom blocks only where core blocks cannot preserve both fidelity and editability.
 6. Assemble editable block content in `wordpress/block-tree.json`; put custom block source in `wordpress/blocks/<slug>/`.
-7. Run `build_rendered_preview`; it renders `wordpress/block-tree.json` from data-only block attributes, inner blocks, styles, classes, and custom block `render.mjs` files, then writes generated `wordpress/content.html`.
+7. Run `serialize_wordpress_blocks`; it registers custom blocks from `wordpress/blocks/*/index.js`, serializes `wordpress/block-tree.json` with `@wordpress/blocks`, writes canonical block markup to `wordpress/content.html`, and writes frontend preview HTML to `rendered/rendered-blocks.html`.
 8. Run `compare_html`.
 9. Inspect screenshots and diffs, write `reports/repair-tasks.md`, fix each task as an agent, then repeat preview/compare until thresholds are met.
 
@@ -52,13 +52,13 @@ Forms, search boxes, subscriptions, booking widgets, and contact/inquiry UI must
 
 ## Assembly
 
-The block assembly source of truth is `wordpress/block-tree.json`, not hand-written block comments or saved HTML. The tree is data-only: `blockName`, `attrs`, `innerBlocks`, block styles, support-like attributes, and classes. `build_rendered_preview` renders plain HTML from that data and custom block `render.mjs` files.
+The block assembly source of truth is `wordpress/block-tree.json`, not hand-written block comments or saved HTML. The tree is data-only: `blockName`, `attrs`, `innerBlocks`, block styles, support-like attributes, and classes. `serialize_wordpress_blocks` turns that data into canonical block markup by calling WordPress block package serialization and each registered block's `save()` implementation.
 
-Never put `htmlLines`, `innerHTML`, `innerContent`, `html`, `markup`, or `sourceHtml` in `wordpress/block-tree.json`. The renderer rejects those fields.
+Never put `htmlLines`, `innerHTML`, `innerContent`, `html`, `markup`, or `sourceHtml` in `wordpress/block-tree.json`. The serializer rejects those fields.
 
 The tree should match the mockup, not merely contain the same text. Preserve source order, links, labels, placeholders, repeated items, and button group layout. Use stable class names that map cleanly to CSS.
 
-Do not hide structure inside rich-text attributes. Inline rich text is acceptable for emphasis or spans inside a heading; repeated items, forms, metrics, timelines, maps, and data blocks should be represented as custom block attributes and rendered by block code.
+Do not hide structure inside rich-text attributes. Inline rich text is acceptable for emphasis or spans inside a heading; repeated items, forms, metrics, timelines, maps, and data blocks should be represented as custom block attributes and saved by the custom block's `save()` implementation.
 
 ## Repair Loop
 
