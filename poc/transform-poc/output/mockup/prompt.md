@@ -1,1 +1,1 @@
-Create a polished landing page for a ceramic studio called Kiln & Kind. It should have a tactile editorial layout, a hero, a product story, an animated maker-values marquee, a small collection grid, and a workshop inquiry form.
+I need a website for my bar. It's called boogie bar and has a 80s aesthetic and theme. We host weekly saturday over 40s parties.

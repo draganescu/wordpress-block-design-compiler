@@ -1,5 +1,5 @@
 {
-  "version": 3,
+  "version": 6,
   "source": {
     "mockup": "mockup/index.html",
     "initialRendered": "rendered/rendered-blocks.base.html",
@@ -10,18 +10,18 @@
     "tool": "playwright + pixelmatch",
     "screenshotMode": "fullPage",
     "animations": "disabled",
-    "maxRepairPasses": 3,
+    "maxRepairPasses": 5,
     "acceptance": {
-      "maxMismatchPercent": 8,
-      "maxHeightDelta": 80
+      "maxMismatchPercent": 4,
+      "maxHeightDelta": 20
     },
     "note": "Images are compared across the shared cropped area. Full-page dimension deltas are reported separately."
   },
   "strategy": {
     "measurement": "PNG diff is used as the deterministic score and regression signal.",
     "interpretation": "LLM vision should inspect screenshots and diffs to identify the visual cause, then propose the smallest block-tree, block-attribute, or scoped-CSS repair.",
-    "repairProvider": "deterministic",
-    "pocMode": "This POC used a deterministic repair proxy. Set POC_VISION_REPAIR_PROVIDER=openai to use the brokered LLM vision step."
+    "repairProvider": "openai",
+    "pocMode": "This POC used a brokered OpenAI vision repair request for each non-acceptable pass."
   },
   "passes": [
     {
@@ -42,24 +42,24 @@
             "diff": "vision/pass-0/diff-desktop.png"
           },
           "comparison": {
-            "mismatchedPixels": 1739133,
-            "comparedPixels": 4004640,
-            "mismatchPercent": 43.43,
+            "mismatchedPixels": 2082606,
+            "comparedPixels": 9086400,
+            "mismatchPercent": 22.92,
             "comparedSize": {
               "width": 1440,
-              "height": 2781
+              "height": 6310
             },
             "mockupSize": {
               "width": 1440,
-              "height": 2781
+              "height": 6310
             },
             "renderedSize": {
               "width": 1440,
-              "height": 3814
+              "height": 7139
             },
             "dimensionDelta": {
               "width": 0,
-              "height": 1033
+              "height": 829
             }
           }
         },
@@ -76,38 +76,39 @@
             "diff": "vision/pass-0/diff-mobile.png"
           },
           "comparison": {
-            "mismatchedPixels": 496025,
-            "comparedPixels": 1433250,
-            "mismatchPercent": 34.61,
+            "mismatchedPixels": 944415,
+            "comparedPixels": 3270540,
+            "mismatchPercent": 28.88,
             "comparedSize": {
               "width": 390,
-              "height": 3675
+              "height": 8386
             },
             "mockupSize": {
               "width": 390,
-              "height": 3675
+              "height": 8386
             },
             "renderedSize": {
               "width": 390,
-              "height": 4008
+              "height": 8649
             },
             "dimensionDelta": {
               "width": 0,
-              "height": 333
+              "height": 263
             }
           }
         }
       ],
       "aggregate": {
-        "maxMismatchPercent": 43.43,
-        "maxHeightDelta": 1033
+        "maxMismatchPercent": 28.88,
+        "maxHeightDelta": 829,
+        "visualScore": 37.17
       }
     },
     {
       "pass": 1,
       "html": "rendered/iterations/pass-1.html",
       "repairsApplied": [
-        "core-layout-selector-bridges"
+        "repair-1"
       ],
       "viewports": [
         {
@@ -123,24 +124,24 @@
             "diff": "vision/pass-1/diff-desktop.png"
           },
           "comparison": {
-            "mismatchedPixels": 1217535,
-            "comparedPixels": 4004640,
-            "mismatchPercent": 30.4,
+            "mismatchedPixels": 207148,
+            "comparedPixels": 9086400,
+            "mismatchPercent": 2.28,
             "comparedSize": {
               "width": 1440,
-              "height": 2781
+              "height": 6310
             },
             "mockupSize": {
               "width": 1440,
-              "height": 2781
+              "height": 6310
             },
             "renderedSize": {
               "width": 1440,
-              "height": 2992
+              "height": 6321
             },
             "dimensionDelta": {
               "width": 0,
-              "height": 211
+              "height": 11
             }
           }
         },
@@ -157,39 +158,40 @@
             "diff": "vision/pass-1/diff-mobile.png"
           },
           "comparison": {
-            "mismatchedPixels": 507600,
-            "comparedPixels": 1433250,
-            "mismatchPercent": 35.42,
+            "mismatchedPixels": 521724,
+            "comparedPixels": 3258060,
+            "mismatchPercent": 16.01,
             "comparedSize": {
               "width": 390,
-              "height": 3675
+              "height": 8354
             },
             "mockupSize": {
               "width": 390,
-              "height": 3675
+              "height": 8386
             },
             "renderedSize": {
               "width": 390,
-              "height": 3948
+              "height": 8354
             },
             "dimensionDelta": {
               "width": 0,
-              "height": 273
+              "height": 32
             }
           }
         }
       ],
       "aggregate": {
-        "maxMismatchPercent": 35.42,
-        "maxHeightDelta": 273
+        "maxMismatchPercent": 16.01,
+        "maxHeightDelta": 32,
+        "visualScore": 16.33
       }
     },
     {
       "pass": 2,
       "html": "rendered/iterations/pass-2.html",
       "repairsApplied": [
-        "core-layout-selector-bridges",
-        "core-block-spacing-reset"
+        "repair-1",
+        "repair-2"
       ],
       "viewports": [
         {
@@ -205,24 +207,24 @@
             "diff": "vision/pass-2/diff-desktop.png"
           },
           "comparison": {
-            "mismatchedPixels": 1074757,
-            "comparedPixels": 4004640,
-            "mismatchPercent": 26.84,
+            "mismatchedPixels": 198929,
+            "comparedPixels": 9086400,
+            "mismatchPercent": 2.19,
             "comparedSize": {
               "width": 1440,
-              "height": 2781
+              "height": 6310
             },
             "mockupSize": {
               "width": 1440,
-              "height": 2781
+              "height": 6310
             },
             "renderedSize": {
               "width": 1440,
-              "height": 2959
+              "height": 6321
             },
             "dimensionDelta": {
               "width": 0,
-              "height": 178
+              "height": 11
             }
           }
         },
@@ -239,40 +241,40 @@
             "diff": "vision/pass-2/diff-mobile.png"
           },
           "comparison": {
-            "mismatchedPixels": 507608,
-            "comparedPixels": 1433250,
-            "mismatchPercent": 35.42,
+            "mismatchedPixels": 1308525,
+            "comparedPixels": 2993640,
+            "mismatchPercent": 43.71,
             "comparedSize": {
               "width": 390,
-              "height": 3675
+              "height": 7676
             },
             "mockupSize": {
               "width": 390,
-              "height": 3675
+              "height": 8386
             },
             "renderedSize": {
-              "width": 390,
-              "height": 3879
+              "width": 396,
+              "height": 7676
             },
             "dimensionDelta": {
-              "width": 0,
-              "height": 204
+              "width": 6,
+              "height": 710
             }
           }
         }
       ],
       "aggregate": {
-        "maxMismatchPercent": 35.42,
-        "maxHeightDelta": 204
+        "maxMismatchPercent": 43.71,
+        "maxHeightDelta": 710,
+        "visualScore": 50.81
       }
     },
     {
       "pass": 3,
       "html": "rendered/iterations/pass-3.html",
       "repairsApplied": [
-        "core-layout-selector-bridges",
-        "core-block-spacing-reset",
-        "semantic-form-width-lock"
+        "repair-1",
+        "repair-2"
       ],
       "viewports": [
         {
@@ -288,24 +290,24 @@
             "diff": "vision/pass-3/diff-desktop.png"
           },
           "comparison": {
-            "mismatchedPixels": 1074757,
-            "comparedPixels": 4004640,
-            "mismatchPercent": 26.84,
+            "mismatchedPixels": 196149,
+            "comparedPixels": 9086400,
+            "mismatchPercent": 2.16,
             "comparedSize": {
               "width": 1440,
-              "height": 2781
+              "height": 6310
             },
             "mockupSize": {
               "width": 1440,
-              "height": 2781
+              "height": 6310
             },
             "renderedSize": {
               "width": 1440,
-              "height": 2959
+              "height": 6321
             },
             "dimensionDelta": {
               "width": 0,
-              "height": 178
+              "height": 11
             }
           }
         },
@@ -322,97 +324,607 @@
             "diff": "vision/pass-3/diff-mobile.png"
           },
           "comparison": {
-            "mismatchedPixels": 507608,
-            "comparedPixels": 1433250,
-            "mismatchPercent": 35.42,
+            "mismatchedPixels": 846767,
+            "comparedPixels": 3098940,
+            "mismatchPercent": 27.32,
             "comparedSize": {
               "width": 390,
-              "height": 3675
+              "height": 7946
             },
             "mockupSize": {
               "width": 390,
-              "height": 3675
+              "height": 8386
             },
             "renderedSize": {
               "width": 390,
-              "height": 3879
+              "height": 7946
             },
             "dimensionDelta": {
               "width": 0,
-              "height": 204
+              "height": 440
             }
           }
         }
       ],
       "aggregate": {
-        "maxMismatchPercent": 35.42,
-        "maxHeightDelta": 204
+        "maxMismatchPercent": 27.32,
+        "maxHeightDelta": 440,
+        "visualScore": 31.72
+      }
+    },
+    {
+      "pass": 4,
+      "html": "rendered/iterations/pass-4.html",
+      "repairsApplied": [
+        "repair-1",
+        "repair-3-mobile-component-scale-recovery"
+      ],
+      "viewports": [
+        {
+          "name": "desktop",
+          "viewport": {
+            "width": 1440,
+            "height": 1200,
+            "deviceScaleFactor": 1
+          },
+          "screenshots": {
+            "mockup": "vision/mockup-desktop.png",
+            "rendered": "vision/pass-4/rendered-desktop.png",
+            "diff": "vision/pass-4/diff-desktop.png"
+          },
+          "comparison": {
+            "mismatchedPixels": 195445,
+            "comparedPixels": 9086400,
+            "mismatchPercent": 2.15,
+            "comparedSize": {
+              "width": 1440,
+              "height": 6310
+            },
+            "mockupSize": {
+              "width": 1440,
+              "height": 6310
+            },
+            "renderedSize": {
+              "width": 1440,
+              "height": 6321
+            },
+            "dimensionDelta": {
+              "width": 0,
+              "height": 11
+            }
+          }
+        },
+        {
+          "name": "mobile",
+          "viewport": {
+            "width": 390,
+            "height": 1200,
+            "deviceScaleFactor": 1
+          },
+          "screenshots": {
+            "mockup": "vision/mockup-mobile.png",
+            "rendered": "vision/pass-4/rendered-mobile.png",
+            "diff": "vision/pass-4/diff-mobile.png"
+          },
+          "comparison": {
+            "mismatchedPixels": 517103,
+            "comparedPixels": 3254160,
+            "mismatchPercent": 15.89,
+            "comparedSize": {
+              "width": 390,
+              "height": 8344
+            },
+            "mockupSize": {
+              "width": 390,
+              "height": 8386
+            },
+            "renderedSize": {
+              "width": 390,
+              "height": 8344
+            },
+            "dimensionDelta": {
+              "width": 0,
+              "height": 42
+            }
+          }
+        }
+      ],
+      "aggregate": {
+        "maxMismatchPercent": 15.89,
+        "maxHeightDelta": 42,
+        "visualScore": 16.31
+      }
+    },
+    {
+      "pass": 5,
+      "html": "rendered/iterations/pass-5.html",
+      "repairsApplied": [
+        "repair-1",
+        "repair-3-mobile-component-scale-recovery",
+        "repair-4-mobile-responsive-rhythm-and-scale"
+      ],
+      "viewports": [
+        {
+          "name": "desktop",
+          "viewport": {
+            "width": 1440,
+            "height": 1200,
+            "deviceScaleFactor": 1
+          },
+          "screenshots": {
+            "mockup": "vision/mockup-desktop.png",
+            "rendered": "vision/pass-5/rendered-desktop.png",
+            "diff": "vision/pass-5/diff-desktop.png"
+          },
+          "comparison": {
+            "mismatchedPixels": 195445,
+            "comparedPixels": 9086400,
+            "mismatchPercent": 2.15,
+            "comparedSize": {
+              "width": 1440,
+              "height": 6310
+            },
+            "mockupSize": {
+              "width": 1440,
+              "height": 6310
+            },
+            "renderedSize": {
+              "width": 1440,
+              "height": 6321
+            },
+            "dimensionDelta": {
+              "width": 0,
+              "height": 11
+            }
+          }
+        },
+        {
+          "name": "mobile",
+          "viewport": {
+            "width": 390,
+            "height": 1200,
+            "deviceScaleFactor": 1
+          },
+          "screenshots": {
+            "mockup": "vision/mockup-mobile.png",
+            "rendered": "vision/pass-5/rendered-mobile.png",
+            "diff": "vision/pass-5/diff-mobile.png"
+          },
+          "comparison": {
+            "mismatchedPixels": 835031,
+            "comparedPixels": 1872000,
+            "mismatchPercent": 44.61,
+            "comparedSize": {
+              "width": 390,
+              "height": 4800
+            },
+            "mockupSize": {
+              "width": 390,
+              "height": 8386
+            },
+            "renderedSize": {
+              "width": 390,
+              "height": 4800
+            },
+            "dimensionDelta": {
+              "width": 0,
+              "height": 3586
+            }
+          }
+        }
+      ],
+      "aggregate": {
+        "maxMismatchPercent": 44.61,
+        "maxHeightDelta": 3586,
+        "visualScore": 80.47
       }
     }
   ],
   "repairProposals": [
     {
       "afterPass": 0,
+      "repairPass": 0,
       "nextPass": 1,
-      "mode": "deterministic-poc-vision-proxy",
-      "trigger": {
-        "maxMismatchPercent": 43.43,
-        "maxHeightDelta": 1033
+      "mode": "openai-vision-artifact",
+      "provider": {
+        "model": "gpt-5.5",
+        "response": "vision/pass-0/llm-repair-response.json",
+        "proposal": "vision/pass-0/llm-repair-proposal.json"
       },
+      "trigger": {
+        "maxMismatchPercent": 28.88,
+        "maxHeightDelta": 829
+      },
+      "focus": {
+        "mode": "open",
+        "artifactPreference": "best-fit",
+        "reason": "The visual drift may require block composition, attributes, custom block structure, or CSS.",
+        "instruction": "Choose the smallest artifact that addresses the dominant discrepancy without disturbing regions that already match."
+      },
+      "observedDiscrepancy": "The dominant drift is not fine polish: multiple WordPress-generated button/column wrappers are escaping the source CSS contract. Header brand/navigation and hero/visit CTAs render as large white default WordPress buttons instead of transparent nav links/neon pills. Hero card detail rows are stacked like normal paragraphs instead of compact label/value rows. Desktop event cards wrap into a 2+1 layout and drinks render as a 2x2 grid instead of the source 3-card event strip and 4-card cocktail row, causing a large desktop height increase. Track badges and contact columns also inherit paragraph/column defaults rather than the mockup geometry.",
+      "likelyCause": "The block tree is broadly semantically close, but the stylesheet targets source HTML selectors such as .brand, .main-nav, .button, .hero-actions, dl/dt/dd, .event-strip article children, and .menu-grid article children. The rendered WordPress HTML inserts .wp-block-buttons, .wp-block-button__link, .wp-block-columns, and .wp-block-column wrappers, so the original visual rules miss the actual elements and WordPress defaults take over.",
+      "confidence": "high",
+      "stop": false,
+      "tasks": [
+        {
+          "id": "task-1",
+          "priority": "high",
+          "issue": "Default WordPress button styling creates large white blobs in the fixed header, hero CTA row, featured event link, and visit CTA.",
+          "target": "Header .site-header button wrappers; .hero-inner CTA buttons; .feature-event booking link; .visit-card enquiry button.",
+          "repairArtifact": "vision-css-addition",
+          "fix": "Add scoped adapter selectors for .wp-block-buttons and .wp-block-button__link inside the existing Boogie Bar sections. Restyle header first button as the brand pill/mark, header second button group as transparent nav links, hero/visit buttons as neon primary/secondary pills, and featured event booking as a plain acid text link.",
+          "verification": "Desktop and mobile screenshots should show no white rectangular button blocks. Header should be a compact glass pill, hero buttons should be horizontal neon pills, and the visit/enquire CTA should match the source gradient button."
+        },
+        {
+          "id": "task-2",
+          "priority": "high",
+          "issue": "Desktop repeated-card geometry is wrong: event cards wrap to 2+1 and drinks render as 2x2 instead of a single desktop row.",
+          "target": ".event-strip.wp-block-columns and .menu-grid.wp-block-columns with their .wp-block-column children.",
+          "repairArtifact": "vision-css-addition",
+          "fix": "Override WordPress column flex defaults with section-scoped CSS grid: three equal event columns on desktop and four equal drink columns on desktop; retain one-column stacking on mobile.",
+          "verification": "At 1440px the Saturday section has three cards in one row and the drinks section has four cards in one row; page height should reduce significantly toward the source height. At 390px both sections remain stacked vertically."
+        },
+        {
+          "id": "task-3",
+          "priority": "medium",
+          "issue": "Hero party details card does not match source definition-list visual rows because the block tree uses paragraph groups rather than dl/dt/dd.",
+          "target": ".hero-card-details, .hero-card-detail, .detail-label, .detail-value.",
+          "repairArtifact": "vision-css-addition",
+          "fix": "Style the existing grouped paragraph structure as compact flex label/value rows with top borders, muted labels, bold right-aligned values, and reset paragraph margins.",
+          "verification": "Hero card should show Doors/Age/Dress rows as horizontal label/value pairs like the mockup, not loose stacked text."
+        },
+        {
+          "id": "task-4",
+          "priority": "medium",
+          "issue": "Decorative and repeated inline elements lose source component scale because generated wrappers/empty groups are not covered.",
+          "target": ".cassette-window, .track-list p, .contact-grid.wp-block-columns.",
+          "repairArtifact": "vision-css-addition",
+          "fix": "Create cassette reels with pseudo-elements since the rendered empty cassette-window has no span children; style track-list paragraphs as compact badges; force contact-grid columns into a two-column card grid on desktop and mobile where space allows.",
+          "verification": "Cassette shows two reel circles, soundtrack styles appear as rounded badges, and visit contact details stay in compact boxed grid cells rather than WordPress column spacing."
+        }
+      ],
       "repairs": [
         {
-          "id": "core-layout-selector-bridges",
-          "source": "deterministic-poc-vision-proxy",
-          "reason": "The diff shows large structural drift. The block tree uses core wrappers, so selectors from the mockup no longer map cleanly to the rendered block DOM.",
-          "preferredRealAction": "Ask the LLM to revise the block plan with explicit core wrapper mapping before adding new custom blocks.",
-          "css": ".wp-block-group.hero.alignwide > .eyebrow,\n.wp-block-group.hero.alignwide > h1,\n.wp-block-group.hero.alignwide > .lede,\n.wp-block-group.hero.alignwide > .wp-block-buttons {\n  grid-column: 1;\n}\n.wp-block-group.hero.alignwide > .hero-object {\n  grid-column: 2;\n  grid-row: 1 / 5;\n  width: 100%;\n  align-self: end;\n}\n.wp-block-columns.product-grid {\n  grid-template-columns: repeat(3, 1fr);\n  gap: 18px;\n}\n.wp-block-poc-studio-inquiry .inquiry-columns {\n  grid-template-columns: 1fr 420px;\n}\n@media (max-width: 760px) {\n  .wp-block-group.hero.alignwide > .eyebrow,\n  .wp-block-group.hero.alignwide > h1,\n  .wp-block-group.hero.alignwide > .lede,\n  .wp-block-group.hero.alignwide > .wp-block-buttons,\n  .wp-block-group.hero.alignwide > .hero-object {\n    grid-column: 1;\n    grid-row: auto;\n  }\n  .wp-block-columns.product-grid,\n  .wp-block-poc-studio-inquiry .inquiry-columns {\n    grid-template-columns: 1fr;\n  }\n}"
+          "id": "repair-1",
+          "source": "openai-vision",
+          "layer": "artifact:vision-css-addition",
+          "artifact": "vision-css-addition",
+          "reason": "The visible failures are caused by selector/WordPress-wrapper mismatch rather than missing editable content. A scoped CSS adapter is the smallest repair that fixes the dominant white-button blobs, desktop grid wrapping, and component-row failures without replacing the whole editable block tree.",
+          "preferredRealAction": "Add this stylesheet after the current vision CSS so it overrides WordPress button/column defaults only inside the existing Boogie Bar section classes.",
+          "expectedVisualEffect": "Header, CTAs, event cards, drink cards, hero details, cassette, badges, and contact grid should snap back to the source layout contract. The largest mismatch regions and desktop height delta should drop substantially because the event and drinks rows no longer wrap incorrectly and the white default buttons disappear.",
+          "editabilityRisk": "Low to medium. Text remains editable in core blocks. The only medium-risk compromise is the header brand mark: because the current block stores “BB boogie bar” in one core/button instead of separate brand spans, CSS uses pseudo-elements to recreate the separate BB mark and brand text visually. A later block-tree pass could make that fully semantic if required.",
+          "css": "/* WordPress block adapter for Boogie Bar source selectors. Scoped to existing section classes. */\n.site-header .wp-block-buttons,\n.hero-inner > .wp-block-buttons,\n.feature-event .wp-block-buttons,\n.visit-card > .wp-block-buttons {\n  margin: 0;\n}\n\n.site-header .wp-block-button,\n.hero-inner .wp-block-button,\n.feature-event .wp-block-button,\n.visit-card .wp-block-button {\n  margin: 0;\n}\n\n/* Header: convert WP button groups back into brand + nav links. */\n.site-header > .wp-block-buttons {\n  display: flex;\n  align-items: center;\n  gap: clamp(0.45rem, 1.6vw, 1.3rem);\n}\n\n.site-header > .wp-block-buttons:first-child .wp-block-button__link {\n  display: inline-flex;\n  align-items: center;\n  gap: 0.7rem;\n  min-height: 42px;\n  padding: 0 !important;\n  border: 0 !important;\n  border-radius: 0 !important;\n  background: transparent !important;\n  box-shadow: none !important;\n  color: var(--ink) !important;\n  font-size: 0;\n  line-height: 1;\n  text-transform: none;\n}\n\n.site-header > .wp-block-buttons:first-child .wp-block-button__link::before {\n  content: \"BB\";\n  display: grid;\n  place-items: center;\n  width: 42px;\n  height: 42px;\n  border-radius: 50%;\n  color: #13001f;\n  font-family: \"Cooper Black\", \"Bookman Old Style\", Georgia, serif;\n  font-size: 1rem;\n  font-weight: 900;\n  letter-spacing: -0.08em;\n  background: conic-gradient(from 180deg, var(--acid), var(--laser-blue), var(--hot-pink), var(--orange), var(--acid));\n  box-shadow: var(--shadow-pink), var(--shadow-blue);\n}\n\n.site-header > .wp-block-buttons:first-child .wp-block-button__link::after {\n  content: \"boogie bar\";\n  font-family: \"Cooper Black\", \"Bookman Old Style\", Georgia, serif;\n  font-size: clamp(1.15rem, 2vw, 1.6rem);\n  letter-spacing: -0.04em;\n  text-transform: lowercase;\n  text-shadow: 0 0 14px rgba(255, 47, 207, 0.8);\n}\n\n.site-header > .wp-block-buttons:nth-child(2) .wp-block-button__link {\n  display: inline-flex;\n  align-items: center;\n  justify-content: center;\n  min-height: auto;\n  padding: 0.65rem 0.85rem !important;\n  border: 0 !important;\n  border-radius: 999px !important;\n  background: transparent !important;\n  box-shadow: none !important;\n  color: var(--muted) !important;\n  font-size: 0.82rem;\n  font-weight: 700;\n  letter-spacing: 0.12em;\n  line-height: 1;\n  text-transform: uppercase;\n}\n\n.site-header > .wp-block-buttons:nth-child(2) .wp-block-button__link:hover {\n  color: var(--ink) !important;\n  background: rgba(255, 255, 255, 0.08) !important;\n}\n\n/* Hero and visit CTAs: map WP button links to source .button styles. */\n.hero-inner > .wp-block-buttons,\n.visit-card > .wp-block-buttons {\n  display: flex;\n  justify-content: center;\n  flex-wrap: wrap;\n  gap: 0.9rem;\n}\n\n.visit-card > .wp-block-buttons {\n  justify-content: flex-start;\n}\n\n.hero-inner > .wp-block-buttons .wp-block-button__link,\n.visit-card > .wp-block-buttons .wp-block-button__link {\n  display: inline-flex;\n  align-items: center;\n  justify-content: center;\n  min-height: 52px;\n  padding: 0.85rem 1.35rem !important;\n  border-radius: 999px !important;\n  border: 0;\n  font-size: 0.82rem;\n  font-weight: 900;\n  letter-spacing: 0.08em;\n  line-height: 1;\n  text-transform: uppercase;\n  box-shadow: none;\n}\n\n.hero-inner > .wp-block-buttons .wp-block-button:first-child .wp-block-button__link,\n.visit-card > .wp-block-buttons .wp-block-button__link {\n  color: #15001f !important;\n  background: linear-gradient(135deg, var(--acid), var(--laser-blue) 48%, var(--hot-pink)) !important;\n  box-shadow: var(--shadow-pink), var(--shadow-blue) !important;\n}\n\n.hero-inner > .wp-block-buttons .wp-block-button:last-child .wp-block-button__link {\n  color: var(--ink) !important;\n  border: 1px solid rgba(255, 255, 255, 0.25) !important;\n  background: rgba(255, 255, 255, 0.08) !important;\n  box-shadow: inset 0 0 22px rgba(255, 255, 255, 0.05) !important;\n}\n\n/* Featured event booking link should be a small text link, not a white WP button. */\n.feature-event .wp-block-buttons {\n  display: block;\n  margin-top: auto;\n}\n\n.feature-event .wp-block-button__link {\n  display: inline !important;\n  min-height: 0 !important;\n  padding: 0 !important;\n  border: 0 !important;\n  border-radius: 0 !important;\n  background: transparent !important;\n  box-shadow: none !important;\n  color: var(--acid) !important;\n  font-size: 0.72rem;\n  font-weight: 900;\n  letter-spacing: 0.12em;\n  line-height: 1.2;\n  text-transform: uppercase;\n}\n\n/* Hero detail card adapter for paragraph-based block structure. */\n.hero-card-details {\n  display: grid;\n  gap: 0.65rem;\n  margin: 0;\n}\n\n.hero-card-detail {\n  display: flex;\n  justify-content: space-between;\n  gap: 1rem;\n  padding-top: 0.65rem;\n  border-top: 1px solid rgba(255, 255, 255, 0.14);\n}\n\n.hero-card-detail p {\n  margin: 0;\n}\n\n.hero-card-detail .detail-label {\n  color: var(--muted);\n}\n\n.hero-card-detail .detail-value {\n  margin-left: auto;\n  font-weight: 800;\n  text-align: right;\n}\n\n/* Empty WP decorative cassette window needs pseudo reels. */\n.cassette-window::before,\n.cassette-window::after {\n  content: \"\";\n  width: 38px;\n  height: 38px;\n  border-radius: 50%;\n  border: 2px solid rgba(255, 255, 255, 0.34);\n  background: radial-gradient(circle, var(--chrome) 0 14%, transparent 15% 32%, var(--chrome) 33% 36%, transparent 37% 100%);\n}\n\n/* Override core Columns defaults for source grid geometry. */\n.event-strip.wp-block-columns {\n  display: grid !important;\n  grid-template-columns: repeat(3, minmax(0, 1fr));\n  align-items: stretch;\n  gap: 1rem;\n}\n\n.menu-grid.wp-block-columns {\n  display: grid !important;\n  grid-template-columns: repeat(4, minmax(0, 1fr));\n  align-items: stretch;\n  gap: 1rem;\n}\n\n.event-strip.wp-block-columns > .wp-block-column,\n.menu-grid.wp-block-columns > .wp-block-column {\n  display: block !important;\n  flex-basis: auto !important;\n  flex-grow: 0 !important;\n  min-width: 0;\n}\n\n.event-strip .event-card,\n.menu-grid .drink-card {\n  height: 100%;\n}\n\n/* Track badges are paragraphs in WP output, spans in source. */\n.track-list p {\n  display: inline-flex;\n  align-items: center;\n  margin: 0;\n  padding: 0.45rem 0.65rem;\n  border: 1px solid rgba(255, 255, 255, 0.18);\n  border-radius: 999px;\n  color: var(--muted);\n  background: rgba(255, 255, 255, 0.05);\n  font-size: 0.78rem;\n  line-height: 1;\n}\n\n/* Contact grid adapter for WP Columns wrappers. */\n.contact-grid.wp-block-columns {\n  display: grid !important;\n  grid-template-columns: repeat(2, minmax(0, 1fr));\n  gap: 0.75rem;\n}\n\n.contact-grid.wp-block-columns > .wp-block-column {\n  display: block !important;\n  flex-basis: auto !important;\n  min-width: 0;\n}\n\n.contact-grid p {\n  margin: 0;\n}\n\n@media (max-width: 760px) {\n  .site-header {\n    top: 8px;\n    width: min(calc(100% - 12px), 360px);\n    padding: 6px 8px;\n  }\n\n  .site-header > .wp-block-buttons:nth-child(2) {\n    display: none !important;\n  }\n\n  .site-header > .wp-block-buttons:first-child .wp-block-button__link::before {\n    width: 28px;\n    height: 28px;\n    font-size: 0.72rem;\n  }\n\n  .site-header > .wp-block-buttons:first-child .wp-block-button__link::after {\n    font-size: 0.9rem;\n  }\n\n  .event-strip.wp-block-columns,\n  .menu-grid.wp-block-columns {\n    grid-template-columns: 1fr;\n  }\n\n  .hero-inner > .wp-block-buttons {\n    gap: 0.55rem;\n  }\n\n  .hero-inner > .wp-block-buttons .wp-block-button__link,\n  .visit-card > .wp-block-buttons .wp-block-button__link {\n    min-height: 46px;\n    padding: 0.78rem 1rem !important;\n    font-size: 0.72rem;\n  }\n\n  .contact-grid.wp-block-columns {\n    grid-template-columns: 1fr;\n  }\n}"
         }
-      ]
+      ],
+      "rejectedRepairs": []
     },
     {
       "afterPass": 1,
+      "repairPass": 1,
       "nextPass": 2,
-      "mode": "deterministic-poc-vision-proxy",
-      "trigger": {
-        "maxMismatchPercent": 35.42,
-        "maxHeightDelta": 273
+      "mode": "openai-vision-artifact",
+      "provider": {
+        "model": "gpt-5.5",
+        "response": "vision/pass-1/llm-repair-response.json",
+        "proposal": "vision/pass-1/llm-repair-proposal.json"
       },
+      "trigger": {
+        "maxMismatchPercent": 16.01,
+        "maxHeightDelta": 32
+      },
+      "focus": {
+        "mode": "styling-refinement",
+        "artifactPreference": "coordinated-repair-bundle",
+        "reason": "The rendered page height is close to the mockup, but pixel drift can still be caused by missing visible elements, wrong flex/grid geometry, component scale, or prior CSS that hid content.",
+        "instruction": "Audit the whole viewport before choosing repairs. Use CSS additions for genuinely local polish, but use block-tree or full vision-css replacement when the mismatch is structural, repeated across components, or caused by prior repair CSS."
+      },
+      "observedDiscrepancy": "Desktop is already visually close, but mobile still shows repeated component drift: drink price badges render inside/over the drink copy instead of pinned to the top-right of each card, the Visit enquiry CTA is much smaller than the source mobile pill, and WordPress column/button wrappers are leaving mobile card stacks and contact tiles slightly out of the source geometry. No visible content is missing or escaped, so this pass should stay in scoped CSS rather than replacing the block tree.",
+      "likelyCause": "The remaining drift is caused by WordPress wrapper markup around Columns, Buttons, and Paragraph-based badges not matching the source selectors exactly on small screens. The drink price is a paragraph instead of the source span, so its absolute badge positioning is not being enforced consistently; the Visit button is inheriting compact desktop button sizing on mobile.",
+      "confidence": "medium",
+      "stop": false,
+      "tasks": [
+        {
+          "id": "task-1",
+          "priority": "high",
+          "issue": "Drink price badges appear in the body/left side of cocktail cards instead of as small white circles at the top-right corner.",
+          "target": "Drinks section, all .drink-card items on desktop and mobile.",
+          "repairArtifact": "vision-css-addition",
+          "fix": "Force .drink-card to be a positioning context and pin .drink-price absolutely to top/right with fixed circular dimensions, no paragraph margin, high z-index, dark text, and white background.",
+          "verification": "Each cocktail card shows exactly one small white price circle in the top-right corner, matching the source; the title text no longer overlaps the price badge."
+        },
+        {
+          "id": "task-2",
+          "priority": "medium",
+          "issue": "Mobile Visit enquiry button is too small/compact compared with the source mobile full-width neon pill.",
+          "target": "Visit section .visit-card direct .wp-block-buttons button on mobile.",
+          "repairArtifact": "vision-css-addition",
+          "fix": "At mobile width, make the visit-card button wrapper and button flex to 100% width, while preserving the existing gradient button styling.",
+          "verification": "On 390px viewport, the Enquire now button spans the visit card width like the mockup and remains a single centered pill."
+        },
+        {
+          "id": "task-3",
+          "priority": "medium",
+          "issue": "Mobile repeated card sections are slightly offset by WordPress Columns wrapper behavior and default column flex basis/margins.",
+          "target": "Mobile .event-strip, .menu-grid, and .contact-grid WordPress column wrappers.",
+          "repairArtifact": "vision-css-addition",
+          "fix": "At mobile width, explicitly convert event and drink Columns to one-column CSS grids, contact-grid to two equal columns, and reset child .wp-block-column margins/flex basis.",
+          "verification": "On mobile, Saturday cards and drink cards stack as full-width cards with consistent gaps; contact details remain a 2x2 grid matching the source."
+        },
+        {
+          "id": "task-4",
+          "priority": "low",
+          "issue": "Mobile hero/action sizing has minor line-height and button-size drift that propagates vertical mismatch near the top of the page.",
+          "target": "Mobile hero heading, hero copy, hero buttons, and hero card placement.",
+          "repairArtifact": "vision-css-addition",
+          "fix": "Apply a small mobile-only normalization for hero display, heading line-height, copy spacing, compact action pills, and relative hero card placement without changing desktop layout.",
+          "verification": "On 390px viewport, the hero title line breaks, button row, party-detail card, and horizon grid align closer to the source without hiding any visible hero elements."
+        }
+      ],
       "repairs": [
         {
-          "id": "core-block-spacing-reset",
-          "source": "deterministic-poc-vision-proxy",
-          "reason": "The first structural repair still leaves block-library wrapper spacing that changes the page height and rhythm.",
-          "preferredRealAction": "Ask the LLM to preserve the source spacing model through block supports, spacing attributes, or scoped CSS on the smallest affected wrapper.",
-          "css": ".wp-block-group.hero.alignwide > * {\n  margin-top: 0;\n}\n.wp-block-buttons {\n  margin-top: 22px;\n}\n.wp-block-column > :first-child {\n  margin-top: 0;\n}\n.wp-block-column > :last-child {\n  margin-bottom: 0;\n}\n.wp-block-poc-studio-inquiry .inquiry-columns {\n  gap: 48px;\n}"
+          "id": "repair-2",
+          "source": "openai-vision",
+          "layer": "artifact:vision-css-addition",
+          "artifact": "vision-css-addition",
+          "reason": "The block structure is semantically adequate and all visible content is present. The remaining actionable issues are selector/wrapper styling failures on reusable components, especially mobile, so a scoped additive stylesheet is the lowest-risk repair.",
+          "preferredRealAction": "Add this scoped CSS after the current vision stylesheet and prior repair CSS.",
+          "expectedVisualEffect": "Drink price circles move to the correct top-right position, mobile card stacks and contact grid align more consistently, the mobile Visit CTA matches the source pill scale, and minor mobile hero vertical drift is reduced while desktop remains essentially unchanged.",
+          "editabilityRisk": "Low. This only targets existing classes and WordPress wrappers; all text, links, buttons, and card content remain editable core blocks.",
+          "css": "/* Repair 2: mobile/component refinements for remaining WordPress wrapper drift */\n\n/* Price is rendered as a paragraph in WP; force it to behave like the source span badge. */\n.drink-card {\n  position: relative !important;\n  overflow: hidden;\n}\n\n.drink-card .drink-price {\n  position: absolute !important;\n  top: 16px !important;\n  right: 16px !important;\n  left: auto !important;\n  bottom: auto !important;\n  z-index: 5;\n  display: grid !important;\n  place-items: center;\n  width: 38px;\n  height: 38px;\n  min-width: 38px;\n  min-height: 38px;\n  margin: 0 !important;\n  padding: 0 !important;\n  border-radius: 999px;\n  background: #fff6ff !important;\n  color: #16002d !important;\n  font-size: 0.68rem;\n  font-weight: 900;\n  line-height: 1;\n  letter-spacing: -0.02em;\n  box-shadow: 0 0 20px rgba(255, 246, 255, 0.38);\n}\n\n.drink-card h3 {\n  padding-right: 3rem;\n}\n\n@media (max-width: 700px) {\n  /* Normalize WP Columns wrappers to the source mobile geometry. */\n  .event-strip.wp-block-columns,\n  .menu-grid.wp-block-columns {\n    display: grid !important;\n    grid-template-columns: 1fr !important;\n    gap: 1rem !important;\n    width: 100%;\n  }\n\n  .contact-grid.wp-block-columns {\n    display: grid !important;\n    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;\n    gap: 0.7rem !important;\n    width: 100%;\n  }\n\n  .event-strip.wp-block-columns > .wp-block-column,\n  .menu-grid.wp-block-columns > .wp-block-column,\n  .contact-grid.wp-block-columns > .wp-block-column {\n    flex-basis: auto !important;\n    flex-grow: 0 !important;\n    width: auto !important;\n    min-width: 0;\n    margin: 0 !important;\n  }\n\n  .event-card,\n  .drink-card {\n    width: 100%;\n  }\n\n  .drink-card .drink-price {\n    top: 14px !important;\n    right: 14px !important;\n    width: 36px;\n    height: 36px;\n    min-width: 36px;\n    min-height: 36px;\n    font-size: 0.64rem;\n  }\n\n  .drink-card h3 {\n    padding-right: 2.75rem;\n  }\n\n  /* Keep the Visit CTA at the source mobile pill scale. */\n  .visit-card > .wp-block-buttons {\n    display: flex !important;\n    width: 100%;\n    margin-top: 0.9rem;\n  }\n\n  .visit-card > .wp-block-buttons > .wp-block-button {\n    flex: 1 1 100%;\n    width: 100%;\n  }\n\n  .visit-card > .wp-block-buttons .wp-block-button__link {\n    width: 100%;\n    min-height: 42px;\n    padding: 0.78rem 1rem;\n    justify-content: center;\n  }\n\n  /* Small hero normalization only on mobile; desktop is already within tolerance. */\n  .hero {\n    display: block !important;\n    min-height: 0;\n    padding-top: 76px;\n    padding-bottom: 34px;\n  }\n\n  .hero-inner {\n    width: 100%;\n    margin: 0 auto;\n  }\n\n  .hero h1 {\n    max-width: 360px;\n    margin-top: 0.12em;\n    margin-bottom: 0.24em;\n    font-size: clamp(3rem, 13.4vw, 3.45rem);\n    line-height: 0.78;\n  }\n\n  .hero-copy {\n    max-width: 310px;\n    margin-bottom: 0.85rem;\n    font-size: 0.82rem;\n    line-height: 1.35;\n  }\n\n  .hero-inner .wp-block-buttons {\n    justify-content: center;\n    flex-wrap: nowrap;\n    gap: 0.55rem;\n  }\n\n  .hero-inner .wp-block-button__link {\n    min-height: 34px;\n    padding: 0.55rem 0.82rem;\n    font-size: 0.58rem;\n    white-space: nowrap;\n  }\n\n  .hero-card {\n    position: relative !important;\n    right: auto !important;\n    bottom: auto !important;\n    width: 100% !important;\n    max-width: 358px;\n    margin: 1.05rem auto 0;\n  }\n\n  .track-list p {\n    margin: 0 !important;\n  }\n}"
         }
-      ]
+      ],
+      "rejectedRepairs": []
     },
     {
-      "afterPass": 2,
+      "afterPass": 1,
+      "repairPass": 2,
       "nextPass": 3,
-      "mode": "deterministic-poc-vision-proxy",
-      "trigger": {
-        "maxMismatchPercent": 35.42,
-        "maxHeightDelta": 204
+      "mode": "openai-vision-artifact",
+      "provider": {
+        "model": "gpt-5.5",
+        "response": "vision/pass-2/llm-repair-response.json",
+        "proposal": "vision/pass-2/llm-repair-proposal.json"
       },
+      "trigger": {
+        "maxMismatchPercent": 16.01,
+        "maxHeightDelta": 32
+      },
+      "focus": {
+        "mode": "regression-recovery",
+        "artifactPreference": "coordinated-repair-bundle",
+        "reason": "Candidate pass 2 regressed from best score 16.33 to 50.81. Ignore that candidate and repair from best pass 1.",
+        "instruction": "Restart from the best pass and choose a different high-leverage repair bundle. If prior CSS caused a visible loss or bad component scale, replace the vision CSS instead of stacking another narrow addition."
+      },
+      "observedDiscrepancy": "Pass 1 is already close on desktop, but mobile still has visible component-level drift. The most actionable visible failure is the drinks component: price circles render on the left/inside the text flow instead of pinned to the card top-right, and the mobile cocktail cards are slightly too compressed vertically. There is also residual responsive-column drift in the visit/contact card where WordPress column wrappers can stack or add default gaps differently from the source 2x2 contact grid. These issues account for much of the remaining mobile mismatch without requiring a block-tree rebuild.",
+      "likelyCause": "The block structure is semantically adequate, but WordPress wrapper markup changes spans/articles into paragraph and column wrappers. Existing CSS does not fully neutralize core paragraph flow for .drink-price or core/columns behavior for .contact-grid at mobile sizes. The prior repair fixed major selector mismatches, so this pass should add a narrow scoped responsive adapter rather than replacing the whole stylesheet.",
+      "confidence": "medium",
+      "stop": false,
+      "tasks": [
+        {
+          "id": "task-1",
+          "priority": "high",
+          "issue": "Drink price badges are visibly misplaced as white circles on the left/in the text flow instead of the source top-right badge position.",
+          "target": "Drinks section, all .drink-card cards, especially mobile and desktop price circles.",
+          "repairArtifact": "vision-css-addition",
+          "fix": "Make .drink-card a positioned container, remove .drink-price from normal paragraph flow, pin .drink-price to top-right, normalize its size, margin, text color, font weight, and z-index. Add explicit h3 top spacing so removing price from flow does not pull drink titles upward.",
+          "verification": "In desktop and mobile screenshots, each £10/£11/£12/£9 badge appears as a small white circle at the upper-right corner of its cocktail card, with the drink name remaining in the lower half of the card and not overlapping the badge."
+        },
+        {
+          "id": "task-2",
+          "priority": "medium",
+          "issue": "Mobile drink cards are slightly shorter/compressed compared with the source, contributing to the 32px mobile height deficit and text/decorative-line mismatch.",
+          "target": "Mobile .drinks .menu-grid and .drink-card cards.",
+          "repairArtifact": "vision-css-addition",
+          "fix": "At max-width 700px, force the drinks menu to a one-column grid, set a source-like gap, and give each .drink-card a stable min-height and padding so the decorative cocktail outline, title, body, and badge align at the same scale as the mockup.",
+          "verification": "On 390px mobile, the four drink cards stack vertically with consistent source-like height, visible spacing between cards, price badges at top-right, and no text collision with the cocktail outline."
+        },
+        {
+          "id": "task-3",
+          "priority": "medium",
+          "issue": "Visit contact details can inherit WordPress core/columns mobile stacking and margins instead of the compact source contact grid.",
+          "target": "Visit section .contact-grid and its .wp-block-column children.",
+          "repairArtifact": "vision-css-addition",
+          "fix": "Override .visit .contact-grid to remain a compact two-column CSS grid on mobile, remove core column margins/flex widths, and normalize inner paragraph margins so labels/values match the card layout.",
+          "verification": "On 390px mobile, Phone/Email and Address/Hours render as compact two-column rows inside the visit card, with no unexpected vertical column stacking or default WordPress column gaps."
+        }
+      ],
       "repairs": [
         {
-          "id": "semantic-form-width-lock",
-          "source": "deterministic-poc-vision-proxy",
-          "reason": "The remaining drift is concentrated around the custom form panel width and block wrapper behavior.",
-          "preferredRealAction": "Ask the LLM whether the custom inquiry block should expose a form width control or use a core column width attribute.",
-          "css": ".wp-block-poc-studio-inquiry .inquiry-panel {\n  max-width: 420px;\n}\n@media (max-width: 760px) {\n  .wp-block-poc-studio-inquiry .inquiry-panel {\n    max-width: none;\n  }\n}"
+          "id": "repair-2",
+          "source": "openai-vision",
+          "layer": "artifact:vision-css-addition",
+          "artifact": "vision-css-addition",
+          "reason": "The remaining drift is caused by WordPress paragraph/column wrappers inside otherwise-correct editable block structure. A small scoped additive CSS repair fixes the visible mobile component scale and badge-placement failures without risking the already-good desktop macro layout.",
+          "preferredRealAction": "Append this scoped CSS after the existing vision stylesheet and the prior repair CSS. Do not replace the block tree for this pass.",
+          "expectedVisualEffect": "Drink price badges move to the source top-right position on every cocktail card; drink card heights and text positions become more source-like on mobile; the visit contact card keeps the compact 2x2 grid rather than drifting through core column behavior. Desktop should remain visually close while mobile mismatch and height delta should improve.",
+          "editabilityRisk": "Low. The repair only changes presentation of existing editable core paragraph, group, button, and columns blocks. It does not hide content, replace text with generated content, or introduce raw HTML.",
+          "css": "/* Repair pass 2: scoped WP wrapper adapter for remaining mobile/component drift. */\n\n/* The source price is a positioned badge. In WP it is a paragraph, so remove it\n   from paragraph flow and pin it to the card corner. */\n.drinks .drink-card {\n  position: relative;\n  overflow: hidden;\n}\n\n.drinks .drink-card .drink-price,\n.drinks .drink-card p.drink-price {\n  position: absolute !important;\n  top: 1rem !important;\n  right: 1rem !important;\n  left: auto !important;\n  z-index: 4 !important;\n  display: grid !important;\n  place-items: center !important;\n  width: 38px !important;\n  height: 38px !important;\n  min-width: 38px !important;\n  margin: 0 !important;\n  padding: 0 !important;\n  border-radius: 999px !important;\n  background: #fff6ff !important;\n  color: #170020 !important;\n  font-size: 0.72rem !important;\n  line-height: 1 !important;\n  font-weight: 900 !important;\n  letter-spacing: -0.03em !important;\n  box-shadow: 0 0 18px rgba(255, 246, 255, 0.42) !important;\n}\n\n.drinks .drink-card h3 {\n  margin-top: 7.05rem !important;\n}\n\n/* Keep track-list pills compact when rendered as WP paragraphs. */\n.soundtrack .track-list > p {\n  margin: 0 !important;\n}\n\n@media (max-width: 700px) {\n  /* Source mobile stacks the cocktail cards as full-width cards with a stable\n     card height; WP columns/paragraph flow made them visually compressed. */\n  .drinks .menu-grid,\n  .drinks .wp-block-columns.menu-grid {\n    display: grid !important;\n    grid-template-columns: 1fr !important;\n    gap: 0.9rem !important;\n    align-items: stretch !important;\n  }\n\n  .drinks .menu-grid > .wp-block-column {\n    flex-basis: auto !important;\n    width: auto !important;\n    margin: 0 !important;\n  }\n\n  .drinks .drink-card {\n    min-height: 228px !important;\n    padding: 1.25rem 1.25rem 1.2rem !important;\n  }\n\n  .drinks .drink-card h3 {\n    margin-top: 7.15rem !important;\n  }\n\n  .drinks .drink-card p:not(.drink-price) {\n    margin-bottom: 0 !important;\n  }\n\n  .drinks .drink-card .drink-price,\n  .drinks .drink-card p.drink-price {\n    top: 0.9rem !important;\n    right: 0.9rem !important;\n    width: 36px !important;\n    height: 36px !important;\n    min-width: 36px !important;\n    font-size: 0.68rem !important;\n  }\n\n  /* Preserve the compact source contact grid instead of inheriting core/columns\n     mobile stacking and paragraph margins. */\n  .visit .contact-grid,\n  .visit .wp-block-columns.contact-grid {\n    display: grid !important;\n    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;\n    gap: 0.65rem !important;\n    align-items: stretch !important;\n  }\n\n  .visit .contact-grid > .wp-block-column {\n    flex-basis: auto !important;\n    width: auto !important;\n    margin: 0 !important;\n    min-width: 0 !important;\n  }\n\n  .visit .contact-grid p {\n    margin: 0 !important;\n  }\n}\n\n@media (max-width: 430px) {\n  .visit .contact-grid,\n  .visit .wp-block-columns.contact-grid {\n    gap: 0.55rem !important;\n  }\n\n  .visit .contact-grid > .wp-block-column {\n    padding-inline: 0.65rem !important;\n  }\n}"
         }
-      ]
+      ],
+      "rejectedRepairs": []
+    },
+    {
+      "afterPass": 1,
+      "repairPass": 3,
+      "nextPass": 4,
+      "mode": "openai-vision-artifact",
+      "provider": {
+        "model": "gpt-5.5",
+        "response": "vision/pass-3/llm-repair-response.json",
+        "proposal": "vision/pass-3/llm-repair-proposal.json"
+      },
+      "trigger": {
+        "maxMismatchPercent": 16.01,
+        "maxHeightDelta": 32
+      },
+      "focus": {
+        "mode": "regression-recovery",
+        "artifactPreference": "coordinated-repair-bundle",
+        "reason": "Candidate pass 3 regressed from best score 16.33 to 31.72. Ignore that candidate and repair from best pass 1.",
+        "instruction": "Restart from the best pass and choose a different high-leverage repair bundle. If prior CSS caused a visible loss or bad component scale, replace the vision CSS instead of stacking another narrow addition."
+      },
+      "observedDiscrepancy": "Desktop is already close, but mobile still has visible component-scale drift. The most obvious remaining errors are not fine typography: drink price badges render as white circles on the left/midline of each card instead of pinned to the top-right corner, the hero CTAs are too narrow compared with the source two-button row, and the mobile visit/enquiry CTA remains a small pill instead of spanning the contact card width.",
+      "likelyCause": "The block structure is semantically adequate and the rendered contact links are not escaped. The remaining visible drift is caused by source CSS selectors expecting plain source elements/classes such as .button and span.drink-price, while the WordPress output inserts core wrappers and renders .drink-price as a paragraph. Existing CSS adapts most layout, but the positioning/width rules for these wrapped components are still missing or losing specificity on mobile.",
+      "confidence": "medium",
+      "stop": false,
+      "tasks": [
+        {
+          "id": "task-1",
+          "priority": "high",
+          "issue": "Drink price bubbles are visibly misplaced on mobile and desktop, appearing near the left edge/middle of the card instead of the top-right corner like the mockup.",
+          "target": "Drinks section .menu-grid / .drink-card / .drink-price",
+          "repairArtifact": "vision-css-addition",
+          "fix": "Add a scoped override that makes each .drink-card a positioning context and absolutely positions p.drink-price at top-right with fixed circular sizing, removing inherited left/bottom/transform placement.",
+          "verification": "In all four drink cards, the £10/£11/£12/£9 circles sit in the top-right corner and no price circle overlaps the drink name/body copy."
+        },
+        {
+          "id": "task-2",
+          "priority": "medium",
+          "issue": "Mobile hero CTA pair is too narrow; source shows two balanced horizontal pills spanning most of the hero content width.",
+          "target": "Mobile .hero-inner > .wp-block-buttons and child core button wrappers",
+          "repairArtifact": "vision-css-addition",
+          "fix": "At mobile widths, force the hero button wrapper to a two-column grid, make each core button/link fill its column, and use compact mobile padding/font sizing so the labels remain on one line.",
+          "verification": "At 390px width, Reserve a booth and See this Saturday remain side-by-side and together span approximately the same width as the mockup CTA row."
+        },
+        {
+          "id": "task-3",
+          "priority": "medium",
+          "issue": "Mobile visit/enquiry CTA is rendered as a small pill; source shows the enquiry button spanning the contact card width.",
+          "target": "Mobile .visit-card > .wp-block-buttons / Enquire now button",
+          "repairArtifact": "vision-css-addition",
+          "fix": "At mobile widths, set the visit button wrapper and core button/link to width:100% with the existing gradient button styling preserved.",
+          "verification": "At 390px width, Enquire now is a full-width pill inside the visit card, aligned with the contact fields above it."
+        }
+      ],
+      "repairs": [
+        {
+          "id": "repair-3-mobile-component-scale-recovery",
+          "source": "openai-vision",
+          "layer": "artifact:vision-css-addition",
+          "artifact": "vision-css-addition",
+          "reason": "The page content and major section order are correct, and desktop already passes visually. A full block-tree or full CSS replacement would risk regressing the good desktop state. The high-leverage remaining mobile mismatch is caused by WordPress wrapper/element differences for repeated components and CTAs, so a small scoped additive CSS recovery is appropriate.",
+          "preferredRealAction": "Append this CSS after the current vision repair stylesheet from the best pass. Do not apply the regressed candidate pass 3 CSS.",
+          "expectedVisualEffect": "Drink cards regain the source top-right price badge geometry; the hero action row matches the source mobile two-pill width; the visit enquiry CTA expands to the source full-card mobile button scale while preserving the already-close desktop layout.",
+          "editabilityRisk": "Low. The repair only changes presentation of existing core Paragraph/Button blocks and does not hide or replace editable text, links, labels, or repeated items.",
+          "css": "/* Repair pass 3: recover mobile component scale without disturbing the close desktop layout. */\n.drink-card {\n  position: relative;\n}\n\n.drink-card > p.drink-price {\n  position: absolute !important;\n  top: clamp(0.75rem, 1.4vw, 1rem) !important;\n  right: clamp(0.75rem, 1.4vw, 1rem) !important;\n  left: auto !important;\n  bottom: auto !important;\n  transform: none !important;\n  z-index: 6;\n  display: grid;\n  place-items: center;\n  width: 42px;\n  height: 42px;\n  margin: 0 !important;\n  padding: 0 !important;\n  border-radius: 999px;\n  background: #fff6ff;\n  color: #16002d;\n  font-weight: 900;\n  font-size: 0.72rem;\n  line-height: 1;\n  letter-spacing: -0.03em;\n  box-shadow: 0 0 22px rgba(255, 246, 255, 0.38);\n}\n\n@media (max-width: 640px) {\n  .hero-inner > .wp-block-buttons {\n    display: grid !important;\n    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);\n    gap: 0.65rem;\n    width: min(100%, 322px);\n    margin: 0 auto !important;\n    align-items: stretch;\n    justify-content: center;\n  }\n\n  .hero-inner > .wp-block-buttons > .wp-block-button {\n    width: 100%;\n    min-width: 0;\n  }\n\n  .hero-inner > .wp-block-buttons .wp-block-button__link {\n    width: 100%;\n    min-width: 0;\n    min-height: 30px;\n    padding: 0.52rem 0.55rem;\n    font-size: 0.62rem;\n    line-height: 1;\n    white-space: nowrap;\n  }\n\n  .drink-card > p.drink-price {\n    top: 0.78rem !important;\n    right: 0.78rem !important;\n    width: 34px;\n    height: 34px;\n    font-size: 0.64rem;\n  }\n\n  .visit-card > .wp-block-buttons {\n    display: block !important;\n    width: 100%;\n    margin-top: 1rem;\n  }\n\n  .visit-card > .wp-block-buttons > .wp-block-button {\n    display: block;\n    width: 100%;\n  }\n\n  .visit-card > .wp-block-buttons .wp-block-button__link {\n    width: 100%;\n    min-height: 34px;\n    padding: 0.62rem 1rem;\n  }\n}"
+        }
+      ],
+      "rejectedRepairs": []
+    },
+    {
+      "afterPass": 4,
+      "repairPass": 4,
+      "nextPass": 5,
+      "mode": "openai-vision-artifact",
+      "provider": {
+        "model": "gpt-5.5",
+        "response": "vision/pass-4/llm-repair-response.json",
+        "proposal": "vision/pass-4/llm-repair-proposal.json"
+      },
+      "trigger": {
+        "maxMismatchPercent": 15.89,
+        "maxHeightDelta": 42
+      },
+      "focus": {
+        "mode": "styling-refinement",
+        "artifactPreference": "coordinated-repair-bundle",
+        "reason": "The rendered page height is close to the mockup, but pixel drift can still be caused by missing visible elements, wrong flex/grid geometry, component scale, or prior CSS that hid content.",
+        "instruction": "Audit the whole viewport before choosing repairs. Use CSS additions for genuinely local polish, but use block-tree or full vision-css replacement when the mismatch is structural, repeated across components, or caused by prior repair CSS."
+      },
+      "observedDiscrepancy": "Desktop is already within tolerance, but mobile still shows repeated drift: the hero copy stack starts at a slightly different vertical scale, section headings/card text do not align consistently, and stacked mobile cards/panels are a few pixels off in height and rhythm across Saturdays, Drinks, Booths, and Visit. No content appears missing and links/contact markup are rendering semantically; the remaining issue is mobile cascade/layout scale rather than a block-tree failure.",
+      "likelyCause": "The source CSS was written for plain section/card markup, while the rendered page contains WordPress wrappers such as .wp-block-columns, .wp-block-column, .wp-block-buttons, and .wp-block-button__link. Earlier repair CSS recovered most desktop geometry and mobile component visibility, but the mobile breakpoint still leaves default WP wrapper gaps, button min-heights, and column/card sizing slightly different from the source mockup.",
+      "confidence": "medium",
+      "stop": false,
+      "tasks": [
+        {
+          "id": "task-4-1",
+          "priority": "high",
+          "issue": "Hero mobile stack is visually close but vertically/typographically offset, especially the h1/copy/buttons/card grouping against the source mobile hero.",
+          "target": "Mobile .hero, .hero-inner, .hero h1, .hero-copy, hero buttons, .hero-card, and decorative orbits/grid.",
+          "repairArtifact": "vision-css-addition",
+          "fix": "Add a max-width:600px override that normalizes hero padding, h1 line-height/width, copy margin, core button wrapper gap/min-height, hero card width/padding, and mobile orbit/grid dimensions without affecting desktop.",
+          "verification": "At 390px width, the hero kicker/h1/buttons/card should align with the source proportions; hero buttons remain horizontal and the details card stays visible below the buttons."
+        },
+        {
+          "id": "task-4-2",
+          "priority": "high",
+          "issue": "Repeated mobile stacked card sections retain small WP Columns/Column rhythm differences, causing cumulative vertical and text-position drift.",
+          "target": "Mobile .event-strip and .menu-grid, including .event-card and .drink-card inside .wp-block-columns/.wp-block-column wrappers.",
+          "repairArtifact": "vision-css-addition",
+          "fix": "Force the event and menu grids into single-column block flow at mobile, zero default WP column margins, set source-like gaps, card padding, min-heights, heading line-height, and price badge sizing.",
+          "verification": "At 390px, Saturday event cards and drink cards stack with the same widths, gaps, and internal text/badge positions as the mockup; no cards become horizontally squeezed or over-tall."
+        },
+        {
+          "id": "task-4-3",
+          "priority": "medium",
+          "issue": "Intro, soundtrack, booth, and visit panels have small mobile panel-height and section-spacing mismatches that accumulate into the remaining height delta.",
+          "target": "Mobile .intro-panel, .panel-dancefloor, .soundtrack, .record-stack, .booth-frame, .booth-details, .visit-card, .contact-grid, and .map-card.",
+          "repairArtifact": "vision-css-addition",
+          "fix": "Normalize mobile section padding, panel/card border radii, record-stack/map heights, booth detail row heights, and contact-grid item padding using scoped overrides.",
+          "verification": "At 390px, the intro panel, record stack, booth rows, contact cards, and map occupy the same visual scale as the source and the total rendered height moves within the 20px threshold."
+        },
+        {
+          "id": "task-4-4",
+          "priority": "medium",
+          "issue": "Core button wrappers still introduce inconsistent mobile CTA scale in hero, event, and visit areas.",
+          "target": "Mobile .wp-block-buttons and .wp-block-button__link within .hero, .feature-event, and .visit-card.",
+          "repairArtifact": "vision-css-addition",
+          "fix": "Set mobile-only button gap, min-height, padding, font-size, and visit CTA width to match the source pill proportions while preserving editable core Button blocks.",
+          "verification": "Hero CTAs stay side-by-side, the event link is a small text/pill link, and the visit CTA remains a full-width neon pill on mobile."
+        }
+      ],
+      "repairs": [
+        {
+          "id": "repair-4-mobile-responsive-rhythm-and-scale",
+          "source": "openai-vision",
+          "layer": "artifact:vision-css-addition",
+          "artifact": "vision-css-addition",
+          "reason": "The block structure is semantically correct and desktop already passes. The remaining failures are mobile-only cascade/wrapper scale differences, so a scoped additive CSS repair is safer than replacing the block tree or full stylesheet.",
+          "preferredRealAction": "Append this CSS after all previous vision repair CSS so it wins the mobile breakpoint cascade. Keep it scoped to max-width:600px to avoid regressing the passing desktop viewport.",
+          "expectedVisualEffect": "Mobile hero, stacked cards, booth/contact panels, and CTA pills will match the source component scale and vertical rhythm more closely, reducing the high mobile mismatch while leaving desktop unchanged.",
+          "editabilityRisk": "Low. The repair only styles existing core Group, Columns, Buttons, Heading, and Paragraph blocks; all text, links, and repeated items remain editable in WordPress.",
+          "css": "@media (max-width: 600px) {\n  .wp-block-group.hero {\n    min-height: auto !important;\n    padding: 4.15rem 0.75rem 3.15rem !important;\n    display: block !important;\n    place-items: initial !important;\n  }\n\n  .hero-inner {\n    width: 100% !important;\n    max-width: 22rem !important;\n    margin: 0 auto !important;\n    text-align: center !important;\n  }\n\n  .hero-kicker,\n  .eyebrow,\n  .card-label,\n  .event-date {\n    font-size: 0.58rem !important;\n    line-height: 1.1 !important;\n    letter-spacing: 0.17em !important;\n  }\n\n  .hero h1 {\n    max-width: 20.5rem !important;\n    margin: 0.08em auto 0.28em !important;\n    font-size: clamp(2.78rem, 13.2vw, 3.32rem) !important;\n    line-height: 0.76 !important;\n    letter-spacing: -0.078em !important;\n  }\n\n  .hero-copy {\n    max-width: 18.5rem !important;\n    margin: 0 auto 0.78rem !important;\n    font-size: 0.68rem !important;\n    line-height: 1.32 !important;\n  }\n\n  .hero .wp-block-buttons,\n  .visit-card .wp-block-buttons,\n  .feature-event .wp-block-buttons {\n    margin: 0 !important;\n    gap: 0.45rem !important;\n    justify-content: center !important;\n    align-items: center !important;\n  }\n\n  .hero .wp-block-button__link,\n  .visit-card .wp-block-button__link,\n  .feature-event .wp-block-button__link {\n    min-height: 1.78rem !important;\n    padding: 0.42rem 0.82rem !important;\n    font-size: 0.52rem !important;\n    line-height: 1 !important;\n    white-space: nowrap !important;\n  }\n\n  .hero-card {\n    position: relative !important;\n    inset: auto !important;\n    width: calc(100vw - 1.5rem) !important;\n    max-width: 23rem !important;\n    margin: 0.78rem auto 0 !important;\n    padding: 0.82rem 0.92rem !important;\n    border-radius: 16px !important;\n  }\n\n  .card-title {\n    margin: 0.18rem 0 0.55rem !important;\n    font-size: 1.08rem !important;\n    line-height: 0.95 !important;\n  }\n\n  .hero-card-details {\n    display: grid !important;\n    gap: 0 !important;\n  }\n\n  .hero-card-detail {\n    display: flex !important;\n    align-items: center !important;\n    justify-content: space-between !important;\n    gap: 0.75rem !important;\n    padding: 0.34rem 0 0 !important;\n    margin: 0.34rem 0 0 !important;\n    border-top: 1px solid rgba(255, 255, 255, 0.14) !important;\n  }\n\n  .hero-card-detail p,\n  .detail-label,\n  .detail-value {\n    margin: 0 !important;\n    font-size: 0.62rem !important;\n    line-height: 1.2 !important;\n  }\n\n  .hero::before {\n    height: 8.25rem !important;\n    transform: perspective(270px) rotateX(62deg) translateY(1.8rem) !important;\n  }\n\n  .hero-orbit-one {\n    width: 10.25rem !important;\n    height: 10.25rem !important;\n    left: -4.65rem !important;\n    top: 3.35rem !important;\n  }\n\n  .hero-orbit-two {\n    width: 5.85rem !important;\n    height: 5.85rem !important;\n    right: -1.15rem !important;\n    top: 4.1rem !important;\n  }\n\n  .intro,\n  .saturdays,\n  .soundtrack,\n  .drinks,\n  .booths,\n  .visit,\n  .site-footer {\n    padding-left: 0.85rem !important;\n    padding-right: 0.85rem !important;\n  }\n\n  .intro {\n    display: block !important;\n    padding-top: 2.05rem !important;\n    padding-bottom: 2.95rem !important;\n  }\n\n  .section-number {\n    margin: 0 0 0.85rem !important;\n    font-size: 1.88rem !important;\n    line-height: 1 !important;\n  }\n\n  .intro-content,\n  .wide-heading,\n  .soundtrack-copy,\n  .drinks-header,\n  .booth-copy,\n  .visit-card {\n    max-width: none !important;\n  }\n\n  .intro h2,\n  .wide-heading h2,\n  .soundtrack h2,\n  .drinks-header h2,\n  .booth-copy h2,\n  .visit-card h2 {\n    font-size: clamp(2rem, 10.2vw, 2.46rem) !important;\n    line-height: 0.82 !important;\n    letter-spacing: -0.06em !important;\n  }\n\n  .intro-content p:not(.eyebrow),\n  .soundtrack-copy > p:not(.eyebrow),\n  .booth-copy > p:not(.eyebrow),\n  .visit-card > p:not(.eyebrow),\n  .event-card p,\n  .drink-card p {\n    font-size: 0.69rem !important;\n    line-height: 1.32 !important;\n  }\n\n  .intro-panel {\n    margin-top: 1.05rem !important;\n    min-height: 9.85rem !important;\n    padding: 0.62rem !important;\n    border-radius: 18px !important;\n  }\n\n  .panel-dancefloor {\n    min-height: 5.95rem !important;\n    border-radius: 12px !important;\n  }\n\n  .panel-copy {\n    margin-top: 0.48rem !important;\n  }\n\n  .panel-title,\n  .panel-description {\n    margin: 0 !important;\n  }\n\n  .panel-title {\n    font-size: 0.72rem !important;\n    line-height: 1.1 !important;\n  }\n\n  .panel-description {\n    margin-top: 0.18rem !important;\n    font-size: 0.6rem !important;\n    line-height: 1.25 !important;\n  }\n\n  .saturdays {\n    padding-top: 2.55rem !important;\n    padding-bottom: 3.25rem !important;\n  }\n\n  .event-strip.wp-block-columns,\n  .menu-grid.wp-block-columns {\n    display: block !important;\n    margin: 0 !important;\n    gap: 0 !important;\n  }\n\n  .event-strip > .wp-block-column,\n  .menu-grid > .wp-block-column {\n    flex-basis: auto !important;\n    width: 100% !important;\n    margin: 0 !important;\n  }\n\n  .event-strip > .wp-block-column + .wp-block-column {\n    margin-top: 0.88rem !important;\n  }\n\n  .event-card {\n    min-height: 7.25rem !important;\n    padding: 0.92rem 1rem !important;\n    border-radius: 14px !important;\n  }\n\n  .event-card h3 {\n    margin: 0.2rem 0 0.28rem !important;\n    font-size: 1.18rem !important;\n    line-height: 0.86 !important;\n    letter-spacing: -0.05em !important;\n  }\n\n  .feature-event .wp-block-buttons {\n    justify-content: flex-start !important;\n    margin-top: 0.35rem !important;\n  }\n\n  .feature-event .wp-block-button__link {\n    min-height: 0 !important;\n    padding: 0 !important;\n    background: transparent !important;\n    box-shadow: none !important;\n    color: var(--acid) !important;\n    font-size: 0.56rem !important;\n    letter-spacing: 0.12em !important;\n  }\n\n  .soundtrack {\n    display: block !important;\n    padding-top: 3.05rem !important;\n    padding-bottom: 3.15rem !important;\n  }\n\n  .record-stack {\n    width: 100% !important;\n    max-width: 18.5rem !important;\n    height: 11.6rem !important;\n    margin: 0 auto 1.25rem !important;\n  }\n\n  .track-list {\n    gap: 0.38rem !important;\n    margin-top: 0.7rem !important;\n  }\n\n  .track-list p {\n    margin: 0 !important;\n    padding: 0.28rem 0.48rem !important;\n    font-size: 0.58rem !important;\n    line-height: 1 !important;\n  }\n\n  .drinks {\n    padding-top: 2.75rem !important;\n    padding-bottom: 3.1rem !important;\n  }\n\n  .menu-grid > .wp-block-column + .wp-block-column {\n    margin-top: 0.72rem !important;\n  }\n\n  .drink-card {\n    min-height: 8.95rem !important;\n    padding: 1.12rem 0.95rem 0.85rem !important;\n    border-radius: 14px !important;\n  }\n\n  .drink-card h3 {\n    margin: 0 0 0.25rem !important;\n    font-size: 1.08rem !important;\n    line-height: 0.9 !important;\n    letter-spacing: -0.045em !important;\n  }\n\n  .drink-price {\n    top: 0.62rem !important;\n    right: 0.62rem !important;\n    width: 1.7rem !important;\n    height: 1.7rem !important;\n    display: grid !important;\n    place-items: center !important;\n    font-size: 0.54rem !important;\n    line-height: 1 !important;\n  }\n\n  .booths {\n    padding-top: 3.05rem !important;\n    padding-bottom: 3.05rem !important;\n  }\n\n  .booth-frame {\n    display: block !important;\n    padding: 1.05rem !important;\n    border-radius: 18px !important;\n  }\n\n  .booth-details {\n    display: grid !important;\n    gap: 0.66rem !important;\n    margin-top: 1rem !important;\n  }\n\n  .booth-details > .wp-block-group {\n    min-height: 4.1rem !important;\n    padding: 0.72rem 0.82rem !important;\n    border-radius: 10px !important;\n  }\n\n  .detail-title,\n  .detail-subtitle {\n    margin: 0 !important;\n  }\n\n  .detail-title {\n    font-size: 0.68rem !important;\n    line-height: 1.1 !important;\n  }\n\n  .detail-subtitle {\n    margin-top: 0.22rem !important;\n    font-size: 0.6rem !important;\n    line-height: 1.2 !important;\n  }\n\n  .visit {\n    display: block !important;\n    padding-top: 3rem !important;\n    padding-bottom: 1.6rem !important;\n  }\n\n  .visit-card {\n    padding: 1.08rem !important;\n    border-radius: 18px !important;\n  }\n\n  .contact-grid.wp-block-columns {\n    display: grid !important;\n    grid-template-columns: 1fr !important;\n    gap: 0.52rem !important;\n    margin: 0.85rem 0 0.9rem !important;\n  }\n\n  .contact-grid .wp-block-column {\n    width: 100% !important;\n    min-height: 3.05rem !important;\n    padding: 0.55rem 0.68rem !important;\n    border-radius: 8px !important;\n  }\n\n  .contact-grid p {\n    margin: 0 !important;\n    font-size: 0.62rem !important;\n    line-height: 1.25 !important;\n  }\n\n  .contact-label {\n    margin-bottom: 0.12rem !important;\n    font-size: 0.5rem !important;\n    letter-spacing: 0.15em !important;\n  }\n\n  .visit-card .wp-block-buttons {\n    justify-content: stretch !important;\n  }\n\n  .visit-card .wp-block-button,\n  .visit-card .wp-block-button__link {\n    width: 100% !important;\n  }\n\n  .map-card {\n    height: 11.35rem !important;\n    min-height: 11.35rem !important;\n    margin-top: 0.82rem !important;\n    border-radius: 18px !important;\n  }\n\n  .site-footer {\n    padding-top: 1.05rem !important;\n    padding-bottom: 1.35rem !important;\n    gap: 0.45rem !important;\n  }\n\n  .site-footer p {\n    margin: 0 !important;\n    font-size: 0.62rem !important;\n    line-height: 1.3 !important;\n  }\n}"
+        }
+      ],
+      "rejectedRepairs": []
     }
   ],
-  "final": {
-    "pass": 3,
-    "html": "rendered/iterations/pass-3.html",
+  "regressions": [
+    {
+      "pass": 2,
+      "rejectedHtml": "rendered/iterations/pass-2.html",
+      "rejectedScore": 50.81,
+      "bestPass": 1,
+      "bestHtml": "rendered/iterations/pass-1.html",
+      "bestScore": 16.33,
+      "action": "rolled-back-and-focused"
+    },
+    {
+      "pass": 3,
+      "rejectedHtml": "rendered/iterations/pass-3.html",
+      "rejectedScore": 31.72,
+      "bestPass": 1,
+      "bestHtml": "rendered/iterations/pass-1.html",
+      "bestScore": 16.33,
+      "action": "rolled-back-and-focused"
+    },
+    {
+      "pass": 5,
+      "rejectedHtml": "rendered/iterations/pass-5.html",
+      "rejectedScore": 80.47,
+      "bestPass": 4,
+      "bestHtml": "rendered/iterations/pass-4.html",
+      "bestScore": 16.31,
+      "action": "kept-best-at-pass-limit"
+    }
+  ],
+  "last": {
+    "pass": 5,
+    "html": "rendered/iterations/pass-5.html",
     "repairsApplied": [
-      "core-layout-selector-bridges",
-      "core-block-spacing-reset",
-      "semantic-form-width-lock"
+      "repair-1",
+      "repair-3-mobile-component-scale-recovery",
+      "repair-4-mobile-responsive-rhythm-and-scale"
     ],
     "viewports": [
       {
@@ -424,28 +936,28 @@
         },
         "screenshots": {
           "mockup": "vision/mockup-desktop.png",
-          "rendered": "vision/pass-3/rendered-desktop.png",
-          "diff": "vision/pass-3/diff-desktop.png"
+          "rendered": "vision/pass-5/rendered-desktop.png",
+          "diff": "vision/pass-5/diff-desktop.png"
         },
         "comparison": {
-          "mismatchedPixels": 1074757,
-          "comparedPixels": 4004640,
-          "mismatchPercent": 26.84,
+          "mismatchedPixels": 195445,
+          "comparedPixels": 9086400,
+          "mismatchPercent": 2.15,
           "comparedSize": {
             "width": 1440,
-            "height": 2781
+            "height": 6310
           },
           "mockupSize": {
             "width": 1440,
-            "height": 2781
+            "height": 6310
           },
           "renderedSize": {
             "width": 1440,
-            "height": 2959
+            "height": 6321
           },
           "dimensionDelta": {
             "width": 0,
-            "height": 178
+            "height": 11
           }
         }
       },
@@ -458,43 +970,132 @@
         },
         "screenshots": {
           "mockup": "vision/mockup-mobile.png",
-          "rendered": "vision/pass-3/rendered-mobile.png",
-          "diff": "vision/pass-3/diff-mobile.png"
+          "rendered": "vision/pass-5/rendered-mobile.png",
+          "diff": "vision/pass-5/diff-mobile.png"
         },
         "comparison": {
-          "mismatchedPixels": 507608,
-          "comparedPixels": 1433250,
-          "mismatchPercent": 35.42,
+          "mismatchedPixels": 835031,
+          "comparedPixels": 1872000,
+          "mismatchPercent": 44.61,
           "comparedSize": {
             "width": 390,
-            "height": 3675
+            "height": 4800
           },
           "mockupSize": {
             "width": 390,
-            "height": 3675
+            "height": 8386
           },
           "renderedSize": {
             "width": 390,
-            "height": 3879
+            "height": 4800
           },
           "dimensionDelta": {
             "width": 0,
-            "height": 204
+            "height": 3586
           }
         }
       }
     ],
     "aggregate": {
-      "maxMismatchPercent": 35.42,
-      "maxHeightDelta": 204
+      "maxMismatchPercent": 44.61,
+      "maxHeightDelta": 3586,
+      "visualScore": 80.47
     }
+  },
+  "final": {
+    "pass": 4,
+    "html": "rendered/iterations/pass-4.html",
+    "repairsApplied": [
+      "repair-1",
+      "repair-3-mobile-component-scale-recovery"
+    ],
+    "viewports": [
+      {
+        "name": "desktop",
+        "viewport": {
+          "width": 1440,
+          "height": 1200,
+          "deviceScaleFactor": 1
+        },
+        "screenshots": {
+          "mockup": "vision/mockup-desktop.png",
+          "rendered": "vision/pass-4/rendered-desktop.png",
+          "diff": "vision/pass-4/diff-desktop.png"
+        },
+        "comparison": {
+          "mismatchedPixels": 195445,
+          "comparedPixels": 9086400,
+          "mismatchPercent": 2.15,
+          "comparedSize": {
+            "width": 1440,
+            "height": 6310
+          },
+          "mockupSize": {
+            "width": 1440,
+            "height": 6310
+          },
+          "renderedSize": {
+            "width": 1440,
+            "height": 6321
+          },
+          "dimensionDelta": {
+            "width": 0,
+            "height": 11
+          }
+        }
+      },
+      {
+        "name": "mobile",
+        "viewport": {
+          "width": 390,
+          "height": 1200,
+          "deviceScaleFactor": 1
+        },
+        "screenshots": {
+          "mockup": "vision/mockup-mobile.png",
+          "rendered": "vision/pass-4/rendered-mobile.png",
+          "diff": "vision/pass-4/diff-mobile.png"
+        },
+        "comparison": {
+          "mismatchedPixels": 517103,
+          "comparedPixels": 3254160,
+          "mismatchPercent": 15.89,
+          "comparedSize": {
+            "width": 390,
+            "height": 8344
+          },
+          "mockupSize": {
+            "width": 390,
+            "height": 8386
+          },
+          "renderedSize": {
+            "width": 390,
+            "height": 8344
+          },
+          "dimensionDelta": {
+            "width": 0,
+            "height": 42
+          }
+        }
+      }
+    ],
+    "aggregate": {
+      "maxMismatchPercent": 15.89,
+      "maxHeightDelta": 42,
+      "visualScore": 16.31
+    }
+  },
+  "stop": {
+    "reason": "max-repair-passes",
+    "pass": 5,
+    "detail": "Reached the configured maximum repair pass count after rejecting regressed pass 5; kept best pass 4."
   },
   "observations": [
     {
       "viewport": "desktop",
-      "severity": "high",
-      "issue": "Rendered page height still diverges from the mockup.",
-      "promptImplication": "The transform planner should re-check layout primitives, responsive behavior, and spacing before choosing or styling blocks."
+      "severity": "low",
+      "issue": "No large visual drift detected by this coarse POC comparator.",
+      "promptImplication": "The transform can continue to semantic/editability checks before a final acceptance decision."
     },
     {
       "viewport": "mobile",

@@ -2,23 +2,37 @@
 
 ## Summary
 
-- Sections analyzed: 5
-- Blocks in assembled tree: 28
-- Custom blocks: poc/kind-marquee, poc/studio-inquiry
-- LLM providers: html=deterministic, plan=deterministic, assembly=deterministic
+- Sections analyzed: 9
+- Blocks in assembled tree: 151
+- Custom blocks: 
+- LLM providers: html=openai, plan=openai, assembly=openai
+- Content repairs applied: 0
+- Custom contract repairs applied: 0
 
 ## Section Strategies
 
+- `header`: core-assembly
+  - Core attempt: Use a Header template part composed of a fixed-position Group with custom class site-header. Brand is a core Group/Link pattern with a small core Paragraph or Site Title for the text and a styled inline Paragraph/Group for the BB mark. Navigation uses core Navigation with editable links. CSS handles pill glass background, blur, neon logo mark, and mobile hiding.
 - `hero`: core-assembly
-  - Core attempt: Core blocks plus custom classes preserve the content model and are sufficient for this section.
+  - Core attempt: Use a full-height core Group with class hero and layout constrained/wide. Hero text remains in Heading, Paragraph, and Buttons. Party details card is a nested Group/Aside-like pattern using Paragraphs and a List or stacked Groups for label/value rows. Orbits, horizon grid, halo, and cassette are produced with CSS on empty/decorative Groups and pseudo-elements, not a custom block. The cassette label can be a normal Paragraph inside a decorative Group if it should remain editable.
 - `story`: core-assembly
-  - Core attempt: Core blocks plus custom classes preserve the content model and are sufficient for this section.
-- `values-marquee`: custom-block (poc/kind-marquee)
-  - Core attempt: A static core group could show the words, but editable repeated marquee items, speed, and duplicated track markup need a purpose-built block.
-- `collection`: core-assembly
-  - Core attempt: Core blocks plus custom classes preserve the content model and are sufficient for this section.
-- `inquiry`: custom-block (poc/studio-inquiry)
-  - Core attempt: Core blocks can fake the CTA, but the mockup contains structured inputs and submission UI that need explicit fields and controls.
+  - Core attempt: Use a two-column core Group/Columns layout with custom classes intro, intro-content, and intro-panel. The section number is a Paragraph with class section-number. The atmosphere panel is a Group with CSS-generated dancefloor graphic and editable panel title/body as RichText Paragraphs. No custom block is needed because all semantics are simple text containers.
+- `saturday-parties`: core-assembly
+  - Core attempt: Use a Group section with anchor saturdays. Heading area is core Paragraph eyebrow plus Heading. Event strip is a core Columns or flex Group containing three card Groups. Each card uses editable Paragraph date, Heading level 3, Paragraph description, and optional Button/Link. The featured styling is just a custom class feature-event on the first card.
+- `soundtrack`: core-assembly
+  - Core attempt: Use a two-column Group/Columns layout. Record stack is a decorative Group with nested empty Groups or pseudo-elements styled as records and aria-hidden via block attributes if supported or CSS/markup pattern. Copy uses Paragraph eyebrow, Heading, Paragraph, and a flex Group of Paragraph badges for track styles. No custom block is needed.
+- `drinks`: core-assembly
+  - Core attempt: Use a Group section with anchor drinks and custom class drinks. Header is core Paragraph plus Heading. Menu grid is a Group using CSS grid containing four card Groups. Each drink card uses editable price Paragraph/span-style class, Heading level 3, and description Paragraph. Cocktail glass line art is CSS pseudo-elements on the card classes, preserving all visible menu content as RichText.
+- `booths`: core-assembly
+  - Core attempt: Use a Group section with a nested booth-frame Group laid out as two columns. Left column is eyebrow, Heading, and paragraph. Right column is a stack of three detail Groups with strong-style Paragraph/Heading and supporting Paragraph. CSS provides glass panel, neon borders, and spacing. No custom behavior or schema is needed.
+- `visit-contact`: core-assembly
+  - Core attempt: Use a two-column Group section with anchor visit. Visit card contains editable eyebrow, Heading, intro paragraph, contact grid Groups, and an enquiry Button. Phone and email use core Paragraph/Link or Button/link formatting with tel: and mailto: URLs. The map illustration is a decorative Group with CSS grid/pin effects; the visible pin label is a Paragraph inside the map card so it remains editable. No form is present in the mockup, so no custom form block is planned.
+- `footer`: core-assembly
+  - Core attempt: Use a Footer template part with a flex Group and two Paragraph/Site Title blocks. CSS handles top border, muted copy, and responsive stacking.
+
+## Custom Block Contracts
+
+
 
 ## Outputs
 

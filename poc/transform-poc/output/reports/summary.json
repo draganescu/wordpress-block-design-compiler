@@ -1,48 +1,77 @@
 {
-  "prompt": "Create a polished landing page for a ceramic studio called Kiln & Kind. It should have a tactile editorial layout, a hero, a product story, an animated maker-values marquee, a small collection grid, and a workshop inquiry form.",
+  "prompt": "I need a website for my bar. It's called boogie bar and has a 80s aesthetic and theme. We host weekly saturday over 40s parties.",
   "providers": {
-    "html": "deterministic",
-    "plan": "deterministic",
-    "assembly": "deterministic"
+    "html": "openai",
+    "plan": "openai",
+    "assembly": "openai"
   },
-  "sectionsAnalyzed": 5,
+  "contentRepair": {
+    "repairedBlocks": 0,
+    "repairs": []
+  },
+  "customContractRepair": {
+    "repairedBlocks": 0,
+    "repairs": []
+  },
+  "sectionsAnalyzed": 9,
   "sectionStrategies": [
+    {
+      "id": "header",
+      "strategy": "core-assembly",
+      "coreAttempt": "Use a Header template part composed of a fixed-position Group with custom class site-header. Brand is a core Group/Link pattern with a small core Paragraph or Site Title for the text and a styled inline Paragraph/Group for the BB mark. Navigation uses core Navigation with editable links. CSS handles pill glass background, blur, neon logo mark, and mobile hiding.",
+      "customBlock": null
+    },
     {
       "id": "hero",
       "strategy": "core-assembly",
-      "coreAttempt": "Core blocks plus custom classes preserve the content model and are sufficient for this section.",
+      "coreAttempt": "Use a full-height core Group with class hero and layout constrained/wide. Hero text remains in Heading, Paragraph, and Buttons. Party details card is a nested Group/Aside-like pattern using Paragraphs and a List or stacked Groups for label/value rows. Orbits, horizon grid, halo, and cassette are produced with CSS on empty/decorative Groups and pseudo-elements, not a custom block. The cassette label can be a normal Paragraph inside a decorative Group if it should remain editable.",
       "customBlock": null
     },
     {
       "id": "story",
       "strategy": "core-assembly",
-      "coreAttempt": "Core blocks plus custom classes preserve the content model and are sufficient for this section.",
+      "coreAttempt": "Use a two-column core Group/Columns layout with custom classes intro, intro-content, and intro-panel. The section number is a Paragraph with class section-number. The atmosphere panel is a Group with CSS-generated dancefloor graphic and editable panel title/body as RichText Paragraphs. No custom block is needed because all semantics are simple text containers.",
       "customBlock": null
     },
     {
-      "id": "values-marquee",
-      "strategy": "custom-block",
-      "coreAttempt": "A static core group could show the words, but editable repeated marquee items, speed, and duplicated track markup need a purpose-built block.",
-      "customBlock": "poc/kind-marquee"
-    },
-    {
-      "id": "collection",
+      "id": "saturday-parties",
       "strategy": "core-assembly",
-      "coreAttempt": "Core blocks plus custom classes preserve the content model and are sufficient for this section.",
+      "coreAttempt": "Use a Group section with anchor saturdays. Heading area is core Paragraph eyebrow plus Heading. Event strip is a core Columns or flex Group containing three card Groups. Each card uses editable Paragraph date, Heading level 3, Paragraph description, and optional Button/Link. The featured styling is just a custom class feature-event on the first card.",
       "customBlock": null
     },
     {
-      "id": "inquiry",
-      "strategy": "custom-block",
-      "coreAttempt": "Core blocks can fake the CTA, but the mockup contains structured inputs and submission UI that need explicit fields and controls.",
-      "customBlock": "poc/studio-inquiry"
+      "id": "soundtrack",
+      "strategy": "core-assembly",
+      "coreAttempt": "Use a two-column Group/Columns layout. Record stack is a decorative Group with nested empty Groups or pseudo-elements styled as records and aria-hidden via block attributes if supported or CSS/markup pattern. Copy uses Paragraph eyebrow, Heading, Paragraph, and a flex Group of Paragraph badges for track styles. No custom block is needed.",
+      "customBlock": null
+    },
+    {
+      "id": "drinks",
+      "strategy": "core-assembly",
+      "coreAttempt": "Use a Group section with anchor drinks and custom class drinks. Header is core Paragraph plus Heading. Menu grid is a Group using CSS grid containing four card Groups. Each drink card uses editable price Paragraph/span-style class, Heading level 3, and description Paragraph. Cocktail glass line art is CSS pseudo-elements on the card classes, preserving all visible menu content as RichText.",
+      "customBlock": null
+    },
+    {
+      "id": "booths",
+      "strategy": "core-assembly",
+      "coreAttempt": "Use a Group section with a nested booth-frame Group laid out as two columns. Left column is eyebrow, Heading, and paragraph. Right column is a stack of three detail Groups with strong-style Paragraph/Heading and supporting Paragraph. CSS provides glass panel, neon borders, and spacing. No custom behavior or schema is needed.",
+      "customBlock": null
+    },
+    {
+      "id": "visit-contact",
+      "strategy": "core-assembly",
+      "coreAttempt": "Use a two-column Group section with anchor visit. Visit card contains editable eyebrow, Heading, intro paragraph, contact grid Groups, and an enquiry Button. Phone and email use core Paragraph/Link or Button/link formatting with tel: and mailto: URLs. The map illustration is a decorative Group with CSS grid/pin effects; the visible pin label is a Paragraph inside the map card so it remains editable. No form is present in the mockup, so no custom form block is planned.",
+      "customBlock": null
+    },
+    {
+      "id": "footer",
+      "strategy": "core-assembly",
+      "coreAttempt": "Use a Footer template part with a flex Group and two Paragraph/Site Title blocks. CSS handles top border, muted copy, and responsive stacking.",
+      "customBlock": null
     }
   ],
-  "customBlocks": [
-    "poc/kind-marquee",
-    "poc/studio-inquiry"
-  ],
-  "blockCount": 28,
+  "customBlocks": [],
+  "blockCount": 151,
   "outputs": {
     "mockup": "mockup/index.html",
     "plan": "plan/block-implementation-plan.json",
