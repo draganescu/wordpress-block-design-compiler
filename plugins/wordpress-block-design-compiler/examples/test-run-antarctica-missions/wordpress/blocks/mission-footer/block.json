@@ -1,0 +1,20 @@
+{
+  "apiVersion": 3,
+  "name": "wbdc/mission-footer",
+  "title": "Mission Footer",
+  "category": "design",
+  "description": "Semantic editable footer for the Antarctica mission example.",
+  "editorScript": "file:./index.js",
+  "style": "file:./style.css",
+  "attributes": {
+    "text": { "type": "string", "default": "Antarctica Mission Index / research interface prototype" },
+    "url": { "type": "string", "default": "#top" },
+    "linkText": { "type": "string", "default": "Return to 90°S" }
+  },
+  "supports": {
+    "anchor": true,
+    "className": true,
+    "spacing": { "margin": true, "padding": true },
+    "html": false
+  }
+}

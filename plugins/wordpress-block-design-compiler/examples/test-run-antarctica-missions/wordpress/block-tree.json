@@ -3,42 +3,18 @@
   "contract": "data-only",
   "blocks": [
     {
-      "blockName": "core/group",
+      "blockName": "wbdc/mission-station-strip",
       "attrs": {
-        "tagName": "header",
-        "className": "station-strip",
-        "ariaLabel": "Mission status"
+        "ariaLabel": "Mission status",
+        "homeUrl": "#top",
+        "homeLabel": "Antarctica Mission Index home",
+        "code": "AM-90",
+        "title": "Antarctica Mission Index",
+        "status": "Live dossier / polar traverse / 82.8628°S 135.0000°E",
+        "actionText": "Open signal map",
+        "actionUrl": "#signal"
       },
-      "innerBlocks": [
-        {
-          "blockName": "core/link",
-          "attrs": {
-            "url": "#top",
-            "className": "station-id",
-            "ariaLabel": "Antarctica Mission Index home"
-          },
-          "innerBlocks": [
-            { "blockName": "core/group", "attrs": { "tagName": "span", "content": "AM-90" }, "innerBlocks": [] },
-            { "blockName": "core/group", "attrs": { "tagName": "strong", "content": "Antarctica Mission Index" }, "innerBlocks": [] }
-          ]
-        },
-        {
-          "blockName": "core/paragraph",
-          "attrs": {
-            "content": "Live dossier / polar traverse / 82.8628°S 135.0000°E"
-          },
-          "innerBlocks": []
-        },
-        {
-          "blockName": "core/link",
-          "attrs": {
-            "url": "#signal",
-            "className": "strip-action",
-            "content": "Open signal map"
-          },
-          "innerBlocks": []
-        }
-      ]
+      "innerBlocks": []
     },
     {
       "blockName": "core/group",
@@ -51,8 +27,7 @@
           "blockName": "core/group",
           "attrs": {
             "tagName": "section",
-            "className": "hero-field",
-            "ariaLabelledby": "hero-title"
+            "className": "hero-field"
           },
           "innerBlocks": [
             {
@@ -74,13 +49,10 @@
                   "blockName": "core/heading",
                   "attrs": {
                     "level": 1,
-                    "anchor": "hero-title"
+                    "anchor": "hero-title",
+                    "content": "<span>South</span><span>is not</span><span>a place.</span>"
                   },
-                  "innerBlocks": [
-                    { "blockName": "core/group", "attrs": { "tagName": "span", "content": "South" }, "innerBlocks": [] },
-                    { "blockName": "core/group", "attrs": { "tagName": "span", "content": "is not" }, "innerBlocks": [] },
-                    { "blockName": "core/group", "attrs": { "tagName": "span", "content": "a place." }, "innerBlocks": [] }
-                  ]
+                  "innerBlocks": []
                 },
                 {
                   "blockName": "core/paragraph",
@@ -111,8 +83,7 @@
           "blockName": "core/group",
           "attrs": {
             "tagName": "section",
-            "className": "rupture-statement",
-            "ariaLabelledby": "rupture-title"
+            "className": "rupture-statement"
           },
           "innerBlocks": [
             {
@@ -165,8 +136,7 @@
           "blockName": "core/group",
           "attrs": {
             "tagName": "section",
-            "className": "telemetry-section",
-            "ariaLabelledby": "telemetry-title"
+            "className": "telemetry-section"
           },
           "innerBlocks": [
             {
@@ -234,8 +204,7 @@
           "attrs": {
             "tagName": "section",
             "anchor": "signal",
-            "className": "signal-array",
-            "ariaLabelledby": "signal-title"
+            "className": "signal-array"
           },
           "innerBlocks": [
             {
@@ -290,8 +259,7 @@
           "blockName": "core/group",
           "attrs": {
             "tagName": "section",
-            "className": "field-log",
-            "ariaLabelledby": "field-log-title"
+            "className": "field-log"
           },
           "innerBlocks": [
             {
@@ -334,28 +302,13 @@
       ]
     },
     {
-      "blockName": "core/group",
+      "blockName": "wbdc/mission-footer",
       "attrs": {
-        "tagName": "footer",
-        "className": "mission-footer"
+        "text": "Antarctica Mission Index / research interface prototype",
+        "url": "#top",
+        "linkText": "Return to 90°S"
       },
-      "innerBlocks": [
-        {
-          "blockName": "core/paragraph",
-          "attrs": {
-            "content": "Antarctica Mission Index / research interface prototype"
-          },
-          "innerBlocks": []
-        },
-        {
-          "blockName": "core/link",
-          "attrs": {
-            "url": "#top",
-            "content": "Return to 90°S"
-          },
-          "innerBlocks": []
-        }
-      ]
+      "innerBlocks": []
     }
   ]
 }

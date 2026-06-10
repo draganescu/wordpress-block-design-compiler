@@ -1,0 +1,18 @@
+{
+  "apiVersion": 3,
+  "name": "wbdc/vellum-time-label",
+  "title": "Vellum Time Label",
+  "category": "design",
+  "description": "Editable semantic time label for workshop listings.",
+  "editorScript": "file:./index.js",
+  "style": "file:./style.css",
+  "attributes": {
+    "datetime": { "type": "string", "default": "" },
+    "label": { "type": "string", "default": "" }
+  },
+  "supports": {
+    "anchor": true,
+    "className": true,
+    "html": false
+  }
+}

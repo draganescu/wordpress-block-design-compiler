@@ -1,0 +1,33 @@
+.wp-block-button.button {
+  display: block;
+  min-height: 0;
+  border: 0;
+  padding: 0;
+}
+
+.wp-block-button.button .wp-block-button__link {
+  display: inline-flex;
+  min-height: 48px;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--ink);
+  border-radius: 0;
+  padding: 0.9rem 1.15rem;
+  color: inherit;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  line-height: inherit;
+  text-transform: uppercase;
+}
+
+.wp-block-button.button-primary .wp-block-button__link {
+  background: var(--ink);
+  color: var(--cream);
+}
+
+.wp-block-button.button-secondary .wp-block-button__link {
+  background: var(--paper-deep);
+  color: var(--ink);
+}

@@ -13,20 +13,8 @@ const DEFAULT_VIEWPORTS = [
 ];
 const customInnerBlocksStack = [];
 const ALLOWED_GROUP_TAGS = new Set(['div', 'main', 'section', 'article', 'aside', 'header', 'footer']);
-const CORE_BLOCK_ATTRS = {
-  'core/group': new Set(['anchor', 'className', 'align', 'style', 'layout', 'tagName', 'metadata', 'lock']),
-  'core/paragraph': new Set(['anchor', 'className', 'align', 'style', 'content', 'dropCap', 'fontSize', 'textColor', 'backgroundColor', 'gradient', 'metadata', 'lock']),
-  'core/heading': new Set(['anchor', 'className', 'align', 'style', 'content', 'level', 'fontSize', 'textColor', 'backgroundColor', 'gradient', 'metadata', 'lock']),
-  'core/buttons': new Set(['anchor', 'className', 'align', 'style', 'layout', 'metadata', 'lock']),
-  'core/button': new Set(['anchor', 'className', 'align', 'style', 'url', 'title', 'text', 'linkTarget', 'rel', 'width', 'fontSize', 'textColor', 'backgroundColor', 'gradient', 'metadata', 'lock']),
-  'core/list': new Set(['anchor', 'className', 'align', 'style', 'ordered', 'reversed', 'start', 'type', 'values', 'metadata', 'lock']),
-  'core/list-item': new Set(['anchor', 'className', 'style', 'content', 'metadata', 'lock']),
-  'core/separator': new Set(['anchor', 'className', 'align', 'style', 'opacity', 'metadata', 'lock']),
-  'core/spacer': new Set(['anchor', 'className', 'style', 'height', 'metadata', 'lock']),
-  'core/columns': new Set(['anchor', 'className', 'align', 'style', 'isStackedOnMobile', 'verticalAlignment', 'metadata', 'lock']),
-  'core/column': new Set(['anchor', 'className', 'style', 'width', 'verticalAlignment', 'layout', 'metadata', 'lock']),
-  'core/html': new Set(['content', 'metadata', 'lock']),
-};
+let coreBlocksRegistered = false;
+let domEnvironmentReady = false;
 
 const TOOLS = [
   {
@@ -346,20 +334,30 @@ async function serializeWordPressBlocks(args) {
   const blockMarkup = treeExists
     ? serializeBlockTreeWithWordPress(readJson(treePath), { workspaceRoot })
     : fs.readFileSync(contentPath, 'utf8');
-  const cssParts = [
-    readIfExists(path.join(workspaceRoot, 'mockup/style.css')),
-    readIfExists(path.join(workspaceRoot, 'wordpress/style.css')),
-    ...findFiles(path.join(workspaceRoot, 'wordpress/blocks'), 'style.css').map((file) => fs.readFileSync(file, 'utf8')),
-  ].filter(Boolean);
+  const cssSources = [
+    cssSource(workspaceRoot, path.join(workspaceRoot, 'mockup/style.css')),
+    cssSource(workspaceRoot, path.join(workspaceRoot, 'wordpress/style.css')),
+    ...findFiles(path.join(workspaceRoot, 'wordpress/blocks'), 'style.css').map((file) => cssSource(workspaceRoot, file)),
+  ].filter((source) => source.css);
+  const previewCss = cssSources.map((source) => `/* ${source.relativePath} */\n${source.css}`).join('\n\n');
 
   if (treeExists) writeFile(contentPath, `${blockMarkup.trim()}\n`);
-  writeFile(outPath, fullHtml('Rendered WordPress Blocks', cssParts.join('\n\n'), stripBlockComments(blockMarkup)));
+  writeFile(outPath, fullHtml('Rendered WordPress Blocks', previewCss, stripBlockComments(blockMarkup)));
   return {
     treePath: treeExists ? treePath : null,
     contentPath,
     renderedPath: outPath,
-    cssSources: cssParts.length,
+    cssSources: cssSources.map((source) => source.relativePath),
     next: 'Call compare_html, inspect screenshots/diffs, then write repair tasks against wordpress/block-tree.json, block save code, or CSS.',
+  };
+}
+
+function cssSource(workspaceRoot, filePath) {
+  const css = readIfExists(filePath);
+  return {
+    path: filePath,
+    relativePath: path.relative(workspaceRoot, filePath),
+    css,
   };
 }
 
@@ -371,7 +369,7 @@ function stripBlockComments(markup) {
 
 function serializeBlockTreeWithWordPress(tree, context) {
   const { createBlock, serialize } = loadWordPressBlocks();
-  registerSerializableCoreBlocks();
+  registerWordPressCoreBlocks();
   registerWorkspaceCustomBlocks(context.workspaceRoot);
   const blocks = Array.isArray(tree) ? tree : tree.blocks;
   if (!Array.isArray(blocks)) {
@@ -401,13 +399,15 @@ function assertDataOnlyBlock(block) {
 
 function validateBlockContract(blockName, attrs) {
   if (!blockName.startsWith('core/')) return;
-  const allowed = CORE_BLOCK_ATTRS[blockName];
-  if (!allowed) {
-    throw new Error(`${blockName} is not available in the local serializer. Use a real supported core block or a custom block; do not invent core blocks.`);
+  const { getBlockType } = loadWordPressBlocks();
+  const blockType = getBlockType(blockName);
+  if (!blockType) {
+    throw new Error(`${blockName} is not registered by @wordpress/block-library. Use a real registered core block or a custom block; do not invent core blocks.`);
   }
+  const allowed = new Set(Object.keys(blockType.attributes || {}));
   for (const key of Object.keys(attrs || {})) {
     if (!allowed.has(key)) {
-      throw new Error(`${blockName} does not support "${key}" in this compiler contract. Move semantic attributes into a custom block or supported WordPress attributes.`);
+      throw new Error(`${blockName} does not define "${key}" in WordPress block metadata. Move semantic attributes into a custom block or supported WordPress attributes.`);
     }
   }
   if (blockName === 'core/group') {
@@ -416,81 +416,6 @@ function validateBlockContract(blockName, attrs) {
       throw new Error(`core/group tagName "${tagName}" is not allowed. Use core/group only for block-level containers or create a semantic custom block.`);
     }
   }
-}
-
-function registerSerializableCoreBlocks() {
-  const { registerBlockType, unregisterBlockType, getBlockType, serialize } = loadWordPressBlocks();
-  const { createElement: el, RawHTML } = loadWordPressElement();
-  const register = (name, settings) => {
-    if (getBlockType(name)) unregisterBlockType(name);
-    registerBlockType(name, { apiVersion: 3, title: titleCase(name.split('/')[1] || name), category: 'design', ...settings });
-  };
-  const content = (attrs) => el(RawHTML, null, richText(attrs.content || attrs.text || ''));
-  const innerContent = (innerBlocks) => el(RawHTML, null, serialize(innerBlocks || [], { isInnerBlocks: true }));
-  const blockChildren = (attrs, innerBlocks) => attrs.content || attrs.text ? content(attrs) : innerContent(innerBlocks);
-
-  register('core/group', {
-    attributes: coreAttributes('core/group'),
-    save: ({ attributes, innerBlocks }) => el(validTag(attributes.tagName || attributes.tag || 'div'), blockProps(attributes, 'wp-block-group'), blockChildren(attributes, innerBlocks)),
-  });
-  register('core/paragraph', {
-    attributes: coreAttributes('core/paragraph'),
-    save: ({ attributes }) => el('p', blockProps(attributes, 'wp-block-paragraph'), content(attributes)),
-  });
-  register('core/heading', {
-    attributes: coreAttributes('core/heading'),
-    save: ({ attributes, innerBlocks }) => el(`h${clampHeadingLevel(attributes.level)}`, blockProps(attributes, 'wp-block-heading'), blockChildren(attributes, innerBlocks)),
-  });
-  register('core/buttons', {
-    attributes: coreAttributes('core/buttons'),
-    save: ({ attributes, innerBlocks }) => el('div', blockProps(attributes, 'wp-block-buttons'), innerContent(innerBlocks)),
-  });
-  register('core/button', {
-    attributes: coreAttributes('core/button'),
-    save: ({ attributes }) => el('div', blockProps(attributes, 'wp-block-button'),
-      el('a', {
-        className: 'wp-block-button__link',
-        href: attributes.url || '#',
-        target: attributes.linkTarget || undefined,
-        rel: attributes.rel || undefined,
-        title: attributes.title || undefined,
-      }, el(RawHTML, null, richText(attributes.text || '')))
-    ),
-  });
-  register('core/list', {
-    attributes: coreAttributes('core/list'),
-    save: ({ attributes, innerBlocks }) => {
-      const tagName = attributes.ordered ? 'ol' : 'ul';
-      if (attributes.values) {
-        return el(tagName, blockProps(attributes, 'wp-block-list'), el(RawHTML, null, richText(attributes.values)));
-      }
-      return el(tagName, blockProps(attributes, 'wp-block-list'), innerContent(innerBlocks));
-    },
-  });
-  register('core/list-item', {
-    attributes: coreAttributes('core/list-item'),
-    save: ({ attributes, innerBlocks }) => el('li', blockProps(attributes, ''), blockChildren(attributes, innerBlocks)),
-  });
-  register('core/separator', {
-    attributes: coreAttributes('core/separator'),
-    save: ({ attributes }) => el('hr', blockProps(attributes, 'wp-block-separator')),
-  });
-  register('core/spacer', {
-    attributes: coreAttributes('core/spacer'),
-    save: ({ attributes }) => el('div', blockProps({ ...attributes, style: { ...(attributes.style || {}), height: attributes.height || attributes.style?.height } }, 'wp-block-spacer')),
-  });
-  register('core/columns', {
-    attributes: coreAttributes('core/columns'),
-    save: ({ attributes, innerBlocks }) => el('div', blockProps(attributes, 'wp-block-columns'), innerContent(innerBlocks)),
-  });
-  register('core/column', {
-    attributes: coreAttributes('core/column'),
-    save: ({ attributes, innerBlocks }) => el('div', blockProps(attributes, 'wp-block-column'), innerContent(innerBlocks)),
-  });
-  register('core/html', {
-    attributes: coreAttributes('core/html'),
-    save: ({ attributes }) => el(RawHTML, null, attributes.content || ''),
-  });
 }
 
 function registerWorkspaceCustomBlocks(workspaceRoot) {
@@ -578,121 +503,8 @@ function createComponentShim() {
   };
 }
 
-function coreAttributes(blockName) {
-  return Object.fromEntries([...CORE_BLOCK_ATTRS[blockName]].map((key) => [key, attributeDefinition(key)]));
-}
-
-function attributeDefinition(key) {
-  if (['style', 'layout', 'metadata', 'lock'].includes(key)) return { type: 'object' };
-  if (['ordered', 'reversed', 'dropCap', 'isStackedOnMobile'].includes(key)) return { type: 'boolean' };
-  if (['level', 'start'].includes(key)) return { type: 'number' };
-  return { type: 'string' };
-}
-
-function blockProps(attrs, defaultClassName) {
-  const classes = [
-    defaultClassName,
-    attrs.className,
-    Array.isArray(attrs.classes) ? attrs.classes.join(' ') : '',
-    attrs.align ? `align${attrs.align}` : '',
-  ];
-  const renderedAttrs = {
-    id: attrs.anchor || attrs.id || undefined,
-    className: classList(...classes) || undefined,
-    style: styleToReactStyle(attrs.style || attrs.inlineStyle || {}),
-    role: attrs.role || undefined,
-    'aria-label': attrs.ariaLabel || undefined,
-    'aria-labelledby': attrs.ariaLabelledby || undefined,
-    'aria-hidden': attrs.ariaHidden === true ? 'true' : attrs.ariaHidden || undefined,
-    dateTime: attrs.datetime || undefined,
-  };
-  if (attrs.data && typeof attrs.data === 'object' && !Array.isArray(attrs.data)) {
-    for (const [key, value] of Object.entries(attrs.data)) {
-      renderedAttrs[`data-${camelToKebab(key)}`] = value;
-    }
-  }
-  return renderedAttrs;
-}
-
-function classList(...values) {
-  return values
-    .flatMap((value) => String(value || '').split(/\s+/))
-    .map((value) => value.trim())
-    .filter(Boolean)
-    .filter((value, index, all) => all.indexOf(value) === index)
-    .join(' ');
-}
-
-function styleToReactStyle(style) {
-  if (!style) return undefined;
-  if (typeof style === 'string') return cssStringToReactStyle(style);
-  const css = {};
-  if (style.css) Object.assign(css, cssStringToReactStyle(style.css));
-  for (const [key, value] of Object.entries(style)) {
-    if (value === undefined || value === null || key === 'css') continue;
-    if (typeof value !== 'object') css[key] = value;
-  }
-  if (style.color?.text) css.color = style.color.text;
-  if (style.color?.background) css.backgroundColor = style.color.background;
-  appendReactBoxStyle(css, 'padding', style.spacing?.padding);
-  appendReactBoxStyle(css, 'margin', style.spacing?.margin);
-  if (style.spacing?.blockGap) css.gap = style.spacing.blockGap;
-  if (style.typography?.fontSize) css.fontSize = style.typography.fontSize;
-  if (style.typography?.lineHeight) css.lineHeight = style.typography.lineHeight;
-  if (style.typography?.fontWeight) css.fontWeight = style.typography.fontWeight;
-  if (style.border?.color) css.borderColor = style.border.color;
-  if (style.border?.width) css.borderWidth = style.border.width;
-  if (style.border?.style) css.borderStyle = style.border.style;
-  if (style.border?.radius) css.borderRadius = style.border.radius;
-  return Object.keys(css).length ? css : undefined;
-}
-
-function cssStringToReactStyle(value) {
-  const css = {};
-  for (const declaration of String(value || '').split(';')) {
-    const [rawProperty, ...rawValue] = declaration.split(':');
-    const property = rawProperty?.trim();
-    const propertyValue = rawValue.join(':').trim();
-    if (!property || !propertyValue) continue;
-    css[kebabToCamel(property)] = propertyValue;
-  }
-  return css;
-}
-
-function appendReactBoxStyle(css, property, value) {
-  if (!value) return;
-  if (typeof value === 'string') {
-    css[property] = value;
-    return;
-  }
-  for (const [side, sideValue] of Object.entries(value)) {
-    if (sideValue) css[`${property}${capitalize(side)}`] = sideValue;
-  }
-}
-
 function richText(value) {
   return String(value ?? '');
-}
-
-function clampHeadingLevel(value) {
-  const level = Number(value || 2);
-  return Math.min(6, Math.max(1, Number.isFinite(level) ? level : 2));
-}
-
-function validTag(value) {
-  return /^[a-z][a-z0-9-]*$/i.test(value) ? value.toLowerCase() : 'div';
-}
-
-function camelToKebab(value) {
-  return String(value).replace(/[A-Z]/g, (char) => `-${char.toLowerCase()}`);
-}
-
-function kebabToCamel(value) {
-  return String(value).replace(/-([a-z])/g, (_, char) => char.toUpperCase());
-}
-
-function capitalize(value) {
-  return String(value).charAt(0).toUpperCase() + String(value).slice(1);
 }
 
 function loadWordPressBlocks() {
@@ -709,6 +521,58 @@ function loadWordPressElement() {
   } catch (error) {
     throw new Error(`WordPress block serialization needs @wordpress/element. Run npm install in ${PLUGIN_ROOT}. Missing dependency: ${error.message}`);
   }
+}
+
+function registerWordPressCoreBlocks() {
+  if (coreBlocksRegistered) return;
+  setupDomEnvironment();
+  try {
+    require('@wordpress/block-library').registerCoreBlocks();
+    coreBlocksRegistered = true;
+  } catch (error) {
+    throw new Error(`WordPress core block registration needs @wordpress/block-library and jsdom. Run npm install in ${PLUGIN_ROOT}. Registration failed: ${error.message}`);
+  }
+}
+
+function setupDomEnvironment() {
+  if (domEnvironmentReady) return;
+  let JSDOM;
+  let VirtualConsole;
+  try {
+    ({ JSDOM, VirtualConsole } = require('jsdom'));
+  } catch (error) {
+    throw new Error(`WordPress core block registration needs jsdom. Run npm install in ${PLUGIN_ROOT}. Missing dependency: ${error.message}`);
+  }
+  const virtualConsole = new VirtualConsole();
+  virtualConsole.on('jsdomError', () => {});
+  const dom = new JSDOM('<!doctype html><html><body></body></html>', {
+    url: 'http://localhost/',
+    virtualConsole,
+  });
+  const win = dom.window;
+  globalThis.window = win;
+  globalThis.document = win.document;
+  Object.defineProperty(globalThis, 'navigator', { value: win.navigator, configurable: true });
+  for (const key of ['HTMLElement', 'HTMLAnchorElement', 'HTMLButtonElement', 'HTMLInputElement', 'HTMLTextAreaElement', 'Node', 'Element', 'MutationObserver', 'CustomEvent', 'File', 'Blob', 'DOMParser', 'Range', 'Selection']) {
+    if (win[key]) globalThis[key] = win[key];
+  }
+  globalThis.getComputedStyle = win.getComputedStyle.bind(win);
+  win.matchMedia ||= () => ({
+    matches: false,
+    media: '',
+    onchange: null,
+    addListener() {},
+    removeListener() {},
+    addEventListener() {},
+    removeEventListener() {},
+    dispatchEvent() { return false; },
+  });
+  globalThis.matchMedia = win.matchMedia;
+  globalThis.requestAnimationFrame ||= (callback) => setTimeout(callback, 16);
+  globalThis.cancelAnimationFrame ||= clearTimeout;
+  globalThis.requestIdleCallback ||= (callback) => setTimeout(() => callback({ didTimeout: false, timeRemaining: () => 50 }), 1);
+  globalThis.cancelIdleCallback ||= clearTimeout;
+  domEnvironmentReady = true;
 }
 
 async function compareHtml(args) {

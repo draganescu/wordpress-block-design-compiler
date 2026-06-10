@@ -10,7 +10,7 @@ The plugin does not try to make an autonomous server-side orchestrator. It gives
 - plan core blocks, custom blocks, and styling responsibilities
 - scaffold vanilla JavaScript static custom blocks
 - assemble editable `wordpress/block-tree.json`
-- serialize the block tree through `@wordpress/blocks` and registered custom-block `save()` functions
+- serialize the block tree through `@wordpress/blocks`, `@wordpress/block-library` core registrations, and registered custom-block `save()` functions
 - compare mockup and rendered output with screenshots and pixel diffs
 - return concrete repair tasks for the agent to fix
 
@@ -50,7 +50,7 @@ Use `claude/CLAUDE.md` as the Claude project instruction file when running this 
 - `create_workspace`: creates `mockup`, `analysis`, `plan`, `wordpress`, `rendered`, `reports`, and `visual` folders.
 - `analyze_mockup`: extracts a content inventory, sections, forms, links, cards, headings, CSS custom properties, and selectors.
 - `scaffold_custom_block`: writes `block.json`, `index.js`, and `style.css` for a vanilla JavaScript static block.
-- `serialize_wordpress_blocks`: registers custom blocks from `wordpress/blocks/*/index.js`, serializes `wordpress/block-tree.json` with `@wordpress/blocks`, writes canonical block markup to `wordpress/content.html`, and writes frontend preview HTML to `rendered/rendered-blocks.html`. It rejects source trees that contain `htmlLines`, `innerHTML`, `innerContent`, `html`, `markup`, or `sourceHtml`; unsupported core block names; unsupported core attributes; or `core/group` tag names outside block-level layout containers.
+- `serialize_wordpress_blocks`: boots a jsdom environment, registers official core blocks with `@wordpress/block-library`, registers custom blocks from `wordpress/blocks/*/index.js`, serializes `wordpress/block-tree.json` with `@wordpress/blocks`, writes canonical block markup to `wordpress/content.html`, and writes frontend preview HTML to `rendered/rendered-blocks.html`. Preview CSS is concatenated from `mockup/style.css`, optional `wordpress/style.css`, and `wordpress/blocks/*/style.css`; the tool returns that source list. It rejects source trees that contain `htmlLines`, `innerHTML`, `innerContent`, `html`, `markup`, or `sourceHtml`; unregistered core block names; attributes absent from WordPress block metadata; or `core/group` tag names outside block-level layout containers.
 - `compare_html`: captures mockup/rendered screenshots, generates diffs, and writes `reports/comparison.json` plus `reports/repair-tasks.md`.
 
 ## Workflow

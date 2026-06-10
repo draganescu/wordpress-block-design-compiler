@@ -3,39 +3,24 @@
   "contract": "data-only",
   "blocks": [
     {
-      "blockName": "core/group",
-      "attrs": { "tagName": "header", "className": "site-header" },
-      "innerBlocks": [
-        {
-          "blockName": "core/link",
-          "attrs": {
-            "url": "#top",
-            "className": "brand",
-            "ariaLabel": "Vellum & Volt home"
-          },
-          "innerBlocks": [
-            { "blockName": "core/group", "attrs": { "tagName": "span", "className": "brand-mark", "content": "V" }, "innerBlocks": [] },
-            {
-              "blockName": "core/group",
-              "attrs": { "tagName": "span" },
-              "innerBlocks": [
-                { "blockName": "core/group", "attrs": { "tagName": "strong", "content": "Vellum &amp; Volt" }, "innerBlocks": [] },
-                { "blockName": "core/group", "attrs": { "tagName": "small", "content": "Letterpress Studio" }, "innerBlocks": [] }
-              ]
-            }
-          ]
-        },
-        {
-          "blockName": "core/group",
-          "attrs": { "tagName": "nav", "className": "site-nav", "ariaLabel": "Primary navigation" },
-          "innerBlocks": [
-            { "blockName": "core/link", "attrs": { "url": "#invitations", "content": "Invitations" }, "innerBlocks": [] },
-            { "blockName": "core/link", "attrs": { "url": "#workshops", "content": "Workshops" }, "innerBlocks": [] },
-            { "blockName": "core/link", "attrs": { "url": "#process", "content": "Process" }, "innerBlocks": [] }
-          ]
-        },
-        { "blockName": "core/link", "attrs": { "url": "#booking", "className": "header-cta", "content": "Book a press consult" }, "innerBlocks": [] }
-      ]
+      "blockName": "wbdc/vellum-site-header",
+      "attrs": {
+        "ariaLabel": "Site header",
+        "homeUrl": "#top",
+        "homeLabel": "Vellum & Volt home",
+        "mark": "V",
+        "title": "Vellum &amp; Volt",
+        "subtitle": "Letterpress Studio",
+        "navLabel": "Primary navigation",
+        "links": [
+          { "label": "Invitations", "url": "#invitations" },
+          { "label": "Workshops", "url": "#workshops" },
+          { "label": "Process", "url": "#process" }
+        ],
+        "actionText": "Book a press consult",
+        "actionUrl": "#booking"
+      },
+      "innerBlocks": []
     },
     {
       "blockName": "core/group",
@@ -53,45 +38,31 @@
                 { "blockName": "core/heading", "attrs": { "level": 1, "content": "Custom invitations and weekend print workshops from a working letterpress studio." }, "innerBlocks": [] },
                 { "blockName": "core/paragraph", "attrs": { "className": "lede", "content": "We pair hand-mixed inks, cotton papers, and antique presses to make tactile wedding suites, launch cards, and private workshop days in our bright canal-side shop." }, "innerBlocks": [] },
                 {
-                  "blockName": "core/group",
-                  "attrs": { "tagName": "div", "className": "button-row" },
+                  "blockName": "core/buttons",
+                  "attrs": { "className": "button-row" },
                   "innerBlocks": [
-                    { "blockName": "core/link", "attrs": { "url": "#booking", "className": "button button-primary", "content": "Start a commission" }, "innerBlocks": [] },
-                    { "blockName": "core/link", "attrs": { "url": "#workshops", "className": "button button-secondary", "content": "View workshops" }, "innerBlocks": [] }
+                    { "blockName": "core/button", "attrs": { "url": "#booking", "className": "button button-primary", "text": "Start a commission" }, "innerBlocks": [] },
+                    { "blockName": "core/button", "attrs": { "url": "#workshops", "className": "button button-secondary", "text": "View workshops" }, "innerBlocks": [] }
                   ]
                 }
               ]
             },
             {
-              "blockName": "core/group",
-              "attrs": { "tagName": "figure", "className": "press-proof", "ariaLabel": "Layered letterpress proof sheet illustration" },
-              "innerBlocks": [
-                {
-                  "blockName": "core/group",
-                  "attrs": { "tagName": "div", "className": "proof-card proof-card-main" },
-                  "innerBlocks": [
-                    { "blockName": "core/group", "attrs": { "tagName": "span", "className": "proof-kicker", "content": "Proof 04" }, "innerBlocks": [] },
-                    { "blockName": "core/group", "attrs": { "tagName": "strong", "content": "Fern &amp; Brass" }, "innerBlocks": [] },
-                    { "blockName": "core/group", "attrs": { "tagName": "span", "content": "blind emboss / moss ink / deckled edge" }, "innerBlocks": [] }
-                  ]
-                },
-                {
-                  "blockName": "core/group",
-                  "attrs": { "tagName": "div", "className": "proof-card proof-card-side" },
-                  "innerBlocks": [
-                    { "blockName": "core/group", "attrs": { "tagName": "span", "className": "proof-dot" }, "innerBlocks": [] },
-                    { "blockName": "core/group", "attrs": { "tagName": "span", "className": "proof-dot" }, "innerBlocks": [] },
-                    { "blockName": "core/group", "attrs": { "tagName": "span", "className": "proof-dot" }, "innerBlocks": [] }
-                  ]
-                },
-                { "blockName": "core/group", "attrs": { "tagName": "div", "className": "registration-grid", "ariaHidden": "true" }, "innerBlocks": [] }
-              ]
+              "blockName": "wbdc/vellum-proof-figure",
+              "attrs": {
+                "ariaLabel": "Layered letterpress proof sheet illustration",
+                "kicker": "Proof 04",
+                "title": "Fern &amp; Brass",
+                "detail": "blind emboss / moss ink / deckled edge",
+                "dotCount": 3
+              },
+              "innerBlocks": []
             }
           ]
         },
         {
           "blockName": "core/group",
-          "attrs": { "tagName": "section", "className": "services section-shell", "ariaLabelledby": "services-title" },
+          "attrs": { "tagName": "section", "className": "services section-shell" },
           "innerBlocks": [
             {
               "blockName": "core/group",
@@ -106,17 +77,17 @@
               "attrs": { "tagName": "div", "className": "service-grid" },
               "innerBlocks": [
                 { "blockName": "core/group", "attrs": { "tagName": "article", "className": "service-card tall-card" }, "innerBlocks": [
-                  { "blockName": "core/group", "attrs": { "tagName": "span", "className": "service-number", "content": "01" }, "innerBlocks": [] },
+                  { "blockName": "core/paragraph", "attrs": { "className": "service-number", "content": "01" }, "innerBlocks": [] },
                   { "blockName": "core/heading", "attrs": { "level": 3, "content": "Wedding suites" }, "innerBlocks": [] },
                   { "blockName": "core/paragraph", "attrs": { "content": "Save-the-dates, invitations, envelopes, menus, and place cards with one consistent print system." }, "innerBlocks": [] }
                 ] },
                 { "blockName": "core/group", "attrs": { "tagName": "article", "className": "service-card" }, "innerBlocks": [
-                  { "blockName": "core/group", "attrs": { "tagName": "span", "className": "service-number", "content": "02" }, "innerBlocks": [] },
+                  { "blockName": "core/paragraph", "attrs": { "className": "service-number", "content": "02" }, "innerBlocks": [] },
                   { "blockName": "core/heading", "attrs": { "level": 3, "content": "Brand paper goods" }, "innerBlocks": [] },
                   { "blockName": "core/paragraph", "attrs": { "content": "Launch notes, thank-you cards, certificates, and packaging inserts for small brands." }, "innerBlocks": [] }
                 ] },
                 { "blockName": "core/group", "attrs": { "tagName": "article", "className": "service-card dark-card" }, "innerBlocks": [
-                  { "blockName": "core/group", "attrs": { "tagName": "span", "className": "service-number", "content": "03" }, "innerBlocks": [] },
+                  { "blockName": "core/paragraph", "attrs": { "className": "service-number", "content": "03" }, "innerBlocks": [] },
                   { "blockName": "core/heading", "attrs": { "level": 3, "content": "Studio workshops" }, "innerBlocks": [] },
                   { "blockName": "core/paragraph", "attrs": { "content": "Four-hour Saturday sessions for beginners, teams, and design students." }, "innerBlocks": [] }
                 ] }
@@ -126,7 +97,7 @@
         },
         {
           "blockName": "core/group",
-          "attrs": { "tagName": "section", "anchor": "invitations", "className": "collection section-shell", "ariaLabelledby": "collection-title" },
+          "attrs": { "tagName": "section", "anchor": "invitations", "className": "collection section-shell" },
           "innerBlocks": [
             {
               "blockName": "core/group",
@@ -161,7 +132,7 @@
         },
         {
           "blockName": "core/group",
-          "attrs": { "tagName": "section", "anchor": "workshops", "className": "workshops section-shell", "ariaLabelledby": "workshops-title" },
+          "attrs": { "tagName": "section", "anchor": "workshops", "className": "workshops section-shell" },
           "innerBlocks": [
             { "blockName": "core/group", "attrs": { "tagName": "div", "className": "workshop-banner" }, "innerBlocks": [
               { "blockName": "core/paragraph", "attrs": { "className": "eyebrow", "content": "Next sessions" }, "innerBlocks": [] },
@@ -169,12 +140,12 @@
             ] },
             { "blockName": "core/group", "attrs": { "tagName": "div", "className": "workshop-list" }, "innerBlocks": [
               { "blockName": "core/group", "attrs": { "tagName": "article" }, "innerBlocks": [
-                { "blockName": "core/group", "attrs": { "tagName": "time", "datetime": "2026-07-11", "content": "July 11" }, "innerBlocks": [] },
+                { "blockName": "wbdc/vellum-time-label", "attrs": { "datetime": "2026-07-11", "label": "July 11" }, "innerBlocks": [] },
                 { "blockName": "core/heading", "attrs": { "level": 3, "content": "Intro to platen press" }, "innerBlocks": [] },
                 { "blockName": "core/paragraph", "attrs": { "content": "Set type, lock a chase, print a two-color postcard, and take home fifty copies." }, "innerBlocks": [] }
               ] },
               { "blockName": "core/group", "attrs": { "tagName": "article" }, "innerBlocks": [
-                { "blockName": "core/group", "attrs": { "tagName": "time", "datetime": "2026-07-25", "content": "July 25" }, "innerBlocks": [] },
+                { "blockName": "wbdc/vellum-time-label", "attrs": { "datetime": "2026-07-25", "label": "July 25" }, "innerBlocks": [] },
                 { "blockName": "core/heading", "attrs": { "level": 3, "content": "Wedding proof day" }, "innerBlocks": [] },
                 { "blockName": "core/paragraph", "attrs": { "content": "Bring your suite draft and leave with paper, ink, and finishing decisions resolved." }, "innerBlocks": [] }
               ] }
@@ -183,7 +154,7 @@
         },
         {
           "blockName": "core/group",
-          "attrs": { "tagName": "section", "anchor": "process", "className": "process section-shell", "ariaLabelledby": "process-title" },
+          "attrs": { "tagName": "section", "anchor": "process", "className": "process section-shell" },
           "innerBlocks": [
             { "blockName": "core/group", "attrs": { "tagName": "div", "className": "section-heading" }, "innerBlocks": [
               { "blockName": "core/paragraph", "attrs": { "className": "eyebrow", "content": "Process" }, "innerBlocks": [] },
@@ -195,35 +166,23 @@
               "innerBlocks": [
                 {
                   "blockName": "core/list-item",
-                  "attrs": {},
-                  "innerBlocks": [
-                    { "blockName": "core/group", "attrs": { "tagName": "strong", "content": "Brief" }, "innerBlocks": [] },
-                    { "blockName": "core/group", "attrs": { "tagName": "span", "content": "We define mood, quantities, wording, and practical deadlines." }, "innerBlocks": [] }
-                  ]
+                  "attrs": { "content": "<strong>Brief</strong><span>We define mood, quantities, wording, and practical deadlines.</span>" },
+                  "innerBlocks": []
                 },
                 {
                   "blockName": "core/list-item",
-                  "attrs": {},
-                  "innerBlocks": [
-                    { "blockName": "core/group", "attrs": { "tagName": "strong", "content": "Material pull" }, "innerBlocks": [] },
-                    { "blockName": "core/group", "attrs": { "tagName": "span", "content": "We compare cotton papers, envelope colors, inks, and finishes." }, "innerBlocks": [] }
-                  ]
+                  "attrs": { "content": "<strong>Material pull</strong><span>We compare cotton papers, envelope colors, inks, and finishes.</span>" },
+                  "innerBlocks": []
                 },
                 {
                   "blockName": "core/list-item",
-                  "attrs": {},
-                  "innerBlocks": [
-                    { "blockName": "core/group", "attrs": { "tagName": "strong", "content": "Physical proof" }, "innerBlocks": [] },
-                    { "blockName": "core/group", "attrs": { "tagName": "span", "content": "You approve a real printed sample before the full edition starts." }, "innerBlocks": [] }
-                  ]
+                  "attrs": { "content": "<strong>Physical proof</strong><span>You approve a real printed sample before the full edition starts.</span>" },
+                  "innerBlocks": []
                 },
                 {
                   "blockName": "core/list-item",
-                  "attrs": {},
-                  "innerBlocks": [
-                    { "blockName": "core/group", "attrs": { "tagName": "strong", "content": "Press run" }, "innerBlocks": [] },
-                    { "blockName": "core/group", "attrs": { "tagName": "span", "content": "We print, trim, assemble, and pack the finished suite." }, "innerBlocks": [] }
-                  ]
+                  "attrs": { "content": "<strong>Press run</strong><span>We print, trim, assemble, and pack the finished suite.</span>" },
+                  "innerBlocks": []
                 }
               ]
             }
@@ -231,7 +190,7 @@
         },
         {
           "blockName": "core/group",
-          "attrs": { "tagName": "section", "anchor": "booking", "className": "booking section-shell", "ariaLabelledby": "booking-title" },
+          "attrs": { "tagName": "section", "anchor": "booking", "className": "booking section-shell" },
           "innerBlocks": [
             { "blockName": "core/group", "attrs": { "tagName": "div" }, "innerBlocks": [
               { "blockName": "core/paragraph", "attrs": { "className": "eyebrow", "content": "Press consult" }, "innerBlocks": [] },

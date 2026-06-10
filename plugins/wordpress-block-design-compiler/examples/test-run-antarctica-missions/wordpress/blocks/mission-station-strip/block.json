@@ -1,0 +1,25 @@
+{
+  "apiVersion": 3,
+  "name": "wbdc/mission-station-strip",
+  "title": "Mission Station Strip",
+  "category": "design",
+  "description": "Semantic editable station header for the Antarctica mission example.",
+  "editorScript": "file:./index.js",
+  "style": "file:./style.css",
+  "attributes": {
+    "ariaLabel": { "type": "string", "default": "Mission status" },
+    "homeUrl": { "type": "string", "default": "#top" },
+    "homeLabel": { "type": "string", "default": "Antarctica Mission Index home" },
+    "code": { "type": "string", "default": "AM-90" },
+    "title": { "type": "string", "default": "Antarctica Mission Index" },
+    "status": { "type": "string", "default": "Live dossier / polar traverse / 82.8628°S 135.0000°E" },
+    "actionText": { "type": "string", "default": "Open signal map" },
+    "actionUrl": { "type": "string", "default": "#signal" }
+  },
+  "supports": {
+    "anchor": true,
+    "className": true,
+    "spacing": { "margin": true, "padding": true },
+    "html": false
+  }
+}

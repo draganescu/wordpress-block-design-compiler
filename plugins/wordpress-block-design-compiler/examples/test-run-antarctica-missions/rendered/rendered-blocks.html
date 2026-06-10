@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Rendered WordPress Blocks</title>
     <style>
+/* mockup/style.css */
 :root {
   --ice: #f4fbff;
   --white: #ffffff;
@@ -632,21 +633,33 @@ time,
 }
 
 
+/* wordpress/blocks/coordinate-stack/style.css */
 .wp-block-wbdc-coordinate-stack {
   box-sizing: border-box;
 }
 
 
+/* wordpress/blocks/field-log/style.css */
 .wp-block-wbdc-field-log {
   box-sizing: border-box;
 }
 
 
+/* wordpress/blocks/mission-footer/style.css */
+/* Example styling is inherited from mockup/style.css. */
+
+
+/* wordpress/blocks/mission-metrics/style.css */
 .wp-block-wbdc-mission-metrics {
   box-sizing: border-box;
 }
 
 
+/* wordpress/blocks/mission-station-strip/style.css */
+/* Example styling is inherited from mockup/style.css. */
+
+
+/* wordpress/blocks/mission-telemetry-rail/style.css */
 .wp-block-wbdc-mission-telemetry-rail.telemetry-rail {
   box-sizing: border-box;
 }
@@ -658,6 +671,7 @@ time,
 }
 
 
+/* wordpress/blocks/polar-mission-map/style.css */
 .wp-block-wbdc-polar-mission-map.polar-plate {
   box-sizing: border-box;
 }
@@ -669,7 +683,7 @@ time,
     </style>
   </head>
   <body>
-<header class="wp-block-group station-strip" aria-label="Mission status"><a class="station-id" aria-label="Antarctica Mission Index home" href="#top"><span class="wp-block-group">AM-90</span><strong class="wp-block-group">Antarctica Mission Index</strong></a><p class="wp-block-paragraph">Live dossier / polar traverse / 82.8628°S 135.0000°E</p><a class="strip-action" href="#signal">Open signal map</a></header><main id="top" class="wp-block-group"><section class="wp-block-group hero-field" aria-labelledby="hero-title"><div class="wp-block-group hero-type"><p class="wp-block-paragraph microcopy">Mission window 2026 / whiteout tolerance: 14m / ice shelf drift +02.7km</p><h1 id="hero-title" class="wp-block-heading"><span class="wp-block-group">South</span><span class="wp-block-group">is not</span><span class="wp-block-group">a place.</span></h1><p class="wp-block-paragraph thesis">It is a pressure system, a data archive, and a human commitment measured in frostbite minutes.</p></div><figure class="polar-plate"><div class="map-grid" aria-hidden="true"><span class="orbit orbit-a"></span><span class="orbit orbit-b"></span><span class="axis axis-x"></span><span class="axis axis-y"></span><span class="node node-one">VOSTOK</span><span class="node node-two">ROSS</span><span class="node node-three">DOME C</span></div><figcaption><strong>Traverse corridor</strong><span>sensor line / katabatic wind model / crevasse scan</span></figcaption></figure></section><section class="wp-block-group rupture-statement" aria-labelledby="rupture-title"><p class="wp-block-paragraph vertical-index">03 / isolation protocol</p><h2 id="rupture-title" class="wp-block-heading">No sun. No margin. No ornamental content.</h2><div class="wp-block-group rupture-copy"><p class="wp-block-paragraph">Every interface panel is a field instrument: legible at low light, spare under pressure, and useful when the satellite window is six minutes wide.</p><dl class="mission-metrics"><div><dt>Temp</dt><dd>-48°C</dd></div><div><dt>Wind</dt><dd>61 knots</dd></div><div><dt>Payload</dt><dd>12 cores</dd></div></dl></div></section><section class="wp-block-group telemetry-section" aria-labelledby="telemetry-title"><div class="wp-block-group telemetry-heading"><p class="wp-block-paragraph microcopy">Horizontal mission rail / scroll east</p><h2 id="telemetry-title" class="wp-block-heading">Four stations, one hostile white geometry.</h2></div><div class="telemetry-rail" tabindex="0" aria-label="Mission timeline"><article class="mission-card wide-card"><span>01</span><h3>Dome C atmospheric drill</h3><p>Balloon launches through diamond dust, collecting upper-air chemistry before the horizon disappears.</p></article><article class="mission-card"><span>02</span><h3>Ross Ice Shelf traverse</h3><p>Ground radar marks hidden fracture fields under a convoy moving slower than walking pace.</p></article><article class="mission-card accent-card"><span>03</span><h3>Vostok core relay</h3><p>Two meters of ancient air are sealed and flown before thermal variance corrupts the sample.</p></article><article class="mission-card tall-card"><span>04</span><h3>Weddell acoustic night</h3><p>Hydrophones listen under blue ice while the camp runs blackout discipline.</p></article></div></section><section id="signal" class="wp-block-group signal-array" aria-labelledby="signal-title"><div class="wp-block-group signal-frame"><p class="wp-block-paragraph microcopy">Signal field / polar equipment frame</p><h2 id="signal-title" class="wp-block-heading">The map refuses romance. It only returns coordinates.</h2><p class="wp-block-paragraph">Each point is an obligation: weather, fuel, human fatigue, and a return path that can vanish in minutes.</p></div><div class="coordinate-stack"><p><span>lat</span> 82.8628°S</p><p><span>lon</span> 135.0000°E</p><p><span>ice</span> 3274m</p><p><span>risk</span> orange</p></div></section><section class="wp-block-group field-log" aria-labelledby="field-log-title"><h2 id="field-log-title" class="wp-block-heading">Field notes from the part of the planet that erases scale.</h2><div class="log-grid"><article><time datetime="2026-01-18T03:12:00Z">03:12 UTC</time><h3>Whiteout rehearsal</h3><p>Navigation returns to rope, compass, breath count, and the low radio voice of the nearest human.</p></article><article><time datetime="2026-01-19T22:40:00Z">22:40 UTC</time><h3>Core tent silence</h3><p>The drill team speaks in hand signals while the sample line cools under red lamps.</p></article><article><time datetime="2026-01-21T11:06:00Z">11:06 UTC</time><h3>Fuel cache geometry</h3><p>Barrels are laid in a triangulated pattern so a buried cache can still be inferred after drift.</p></article></div></section></main><footer class="wp-block-group mission-footer"><p class="wp-block-paragraph">Antarctica Mission Index / research interface prototype</p><a href="#top">Return to 90°S</a></footer>
+<header class="station-strip" aria-label="Mission status"><a class="station-id" href="#top" aria-label="Antarctica Mission Index home"><span>AM-90</span><strong>Antarctica Mission Index</strong></a><p>Live dossier / polar traverse / 82.8628°S 135.0000°E</p><a class="strip-action" href="#signal"><span>Open signal map</span></a></header><main id="top" class="wp-block-group"><section class="wp-block-group hero-field"><div class="wp-block-group hero-type"><p class="microcopy">Mission window 2026 / whiteout tolerance: 14m / ice shelf drift +02.7km</p><h1 id="hero-title" class="wp-block-heading"><span>South</span><span>is not</span><span>a place.</span></h1><p class="thesis">It is a pressure system, a data archive, and a human commitment measured in frostbite minutes.</p></div><figure class="polar-plate"><div class="map-grid" aria-hidden="true"><span class="orbit orbit-a"></span><span class="orbit orbit-b"></span><span class="axis axis-x"></span><span class="axis axis-y"></span><span class="node node-one">VOSTOK</span><span class="node node-two">ROSS</span><span class="node node-three">DOME C</span></div><figcaption><strong>Traverse corridor</strong><span>sensor line / katabatic wind model / crevasse scan</span></figcaption></figure></section><section class="wp-block-group rupture-statement"><p class="vertical-index">03 / isolation protocol</p><h2 id="rupture-title" class="wp-block-heading">No sun. No margin. No ornamental content.</h2><div class="wp-block-group rupture-copy"><p>Every interface panel is a field instrument: legible at low light, spare under pressure, and useful when the satellite window is six minutes wide.</p><dl class="mission-metrics"><div><dt>Temp</dt><dd>-48°C</dd></div><div><dt>Wind</dt><dd>61 knots</dd></div><div><dt>Payload</dt><dd>12 cores</dd></div></dl></div></section><section class="wp-block-group telemetry-section"><div class="wp-block-group telemetry-heading"><p class="microcopy">Horizontal mission rail / scroll east</p><h2 id="telemetry-title" class="wp-block-heading">Four stations, one hostile white geometry.</h2></div><div class="telemetry-rail" tabindex="0" aria-label="Mission timeline"><article class="mission-card wide-card"><span>01</span><h3>Dome C atmospheric drill</h3><p>Balloon launches through diamond dust, collecting upper-air chemistry before the horizon disappears.</p></article><article class="mission-card"><span>02</span><h3>Ross Ice Shelf traverse</h3><p>Ground radar marks hidden fracture fields under a convoy moving slower than walking pace.</p></article><article class="mission-card accent-card"><span>03</span><h3>Vostok core relay</h3><p>Two meters of ancient air are sealed and flown before thermal variance corrupts the sample.</p></article><article class="mission-card tall-card"><span>04</span><h3>Weddell acoustic night</h3><p>Hydrophones listen under blue ice while the camp runs blackout discipline.</p></article></div></section><section id="signal" class="wp-block-group signal-array"><div class="wp-block-group signal-frame"><p class="microcopy">Signal field / polar equipment frame</p><h2 id="signal-title" class="wp-block-heading">The map refuses romance. It only returns coordinates.</h2><p>Each point is an obligation: weather, fuel, human fatigue, and a return path that can vanish in minutes.</p></div><div class="coordinate-stack"><p><span>lat</span> 82.8628°S</p><p><span>lon</span> 135.0000°E</p><p><span>ice</span> 3274m</p><p><span>risk</span> orange</p></div></section><section class="wp-block-group field-log"><h2 id="field-log-title" class="wp-block-heading">Field notes from the part of the planet that erases scale.</h2><div class="log-grid"><article><time datetime="2026-01-18T03:12:00Z">03:12 UTC</time><h3>Whiteout rehearsal</h3><p>Navigation returns to rope, compass, breath count, and the low radio voice of the nearest human.</p></article><article><time datetime="2026-01-19T22:40:00Z">22:40 UTC</time><h3>Core tent silence</h3><p>The drill team speaks in hand signals while the sample line cools under red lamps.</p></article><article><time datetime="2026-01-21T11:06:00Z">11:06 UTC</time><h3>Fuel cache geometry</h3><p>Barrels are laid in a triangulated pattern so a buried cache can still be inferred after drift.</p></article></div></section></main><footer class="mission-footer"><p>Antarctica Mission Index / research interface prototype</p><a href="#top"><span>Return to 90°S</span></a></footer>
 
   </body>
 </html>

@@ -15,7 +15,7 @@ Use this skill when the user wants a website that should end as editable WordPre
 4. Write `plan/block-plan.md` and `plan/block-plan.json`.
 5. Generate custom blocks only where core blocks cannot preserve both fidelity and editability.
 6. Assemble editable block content in `wordpress/block-tree.json`; put custom block source in `wordpress/blocks/<slug>/`.
-7. Run `serialize_wordpress_blocks`; it registers custom blocks from `wordpress/blocks/*/index.js`, serializes `wordpress/block-tree.json` with `@wordpress/blocks`, writes canonical block markup to `wordpress/content.html`, and writes frontend preview HTML to `rendered/rendered-blocks.html`.
+7. Run `serialize_wordpress_blocks`; it registers official core blocks with `@wordpress/block-library`, registers custom blocks from `wordpress/blocks/*/index.js`, serializes `wordpress/block-tree.json` with `@wordpress/blocks`, writes canonical block markup to `wordpress/content.html`, and writes frontend preview HTML to `rendered/rendered-blocks.html`. The preview CSS source list comes from `mockup/style.css`, optional `wordpress/style.css`, and custom block `style.css` files.
 8. Run `compare_html`.
 9. Inspect screenshots and diffs, write `reports/repair-tasks.md`, fix each task as an agent, then repeat preview/compare until thresholds are met.
 
@@ -40,7 +40,7 @@ The plan must answer:
 
 Prefer core blocks, block supports, style variations, and scoped CSS before custom blocks. Use custom blocks for reusable data models, real forms/search/booking widgets, nontrivial repeated components, or semantic save contracts.
 
-Use only real WordPress core block names and attributes supported by the compiler. Do not invent convenience core blocks such as `core/link`, and do not use `core/group` as an arbitrary HTML element factory. `core/group` is for block-level layout containers only; inline elements, definition lists, navigation shells, telemetry panels, and other semantic structures need either real core blocks or custom blocks with typed attributes.
+Use only real WordPress core block names and attributes registered by `@wordpress/block-library`. Do not invent convenience core blocks such as `core/link`, and do not use `core/group` as an arbitrary HTML element factory. `core/group` is for block-level layout containers only; inline elements, definition lists, navigation shells, telemetry panels, and other semantic structures need either real core blocks or custom blocks with typed attributes.
 
 ## Custom Blocks
 
@@ -54,11 +54,11 @@ Forms, search boxes, subscriptions, booking widgets, and contact/inquiry UI must
 
 ## Assembly
 
-The block assembly source of truth is `wordpress/block-tree.json`, not hand-written block comments or saved HTML. The tree is data-only: `blockName`, `attrs`, `innerBlocks`, block styles, support-like attributes, and classes. `serialize_wordpress_blocks` turns that data into canonical block markup by calling WordPress block package serialization and each registered block's `save()` implementation.
+The block assembly source of truth is `wordpress/block-tree.json`, not hand-written block comments or saved HTML. The tree is data-only: `blockName`, `attrs`, `innerBlocks`, block styles, support-like attributes, and classes. `serialize_wordpress_blocks` turns that data into canonical block markup by calling WordPress block package serialization, official core block `save()` implementations, and each registered custom block's `save()` implementation.
 
 Never put `htmlLines`, `innerHTML`, `innerContent`, `html`, `markup`, or `sourceHtml` in `wordpress/block-tree.json`. The serializer rejects those fields.
 
-The serializer also rejects unsupported core block names, unsupported core block attributes, and non-layout `core/group` tag names. If WordPress core cannot model a structure cleanly, generate a custom static block whose attributes represent the editable content model.
+The serializer also rejects unregistered core block names, attributes absent from WordPress block metadata, and non-layout `core/group` tag names. If WordPress core cannot model a structure cleanly, generate a custom static block whose attributes represent the editable content model.
 
 The tree should match the mockup, not merely contain the same text. Preserve source order, links, labels, placeholders, repeated items, and button group layout. Use stable class names that map cleanly to CSS.
 
