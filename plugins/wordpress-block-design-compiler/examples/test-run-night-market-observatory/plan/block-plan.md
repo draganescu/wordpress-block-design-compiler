@@ -7,7 +7,7 @@ The source mockup is an editorial star-map homepage for a travelling food and te
 - Use `core/group` for block-level sections, article wrappers, and the `main` container.
 - Use `core/paragraph` and `core/heading` for ordinary editorial copy.
 - Keep the field etiquette section as core block composition because the text structure is simple and editor-friendly.
-- Put exact visual behavior in CSS from `mockup/style.css`; no `core/html` is needed.
+- Recreate visual behavior in `wordpress/style.css` and custom block `style.css` files; no `core/html` is needed.
 
 ## Custom Blocks
 

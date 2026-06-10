@@ -14,8 +14,8 @@ Use this skill when the user wants a website that should end as editable WordPre
 3. Run `analyze_mockup` and read `analysis/content-inventory.json`.
 4. Write `plan/block-plan.md` and `plan/block-plan.json`.
 5. Generate custom blocks only where core blocks cannot preserve both fidelity and editability.
-6. Assemble editable block content in `wordpress/block-tree.json`; put custom block source in `wordpress/blocks/<slug>/`.
-7. Run `serialize_wordpress_blocks`; it registers official core blocks with `@wordpress/block-library`, registers custom blocks from `wordpress/blocks/*/index.js`, serializes `wordpress/block-tree.json` with `@wordpress/blocks`, writes canonical block markup to `wordpress/content.html`, and writes frontend preview HTML to `rendered/rendered-blocks.html`. The preview CSS source list comes from `mockup/style.css`, optional `wordpress/style.css`, and custom block `style.css` files.
+6. Assemble editable block content in `wordpress/block-tree.json`; put custom block source in `wordpress/blocks/<slug>/`; write generated WordPress preview CSS in `wordpress/style.css` and/or custom block `style.css` files.
+7. Run `serialize_wordpress_blocks`; it registers official core blocks with `@wordpress/block-library`, registers custom blocks from `wordpress/blocks/*/index.js`, serializes `wordpress/block-tree.json` with `@wordpress/blocks`, writes canonical block markup to `wordpress/content.html`, and writes frontend preview HTML to `rendered/rendered-blocks.html`. The preview CSS source list comes from `wordpress/style.css` and custom block `style.css` files. `mockup/style.css` is intentionally excluded from rendered block preview by default.
 8. Run `compare_html`.
 9. Inspect screenshots and diffs, write `reports/repair-tasks.md`, fix each task as an agent, then repeat preview/compare until thresholds are met.
 
@@ -64,6 +64,8 @@ The tree should match the mockup, not merely contain the same text. Preserve sou
 
 Do not hide structure inside rich-text attributes. Inline rich text is acceptable for emphasis or spans inside a heading; repeated items, forms, metrics, timelines, maps, and data blocks should be represented as custom block attributes and saved by the custom block's `save()` implementation.
 
+Do not use `mockup/style.css` as the rendered block stylesheet. Generate separate WordPress CSS in `wordpress/style.css` and custom block `style.css` files so comparison measures the transform, not shared source CSS.
+
 ## Repair Loop
 
 Read `references/repair-loop.md` before starting visual repair.
@@ -96,6 +98,7 @@ When done, leave the workspace with:
 - `plan/block-plan.json`
 - `wordpress/block-tree.json`
 - `wordpress/content.html` generated from the block tree
+- `wordpress/style.css`
 - `wordpress/blocks/*`
 - `rendered/rendered-blocks.html`
 - `reports/comparison.json`

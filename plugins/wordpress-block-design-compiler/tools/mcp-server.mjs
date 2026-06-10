@@ -88,6 +88,7 @@ const TOOLS = [
         treePath: { type: 'string', default: 'wordpress/block-tree.json' },
         contentPath: { type: 'string', default: 'wordpress/content.html' },
         outPath: { type: 'string', default: 'rendered/rendered-blocks.html' },
+        includeMockupCss: { type: 'boolean', default: false },
       },
     },
   },
@@ -229,6 +230,7 @@ async function createWorkspace(args) {
   writeFile(path.join(workspaceRoot, 'brief.md'), `${args.prompt.trim()}\n`);
   writeFile(path.join(workspaceRoot, 'mockup/index.html'), starterHtml(args.prompt));
   writeFile(path.join(workspaceRoot, 'mockup/style.css'), starterCss());
+  writeFile(path.join(workspaceRoot, 'wordpress/style.css'), '/* Generated WordPress preview CSS belongs here. Do not import mockup/style.css. */\n');
   writeJson(path.join(workspaceRoot, 'wordpress/block-tree.json'), { version: 2, contract: 'data-only', blocks: [] });
   writeFile(path.join(workspaceRoot, 'wordpress/content.html'), '<!-- Serialized from wordpress/block-tree.json by @wordpress/blocks. -->\n');
   writeJson(path.join(workspaceRoot, 'plan/block-plan.json'), { sections: [], customBlocks: [] });
@@ -243,6 +245,7 @@ async function createWorkspace(args) {
       blockPlan: path.join(workspaceRoot, 'plan/block-plan.json'),
       blockTree: path.join(workspaceRoot, 'wordpress/block-tree.json'),
       blockContent: path.join(workspaceRoot, 'wordpress/content.html'),
+      wordpressCss: path.join(workspaceRoot, 'wordpress/style.css'),
     },
     next: 'Replace the starter mockup with the designed HTML/CSS/JS, then call analyze_mockup. Assemble blocks in wordpress/block-tree.json.',
   };
@@ -335,7 +338,7 @@ async function serializeWordPressBlocks(args) {
     ? serializeBlockTreeWithWordPress(readJson(treePath), { workspaceRoot })
     : fs.readFileSync(contentPath, 'utf8');
   const cssSources = [
-    cssSource(workspaceRoot, path.join(workspaceRoot, 'mockup/style.css')),
+    ...(args.includeMockupCss ? [cssSource(workspaceRoot, path.join(workspaceRoot, 'mockup/style.css'))] : []),
     cssSource(workspaceRoot, path.join(workspaceRoot, 'wordpress/style.css')),
     ...findFiles(path.join(workspaceRoot, 'wordpress/blocks'), 'style.css').map((file) => cssSource(workspaceRoot, file)),
   ].filter((source) => source.css);

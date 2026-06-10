@@ -114,3 +114,9 @@ Custom block serialization requirements:
 - The serializer registers official core blocks, registers `wordpress/blocks/*/index.js`, and calls WordPress package serialization. Do not create a parallel markup-generation layer.
 - The block tree references custom blocks by `blockName` and `attrs`; it never embeds the custom block's saved HTML.
 - Custom blocks should be generated for semantic shells that core cannot represent cleanly, such as bespoke navigation, definition-list telemetry panels, search/subscription/booking forms, maps, marquees, archive reveal systems, and data visualizations.
+
+CSS transfer requirements:
+
+- `mockup/style.css` belongs only to the source mockup.
+- The rendered block preview uses `wordpress/style.css` and `wordpress/blocks/*/style.css`.
+- Recreate the needed styling in WordPress CSS; do not import or concatenate the mockup stylesheet into the rendered preview.
