@@ -1,0 +1,337 @@
+{
+  "version": 1,
+  "blocks": [
+    {
+      "blockName": "core/group",
+      "attrs": {
+        "tagName": "header",
+        "className": "station-strip"
+      },
+      "htmlLines": [
+        "<header class='station-strip' aria-label='Mission status'>",
+        "  <a class='station-id' href='#top' aria-label='Antarctica Mission Index home'>",
+        "    <span>AM-90</span>",
+        "    <strong>Antarctica Mission Index</strong>",
+        "  </a>",
+        "  <p>Live dossier / polar traverse / 82.8628°S 135.0000°E</p>",
+        "  <a class='strip-action' href='#signal'>Open signal map</a>",
+        "</header>"
+      ],
+      "innerBlocks": []
+    },
+    {
+      "blockName": "core/group",
+      "attrs": {
+        "tagName": "main",
+        "anchor": "top"
+      },
+      "innerHTML": "",
+      "innerContent": [
+        "<main id='top'>\n",
+        null,
+        "\n",
+        null,
+        "\n",
+        null,
+        "\n",
+        null,
+        "\n",
+        null,
+        "\n</main>"
+      ],
+      "innerBlocks": [
+        {
+          "blockName": "core/group",
+          "attrs": {
+            "tagName": "section",
+            "className": "hero-field"
+          },
+          "innerHTML": "",
+          "innerContent": [
+            "<section class='hero-field' aria-labelledby='hero-title'>\n  <div class='hero-type'>\n",
+            null,
+            "\n",
+            null,
+            "\n",
+            null,
+            "\n  </div>\n",
+            null,
+            "\n</section>"
+          ],
+          "innerBlocks": [
+            {
+              "blockName": "core/paragraph",
+              "attrs": {
+                "className": "microcopy"
+              },
+              "htmlLines": [
+                "<p class='microcopy'>Mission window 2026 / whiteout tolerance: 14m / ice shelf drift +02.7km</p>"
+              ],
+              "innerBlocks": []
+            },
+            {
+              "blockName": "core/heading",
+              "attrs": {
+                "level": 1
+              },
+              "htmlLines": [
+                "<h1 id='hero-title'><span>South</span><span>is not</span><span>a place.</span></h1>"
+              ],
+              "innerBlocks": []
+            },
+            {
+              "blockName": "core/paragraph",
+              "attrs": {
+                "className": "thesis"
+              },
+              "htmlLines": [
+                "<p class='thesis'>It is a pressure system, a data archive, and a human commitment measured in frostbite minutes.</p>"
+              ],
+              "innerBlocks": []
+            },
+            {
+              "blockName": "wbdc/polar-mission-map",
+              "attrs": {
+                "title": "Traverse corridor",
+                "caption": "sensor line / katabatic wind model / crevasse scan",
+                "nodes": [
+                  { "label": "VOSTOK", "className": "node-one" },
+                  { "label": "ROSS", "className": "node-two" },
+                  { "label": "DOME C", "className": "node-three" }
+                ]
+              },
+              "htmlLines": [
+                "<figure class='wp-block-wbdc-polar-mission-map polar-plate' aria-label='Polar coordinate mission map'>",
+                "  <div class='map-grid' aria-hidden='true'>",
+                "    <span class='orbit orbit-a'></span>",
+                "    <span class='orbit orbit-b'></span>",
+                "    <span class='axis axis-x'></span>",
+                "    <span class='axis axis-y'></span>",
+                "    <span class='node node-one'>VOSTOK</span>",
+                "    <span class='node node-two'>ROSS</span>",
+                "    <span class='node node-three'>DOME C</span>",
+                "  </div>",
+                "  <figcaption>",
+                "    <strong>Traverse corridor</strong>",
+                "    <span>sensor line / katabatic wind model / crevasse scan</span>",
+                "  </figcaption>",
+                "</figure>"
+              ],
+              "innerBlocks": []
+            }
+          ]
+        },
+        {
+          "blockName": "core/group",
+          "attrs": {
+            "tagName": "section",
+            "className": "rupture-statement"
+          },
+          "innerHTML": "",
+          "innerContent": [
+            "<section class='rupture-statement' aria-labelledby='rupture-title'>\n",
+            null,
+            "\n",
+            null,
+            "\n  <div class='rupture-copy'>\n",
+            null,
+            "\n    <dl>\n      <div><dt>Temp</dt><dd>-48°C</dd></div>\n      <div><dt>Wind</dt><dd>61 knots</dd></div>\n      <div><dt>Payload</dt><dd>12 cores</dd></div>\n    </dl>\n  </div>\n</section>"
+          ],
+          "innerBlocks": [
+            {
+              "blockName": "core/paragraph",
+              "attrs": {
+                "className": "vertical-index"
+              },
+              "htmlLines": [
+                "<p class='vertical-index'>03 / isolation protocol</p>"
+              ],
+              "innerBlocks": []
+            },
+            {
+              "blockName": "core/heading",
+              "attrs": {
+                "level": 2
+              },
+              "htmlLines": [
+                "<h2 id='rupture-title'>No sun. No margin. No ornamental content.</h2>"
+              ],
+              "innerBlocks": []
+            },
+            {
+              "blockName": "core/paragraph",
+              "attrs": {},
+              "htmlLines": [
+                "<p>Every interface panel is a field instrument: legible at low light, spare under pressure, and useful when the satellite window is six minutes wide.</p>"
+              ],
+              "innerBlocks": []
+            }
+          ]
+        },
+        {
+          "blockName": "core/group",
+          "attrs": {
+            "tagName": "section",
+            "className": "telemetry-section"
+          },
+          "innerHTML": "",
+          "innerContent": [
+            "<section class='telemetry-section' aria-labelledby='telemetry-title'>\n  <div class='telemetry-heading'>\n",
+            null,
+            "\n",
+            null,
+            "\n  </div>\n",
+            null,
+            "\n</section>"
+          ],
+          "innerBlocks": [
+            {
+              "blockName": "core/paragraph",
+              "attrs": {
+                "className": "microcopy"
+              },
+              "htmlLines": [
+                "<p class='microcopy'>Horizontal mission rail / scroll east</p>"
+              ],
+              "innerBlocks": []
+            },
+            {
+              "blockName": "core/heading",
+              "attrs": {
+                "level": 2
+              },
+              "htmlLines": [
+                "<h2 id='telemetry-title'>Four stations, one hostile white geometry.</h2>"
+              ],
+              "innerBlocks": []
+            },
+            {
+              "blockName": "wbdc/mission-telemetry-rail",
+              "attrs": {
+                "items": [
+                  {
+                    "index": "01",
+                    "title": "Dome C atmospheric drill",
+                    "body": "Balloon launches through diamond dust, collecting upper-air chemistry before the horizon disappears.",
+                    "className": "wide-card"
+                  },
+                  {
+                    "index": "02",
+                    "title": "Ross Ice Shelf traverse",
+                    "body": "Ground radar marks hidden fracture fields under a convoy moving slower than walking pace.",
+                    "className": ""
+                  },
+                  {
+                    "index": "03",
+                    "title": "Vostok core relay",
+                    "body": "Two meters of ancient air are sealed and flown before thermal variance corrupts the sample.",
+                    "className": "accent-card"
+                  },
+                  {
+                    "index": "04",
+                    "title": "Weddell acoustic night",
+                    "body": "Hydrophones listen under blue ice while the camp runs blackout discipline.",
+                    "className": "tall-card"
+                  }
+                ]
+              },
+              "htmlLines": [
+                "<div class='wp-block-wbdc-mission-telemetry-rail telemetry-rail' tabindex='0' aria-label='Mission timeline'>",
+                "  <article class='mission-card wide-card'>",
+                "    <span>01</span>",
+                "    <h3>Dome C atmospheric drill</h3>",
+                "    <p>Balloon launches through diamond dust, collecting upper-air chemistry before the horizon disappears.</p>",
+                "  </article>",
+                "  <article class='mission-card'>",
+                "    <span>02</span>",
+                "    <h3>Ross Ice Shelf traverse</h3>",
+                "    <p>Ground radar marks hidden fracture fields under a convoy moving slower than walking pace.</p>",
+                "  </article>",
+                "  <article class='mission-card accent-card'>",
+                "    <span>03</span>",
+                "    <h3>Vostok core relay</h3>",
+                "    <p>Two meters of ancient air are sealed and flown before thermal variance corrupts the sample.</p>",
+                "  </article>",
+                "  <article class='mission-card tall-card'>",
+                "    <span>04</span>",
+                "    <h3>Weddell acoustic night</h3>",
+                "    <p>Hydrophones listen under blue ice while the camp runs blackout discipline.</p>",
+                "  </article>",
+                "</div>"
+              ],
+              "innerBlocks": []
+            }
+          ]
+        },
+        {
+          "blockName": "core/group",
+          "attrs": {
+            "tagName": "section",
+            "anchor": "signal",
+            "className": "signal-array"
+          },
+          "htmlLines": [
+            "<section id='signal' class='signal-array' aria-labelledby='signal-title'>",
+            "  <div class='signal-frame'>",
+            "    <p class='microcopy'>Signal field / polar equipment frame</p>",
+            "    <h2 id='signal-title'>The map refuses romance. It only returns coordinates.</h2>",
+            "    <p>Each point is an obligation: weather, fuel, human fatigue, and a return path that can vanish in minutes.</p>",
+            "  </div>",
+            "  <div class='coordinate-stack' aria-label='Current mission coordinates'>",
+            "    <p><span>lat</span> 82.8628°S</p>",
+            "    <p><span>lon</span> 135.0000°E</p>",
+            "    <p><span>ice</span> 3274m</p>",
+            "    <p><span>risk</span> orange</p>",
+            "  </div>",
+            "</section>"
+          ],
+          "innerBlocks": []
+        },
+        {
+          "blockName": "core/group",
+          "attrs": {
+            "tagName": "section",
+            "className": "field-log"
+          },
+          "htmlLines": [
+            "<section class='field-log' aria-labelledby='field-log-title'>",
+            "  <h2 id='field-log-title'>Field notes from the part of the planet that erases scale.</h2>",
+            "  <div class='log-grid'>",
+            "    <article>",
+            "      <time datetime='2026-01-18T03:12:00Z'>03:12 UTC</time>",
+            "      <h3>Whiteout rehearsal</h3>",
+            "      <p>Navigation returns to rope, compass, breath count, and the low radio voice of the nearest human.</p>",
+            "    </article>",
+            "    <article>",
+            "      <time datetime='2026-01-19T22:40:00Z'>22:40 UTC</time>",
+            "      <h3>Core tent silence</h3>",
+            "      <p>The drill team speaks in hand signals while the sample line cools under red lamps.</p>",
+            "    </article>",
+            "    <article>",
+            "      <time datetime='2026-01-21T11:06:00Z'>11:06 UTC</time>",
+            "      <h3>Fuel cache geometry</h3>",
+            "      <p>Barrels are laid in a triangulated pattern so a buried cache can still be inferred after drift.</p>",
+            "    </article>",
+            "  </div>",
+            "</section>"
+          ],
+          "innerBlocks": []
+        }
+      ]
+    },
+    {
+      "blockName": "core/group",
+      "attrs": {
+        "tagName": "footer",
+        "className": "mission-footer"
+      },
+      "htmlLines": [
+        "<footer class='mission-footer'>",
+        "  <p>Antarctica Mission Index / research interface prototype</p>",
+        "  <a href='#top'>Return to 90°S</a>",
+        "</footer>"
+      ],
+      "innerBlocks": []
+    }
+  ]
+}

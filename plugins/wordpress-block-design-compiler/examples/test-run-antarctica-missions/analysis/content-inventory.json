@@ -1,0 +1,453 @@
+{
+  "sections": [
+    {
+      "id": "station-strip",
+      "selector": ".station-strip",
+      "tagName": "header",
+      "className": "station-strip",
+      "text": "AM-90 Antarctica Mission Index Live dossier / polar traverse / 82.8628°S 135.0000°E Open signal map",
+      "headings": [],
+      "paragraphs": [
+        {
+          "className": "",
+          "content": "Live dossier / polar traverse / 82.8628°S 135.0000°E"
+        }
+      ],
+      "links": [
+        {
+          "className": "station-id",
+          "url": "#top",
+          "text": "AM-90 Antarctica Mission Index"
+        },
+        {
+          "className": "strip-action",
+          "url": "#signal",
+          "text": "Open signal map"
+        }
+      ],
+      "forms": [],
+      "cards": [],
+      "html": "<header class=\"station-strip\" aria-label=\"Mission status\">\n      <a class=\"station-id\" href=\"#top\" aria-label=\"Antarctica Mission Index home\">\n        <span>AM-90</span>\n        <strong>Antarctica Mission Index</strong>\n      </a>\n      <p>Live dossier / polar traverse / 82.8628°S 135.0000°E</p>\n      <a class=\"strip-action\" href=\"#signal\">Open signal map</a>\n    </header>"
+    },
+    {
+      "id": "top",
+      "selector": "#top",
+      "tagName": "main",
+      "className": "",
+      "text": "Mission window 2026 / whiteout tolerance: 14m / ice shelf drift +02.7km South is not a place. It is a pressure system, a data archive, and a human commitment measured in frostbite minutes. VOSTOK ROSS DOME C Traverse corridor sensor line / katabatic wind model / crevasse scan 03 / isolation protocol No sun. No margin. No ornamental content. Every interface panel is a field instrument: legible at low light, spare under pressure, and useful when the satellite window is six minutes wide. Temp -48°C Wind 61 knots Payload 12 cores Horizontal mission rail / scroll east Four stations, one hostile white geometry. 01 Dome C atmospheric drill Balloon launches through diamond dust, collecting upper-air chemistry before the horizon disappears. 02 Ross Ice Shelf traverse Ground radar marks hidden fracture fields under a convoy moving slower than walking pace. 03 Vostok core relay Two meters of ancient air are sealed and flown before thermal variance corrupts the sample. 04 Weddell acoustic night Hydrophones listen under blue ice while the camp runs blackout discipline. Signal field / polar equipment frame The map refuses romance. It only returns coordinates. Each point is an obligation: weather, fuel, human fatigue, and a return path that can vanish in minutes. lat 82.8628°S lon 135.0000°E ice 3274m risk orange Field notes from the part of the planet that erases scale. 03:12 UTC Whiteout rehearsal Navigation returns to rope, compass, breath count, and the low radio voice of the nearest human. 22:40 UTC Core tent silence The drill team speaks in hand signals while the sample line cools under red lamps. 11:06 UTC Fuel cache geometry Barrels are laid in a triangulated pattern so a buried cache can still be inferred after drift.",
+      "headings": [
+        {
+          "level": 1,
+          "className": "",
+          "content": "South is not a place."
+        },
+        {
+          "level": 2,
+          "className": "",
+          "content": "No sun. No margin. No ornamental content."
+        },
+        {
+          "level": 2,
+          "className": "",
+          "content": "Four stations, one hostile white geometry."
+        },
+        {
+          "level": 3,
+          "className": "",
+          "content": "Dome C atmospheric drill"
+        },
+        {
+          "level": 3,
+          "className": "",
+          "content": "Ross Ice Shelf traverse"
+        },
+        {
+          "level": 3,
+          "className": "",
+          "content": "Vostok core relay"
+        },
+        {
+          "level": 3,
+          "className": "",
+          "content": "Weddell acoustic night"
+        },
+        {
+          "level": 2,
+          "className": "",
+          "content": "The map refuses romance. It only returns coordinates."
+        },
+        {
+          "level": 2,
+          "className": "",
+          "content": "Field notes from the part of the planet that erases scale."
+        },
+        {
+          "level": 3,
+          "className": "",
+          "content": "Whiteout rehearsal"
+        },
+        {
+          "level": 3,
+          "className": "",
+          "content": "Core tent silence"
+        },
+        {
+          "level": 3,
+          "className": "",
+          "content": "Fuel cache geometry"
+        }
+      ],
+      "paragraphs": [
+        {
+          "className": "microcopy",
+          "content": "Mission window 2026 / whiteout tolerance: 14m / ice shelf drift +02.7km"
+        },
+        {
+          "className": "thesis",
+          "content": "It is a pressure system, a data archive, and a human commitment measured in frostbite minutes."
+        },
+        {
+          "className": "vertical-index",
+          "content": "03 / isolation protocol"
+        },
+        {
+          "className": "",
+          "content": "Every interface panel is a field instrument: legible at low light, spare under pressure, and useful when the satellite window is six minutes wide."
+        },
+        {
+          "className": "microcopy",
+          "content": "Horizontal mission rail / scroll east"
+        },
+        {
+          "className": "",
+          "content": "Balloon launches through diamond dust, collecting upper-air chemistry before the horizon disappears."
+        },
+        {
+          "className": "",
+          "content": "Ground radar marks hidden fracture fields under a convoy moving slower than walking pace."
+        },
+        {
+          "className": "",
+          "content": "Two meters of ancient air are sealed and flown before thermal variance corrupts the sample."
+        },
+        {
+          "className": "",
+          "content": "Hydrophones listen under blue ice while the camp runs blackout discipline."
+        },
+        {
+          "className": "microcopy",
+          "content": "Signal field / polar equipment frame"
+        },
+        {
+          "className": "",
+          "content": "Each point is an obligation: weather, fuel, human fatigue, and a return path that can vanish in minutes."
+        },
+        {
+          "className": "",
+          "content": "lat 82.8628°S"
+        },
+        {
+          "className": "",
+          "content": "lon 135.0000°E"
+        },
+        {
+          "className": "",
+          "content": "ice 3274m"
+        },
+        {
+          "className": "",
+          "content": "risk orange"
+        },
+        {
+          "className": "",
+          "content": "Navigation returns to rope, compass, breath count, and the low radio voice of the nearest human."
+        },
+        {
+          "className": "",
+          "content": "The drill team speaks in hand signals while the sample line cools under red lamps."
+        },
+        {
+          "className": "",
+          "content": "Barrels are laid in a triangulated pattern so a buried cache can still be inferred after drift."
+        }
+      ],
+      "links": [],
+      "forms": [],
+      "cards": [
+        {
+          "className": "mission-card wide-card",
+          "title": "Dome C atmospheric drill",
+          "text": "Balloon launches through diamond dust, collecting upper-air chemistry before the horizon disappears.",
+          "links": []
+        },
+        {
+          "className": "mission-card",
+          "title": "Ross Ice Shelf traverse",
+          "text": "Ground radar marks hidden fracture fields under a convoy moving slower than walking pace.",
+          "links": []
+        },
+        {
+          "className": "mission-card accent-card",
+          "title": "Vostok core relay",
+          "text": "Two meters of ancient air are sealed and flown before thermal variance corrupts the sample.",
+          "links": []
+        },
+        {
+          "className": "mission-card tall-card",
+          "title": "Weddell acoustic night",
+          "text": "Hydrophones listen under blue ice while the camp runs blackout discipline.",
+          "links": []
+        },
+        {
+          "className": "",
+          "title": "Whiteout rehearsal",
+          "text": "Navigation returns to rope, compass, breath count, and the low radio voice of the nearest human.",
+          "links": []
+        },
+        {
+          "className": "",
+          "title": "Core tent silence",
+          "text": "The drill team speaks in hand signals while the sample line cools under red lamps.",
+          "links": []
+        },
+        {
+          "className": "",
+          "title": "Fuel cache geometry",
+          "text": "Barrels are laid in a triangulated pattern so a buried cache can still be inferred after drift.",
+          "links": []
+        }
+      ],
+      "html": "<main id=\"top\">\n      <section class=\"hero-field\" aria-labelledby=\"hero-title\">\n        <div class=\"hero-type\">\n          <p class=\"microcopy\">Mission window 2026 / whiteout tolerance: 14m / ice shelf drift +02.7km</p>\n          <h1 id=\"hero-title\"><span>South</span><span>is not</span><span>a place.</span></h1>\n          <p class=\"thesis\">It is a pressure system, a data archive, and a human commitment measured in frostbite minutes.</p>\n        </div>\n        <figure class=\"polar-plate\" aria-label=\"Polar coordinate mission map\">\n          <div class=\"map-grid\" aria-hidden=\"true\">\n            <span class=\"orbit orbit-a\"></span>\n            <span class=\"orbit orbit-b\"></span>\n            <span class=\"axis axis-x\"></span>\n            <span class=\"axis axis-y\"></span>\n            <span class=\"node node-one\">VOSTOK</span>\n            <span class=\"node node-two\">ROSS</span>\n            <span class=\"node node-three\">DOME C</span>\n          </div>\n          <figcaption>\n            <strong>Traverse corridor</strong>\n            <span>sensor line / katabatic wind model / crevasse scan</span>\n          </figcaption>\n        </figure>\n      </section>\n\n      <section class=\"rupture-statement\" aria-labelledby=\"rupture-title\">\n        <p class=\"vertical-index\">03 / isolation protocol</p>\n        <h2 id=\"rupture-title\">No sun. No margin. No ornamental content.</h2>\n        <div class=\"rupture-copy\">\n          <p>Every interface panel is a field instrument: legible at low light, spare under pressure, and useful when the satellite window is six minutes wide.</p>\n          <dl>\n            <div><dt>Temp</dt><dd>-48°C</dd></div>\n            <div><dt>Wind</dt><dd>61 knots</dd></div>\n            <div><dt>Payload</dt><dd>12 cores</dd></div>\n          </dl>\n        </div>\n      </section>\n\n      <section class=\"telemetry-section\" aria-labelledby=\"telemetry-title\">\n        <div class=\"telemetry-heading\">\n          <p class=\"microcopy\">Horizontal mission rail / scroll east</p>\n          <h2 id=\"telemetry-title\">Four stations, one hostile white geometry.</h2>\n        </div>\n        <div class=\"telemetry-rail\" tabindex=\"0\" aria-label=\"Mission timeline\">\n          <article class=\"mission-card wide-card\">\n            <span>01</span>\n            <h3>Dome C atmospheric drill</h3>\n            <p>Balloon launches through diamond dust, collecting upper-air chemistry before the horizon disappears.</p>\n          </article>\n          <article class=\"mission-card\">\n            <span>02</span>\n            <h3>Ross Ice Shelf traverse</h3>\n            <p>Ground radar marks hidden fracture fields under a convoy moving slower than walking pace.</p>\n          </article>\n          <article class=\"mission-card accent-card\">\n            <span>03</span>\n            <h3>Vostok core relay</h3>\n            <p>Two meters of ancient air are sealed and flown before thermal variance corrupts the sample.</p>\n          </article>\n          <article class=\"mission-card tall-card\">\n            <span>04</span>\n            <h3>Weddell acoustic night</h3>\n            <p>Hydrophones listen under blue ice while the camp runs blackout discipline.</p>\n          </article>\n        </div>\n      </section>\n\n      <section id=\"signal\" class=\"signal-array\" aria-labelledby=\"signal-title\">\n        <div class=\"signal-frame\">\n          <p class=\"microcopy\">Signal field / polar equipment frame</p>\n          <h2 id=\"signal-title\">The map refuses romance. It only returns coordinates.</h2>\n          <p>Each point is an obligation: weather, fuel, human fatigue, and a return path that can vanish in minutes.</p>\n        </div>\n        <div class=\"coordinate-stack\" aria-label=\"Current mission coordinates\">\n          <p><span>lat</span> 82.8628°S</p>\n          <p><span>lon</span> 135.0000°E</p>\n          <p><span>ice</span> 3274m</p>\n          <p><span>risk</span> orange</p>\n        </div>\n      </section>\n\n      <section class=\"field-log\" aria-labelledby=\"field-log-title\">\n        <h2 id=\"field-log-title\">Field notes from the part of the planet that erases scale.</h2>\n        <div class=\"log-grid\">\n          <article>\n            <time datetime=\"2026-01-18T03:12:00Z\">03:12 UTC</time>\n            <h3>Whiteout rehearsal</h3>\n            <p>Navigation returns to rope, compass, breath count, and the low radio voice of the nearest human.</p>\n          </article>\n          <article>\n            <time datetime=\"2026-01-19T22:40:00Z\">22:40 UTC</time>\n            <h3>Core tent silence</h3>\n            <p>The drill team speaks in hand signals while the sample line cools under red lamps.</p>\n          </article>\n          <article>\n            <time datetime=\"2026-01-21T11:06:00Z\">11:06 UTC</time>\n            <h3>Fuel cache geometry</h3>\n            <p>Barrels are laid in a triangulated pattern so a buried cache can still be inferred after drift.</p>\n          </article>\n        </div>\n      </section>\n    </main>"
+    },
+    {
+      "id": "mission-footer",
+      "selector": ".mission-footer",
+      "tagName": "footer",
+      "className": "mission-footer",
+      "text": "Antarctica Mission Index / research interface prototype Return to 90°S",
+      "headings": [],
+      "paragraphs": [
+        {
+          "className": "",
+          "content": "Antarctica Mission Index / research interface prototype"
+        }
+      ],
+      "links": [
+        {
+          "className": "",
+          "url": "#top",
+          "text": "Return to 90°S"
+        }
+      ],
+      "forms": [],
+      "cards": [],
+      "html": "<footer class=\"mission-footer\">\n      <p>Antarctica Mission Index / research interface prototype</p>\n      <a href=\"#top\">Return to 90°S</a>\n    </footer>"
+    }
+  ],
+  "headings": [
+    {
+      "level": 1,
+      "className": "",
+      "content": "South is not a place."
+    },
+    {
+      "level": 2,
+      "className": "",
+      "content": "No sun. No margin. No ornamental content."
+    },
+    {
+      "level": 2,
+      "className": "",
+      "content": "Four stations, one hostile white geometry."
+    },
+    {
+      "level": 3,
+      "className": "",
+      "content": "Dome C atmospheric drill"
+    },
+    {
+      "level": 3,
+      "className": "",
+      "content": "Ross Ice Shelf traverse"
+    },
+    {
+      "level": 3,
+      "className": "",
+      "content": "Vostok core relay"
+    },
+    {
+      "level": 3,
+      "className": "",
+      "content": "Weddell acoustic night"
+    },
+    {
+      "level": 2,
+      "className": "",
+      "content": "The map refuses romance. It only returns coordinates."
+    },
+    {
+      "level": 2,
+      "className": "",
+      "content": "Field notes from the part of the planet that erases scale."
+    },
+    {
+      "level": 3,
+      "className": "",
+      "content": "Whiteout rehearsal"
+    },
+    {
+      "level": 3,
+      "className": "",
+      "content": "Core tent silence"
+    },
+    {
+      "level": 3,
+      "className": "",
+      "content": "Fuel cache geometry"
+    }
+  ],
+  "paragraphs": [
+    {
+      "className": "",
+      "content": "Live dossier / polar traverse / 82.8628°S 135.0000°E"
+    },
+    {
+      "className": "microcopy",
+      "content": "Mission window 2026 / whiteout tolerance: 14m / ice shelf drift +02.7km"
+    },
+    {
+      "className": "thesis",
+      "content": "It is a pressure system, a data archive, and a human commitment measured in frostbite minutes."
+    },
+    {
+      "className": "vertical-index",
+      "content": "03 / isolation protocol"
+    },
+    {
+      "className": "",
+      "content": "Every interface panel is a field instrument: legible at low light, spare under pressure, and useful when the satellite window is six minutes wide."
+    },
+    {
+      "className": "microcopy",
+      "content": "Horizontal mission rail / scroll east"
+    },
+    {
+      "className": "",
+      "content": "Balloon launches through diamond dust, collecting upper-air chemistry before the horizon disappears."
+    },
+    {
+      "className": "",
+      "content": "Ground radar marks hidden fracture fields under a convoy moving slower than walking pace."
+    },
+    {
+      "className": "",
+      "content": "Two meters of ancient air are sealed and flown before thermal variance corrupts the sample."
+    },
+    {
+      "className": "",
+      "content": "Hydrophones listen under blue ice while the camp runs blackout discipline."
+    },
+    {
+      "className": "microcopy",
+      "content": "Signal field / polar equipment frame"
+    },
+    {
+      "className": "",
+      "content": "Each point is an obligation: weather, fuel, human fatigue, and a return path that can vanish in minutes."
+    },
+    {
+      "className": "",
+      "content": "lat 82.8628°S"
+    },
+    {
+      "className": "",
+      "content": "lon 135.0000°E"
+    },
+    {
+      "className": "",
+      "content": "ice 3274m"
+    },
+    {
+      "className": "",
+      "content": "risk orange"
+    },
+    {
+      "className": "",
+      "content": "Navigation returns to rope, compass, breath count, and the low radio voice of the nearest human."
+    },
+    {
+      "className": "",
+      "content": "The drill team speaks in hand signals while the sample line cools under red lamps."
+    },
+    {
+      "className": "",
+      "content": "Barrels are laid in a triangulated pattern so a buried cache can still be inferred after drift."
+    },
+    {
+      "className": "",
+      "content": "Antarctica Mission Index / research interface prototype"
+    }
+  ],
+  "links": [
+    {
+      "className": "station-id",
+      "url": "#top",
+      "text": "AM-90 Antarctica Mission Index"
+    },
+    {
+      "className": "strip-action",
+      "url": "#signal",
+      "text": "Open signal map"
+    },
+    {
+      "className": "",
+      "url": "#top",
+      "text": "Return to 90°S"
+    }
+  ],
+  "forms": [],
+  "cards": [
+    {
+      "className": "mission-card wide-card",
+      "title": "Dome C atmospheric drill",
+      "text": "Balloon launches through diamond dust, collecting upper-air chemistry before the horizon disappears.",
+      "links": []
+    },
+    {
+      "className": "mission-card",
+      "title": "Ross Ice Shelf traverse",
+      "text": "Ground radar marks hidden fracture fields under a convoy moving slower than walking pace.",
+      "links": []
+    },
+    {
+      "className": "mission-card accent-card",
+      "title": "Vostok core relay",
+      "text": "Two meters of ancient air are sealed and flown before thermal variance corrupts the sample.",
+      "links": []
+    },
+    {
+      "className": "mission-card tall-card",
+      "title": "Weddell acoustic night",
+      "text": "Hydrophones listen under blue ice while the camp runs blackout discipline.",
+      "links": []
+    },
+    {
+      "className": "",
+      "title": "Whiteout rehearsal",
+      "text": "Navigation returns to rope, compass, breath count, and the low radio voice of the nearest human.",
+      "links": []
+    },
+    {
+      "className": "",
+      "title": "Core tent silence",
+      "text": "The drill team speaks in hand signals while the sample line cools under red lamps.",
+      "links": []
+    },
+    {
+      "className": "",
+      "title": "Fuel cache geometry",
+      "text": "Barrels are laid in a triangulated pattern so a buried cache can still be inferred after drift.",
+      "links": []
+    }
+  ]
+}
