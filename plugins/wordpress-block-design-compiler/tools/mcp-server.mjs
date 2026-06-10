@@ -414,8 +414,8 @@ function comparePngs({ mockupShot, renderedShot, diffShot, viewport, PNG, pixelm
   const height = Math.min(mockup.height, rendered.height);
   const diff = new PNG({ width, height });
   const mismatch = pixelmatch(
-    cropPng(mockup, width, height).data,
-    cropPng(rendered, width, height).data,
+    cropPng(mockup, width, height, PNG).data,
+    cropPng(rendered, width, height, PNG).data,
     diff.data,
     width,
     height,
@@ -434,9 +434,9 @@ function comparePngs({ mockupShot, renderedShot, diffShot, viewport, PNG, pixelm
   };
 }
 
-function cropPng(source, width, height) {
+function cropPng(source, width, height, PNG) {
   if (source.width === width && source.height === height) return source;
-  const cropped = new source.constructor({ width, height });
+  const cropped = new PNG({ width, height });
   for (let y = 0; y < height; y += 1) {
     const sourceStart = y * source.width * 4;
     const targetStart = y * width * 4;
@@ -651,7 +651,10 @@ function defaultSupports() {
 }
 
 function generateIndexJs({ name, slug, attributes, form }) {
-  const richText = attributes.filter((attribute) => isInlineEditable(attribute)).map((attribute) => richTextEdit(attribute, slug)).join(',\n        ');
+  const richText = attributes
+    .filter((attribute) => isInlineEditable(attribute) && !(form && isButtonText(attribute)))
+    .map((attribute) => richTextEdit(attribute, slug))
+    .join(',\n        ');
   const inspector = attributes.filter((attribute) => !isInlineEditable(attribute) && attribute.type !== 'array' && attribute.type !== 'object').map(inspectorControl).join(',\n            ');
   const formCanvas = form ? formEditCanvas(slug) : '';
   const saveContent = form ? formSaveCanvas(slug) : attributes.filter((attribute) => isInlineEditable(attribute) || attribute.type === 'array').map((attribute) => saveElement(attribute, slug)).join(',\n          ');
@@ -749,8 +752,7 @@ function formEditCanvas(slugValue) {
 }
 
 function formSaveCanvas(slugValue) {
-  return `(attributes.heading ? el(RichText.Content, { tagName: 'h2', className: ${JSON.stringify(`${slugValue}__heading`)}, value: attributes.heading }) : null),
-          el('form', { className: ${JSON.stringify(`${slugValue}__form`)}, action: attributes.action || '#', method: attributes.method || 'post' },
+  return `el('form', { className: ${JSON.stringify(`${slugValue}__form`)}, action: attributes.action || '#', method: attributes.method || 'post' },
             (attributes.fields || []).map(function (field, index) {
               const name = field.name || String(field.label || 'field-' + index).toLowerCase().replace(/[^a-z0-9]+/g, '-');
               return el('label', { key: name },
@@ -802,6 +804,10 @@ function isInlineEditable(attribute) {
   const role = `${attribute.role || ''} ${attribute.name}`.toLowerCase();
   if (/url|href|action|method|required|placeholder|inputname|style|variant|speed|duration|fields/.test(role)) return false;
   return attribute.type === 'string';
+}
+
+function isButtonText(attribute) {
+  return /button|cta|submit/.test(`${attribute.role || ''} ${attribute.name}`.toLowerCase());
 }
 
 function tagFor(attribute) {
@@ -935,7 +941,11 @@ function slug(value) {
 }
 
 function camelName(value) {
-  const parts = slug(value).split('-').filter(Boolean);
+  const raw = String(value || '').trim();
+  if (/^[A-Za-z_$][A-Za-z0-9_$]*$/.test(raw)) {
+    return raw.charAt(0).toLowerCase() + raw.slice(1);
+  }
+  const parts = slug(raw).split('-').filter(Boolean);
   if (!parts.length) return 'field';
   return parts[0] + parts.slice(1).map((part) => part.charAt(0).toUpperCase() + part.slice(1)).join('');
 }

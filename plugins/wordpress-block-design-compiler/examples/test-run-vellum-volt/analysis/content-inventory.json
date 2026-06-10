@@ -1,0 +1,576 @@
+{
+  "sections": [
+    {
+      "id": "site-header",
+      "selector": ".site-header",
+      "tagName": "header",
+      "className": "site-header",
+      "text": "V Vellum &amp; Volt Letterpress Studio Invitations Workshops Process Book a press consult",
+      "headings": [],
+      "paragraphs": [],
+      "links": [
+        {
+          "className": "brand",
+          "url": "#top",
+          "text": "V Vellum &amp; Volt Letterpress Studio"
+        },
+        {
+          "className": "",
+          "url": "#invitations",
+          "text": "Invitations"
+        },
+        {
+          "className": "",
+          "url": "#workshops",
+          "text": "Workshops"
+        },
+        {
+          "className": "",
+          "url": "#process",
+          "text": "Process"
+        },
+        {
+          "className": "header-cta",
+          "url": "#booking",
+          "text": "Book a press consult"
+        }
+      ],
+      "forms": [],
+      "cards": [],
+      "html": "<header class=\"site-header\">\n      <a class=\"brand\" href=\"#top\" aria-label=\"Vellum & Volt home\">\n        <span class=\"brand-mark\">V</span>\n        <span>\n          <strong>Vellum &amp; Volt</strong>\n          <small>Letterpress Studio</small>\n        </span>\n      </a>\n      <nav class=\"site-nav\" aria-label=\"Primary navigation\">\n        <a href=\"#invitations\">Invitations</a>\n        <a href=\"#workshops\">Workshops</a>\n        <a href=\"#process\">Process</a>\n      </nav>\n      <a class=\"header-cta\" href=\"#booking\">Book a press consult</a>\n    </header>"
+    },
+    {
+      "id": "top",
+      "selector": "#top",
+      "tagName": "main",
+      "className": "",
+      "text": "Small-batch print, big-day detail Custom invitations and weekend print workshops from a working letterpress studio. We pair hand-mixed inks, cotton papers, and antique presses to make tactile wedding suites, launch cards, and private workshop days in our bright canal-side shop. Start a commission View workshops Proof 04 Fern &amp; Brass blind emboss / moss ink / deckled edge What we make Designed slowly, printed with pressure. 01 Wedding suites Save-the-dates, invitations, envelopes, menus, and place cards with one consistent print system. 02 Brand paper goods Launch notes, thank-you cards, certificates, and packaging inserts for small brands. 03 Studio workshops Four-hour Saturday sessions for beginners, teams, and design students. Invitation families Three print moods, each built for customization. Every family starts with a consultation, paper pull, ink drawdown, and a physical proof before the final press run. 01 / Garden formal Olive ink, soft deckle, blind pressed border. 02 / City evening Graphite type, foil flash, architectural spacing. 03 / Orchard lunch Persimmon accents, warm cotton stock, playful map insert. Next sessions Weekend workshops for people who want ink under their fingernails. July 11 Intro to platen press Set type, lock a chase, print a two-color postcard, and take home fifty copies. July 25 Wedding proof day Bring your suite draft and leave with paper, ink, and finishing decisions resolved. Process A tactile production path with no mystery middle. Brief We define mood, quantities, wording, and practical deadlines. Material pull We compare cotton papers, envelope colors, inks, and finishes. Physical proof You approve a real printed sample before the full edition starts. Press run We print, trim, assemble, and pack the finished suite. Press consult Tell us what needs to feel unforgettable on paper. Share a date, quantity, and the kind of printed object you are imagining. We reply within two studio days. Name Email Project notes Send the brief",
+      "headings": [
+        {
+          "level": 1,
+          "className": "",
+          "content": "Custom invitations and weekend print workshops from a working letterpress studio."
+        },
+        {
+          "level": 2,
+          "className": "",
+          "content": "Designed slowly, printed with pressure."
+        },
+        {
+          "level": 3,
+          "className": "",
+          "content": "Wedding suites"
+        },
+        {
+          "level": 3,
+          "className": "",
+          "content": "Brand paper goods"
+        },
+        {
+          "level": 3,
+          "className": "",
+          "content": "Studio workshops"
+        },
+        {
+          "level": 2,
+          "className": "",
+          "content": "Three print moods, each built for customization."
+        },
+        {
+          "level": 3,
+          "className": "",
+          "content": "Olive ink, soft deckle, blind pressed border."
+        },
+        {
+          "level": 3,
+          "className": "",
+          "content": "Graphite type, foil flash, architectural spacing."
+        },
+        {
+          "level": 3,
+          "className": "",
+          "content": "Persimmon accents, warm cotton stock, playful map insert."
+        },
+        {
+          "level": 2,
+          "className": "",
+          "content": "Weekend workshops for people who want ink under their fingernails."
+        },
+        {
+          "level": 3,
+          "className": "",
+          "content": "Intro to platen press"
+        },
+        {
+          "level": 3,
+          "className": "",
+          "content": "Wedding proof day"
+        },
+        {
+          "level": 2,
+          "className": "",
+          "content": "A tactile production path with no mystery middle."
+        },
+        {
+          "level": 2,
+          "className": "",
+          "content": "Tell us what needs to feel unforgettable on paper."
+        }
+      ],
+      "paragraphs": [
+        {
+          "className": "eyebrow",
+          "content": "Small-batch print, big-day detail"
+        },
+        {
+          "className": "lede",
+          "content": "We pair hand-mixed inks, cotton papers, and antique presses to make tactile wedding suites, launch cards, and private workshop days in our bright canal-side shop."
+        },
+        {
+          "className": "eyebrow",
+          "content": "What we make"
+        },
+        {
+          "className": "",
+          "content": "Save-the-dates, invitations, envelopes, menus, and place cards with one consistent print system."
+        },
+        {
+          "className": "",
+          "content": "Launch notes, thank-you cards, certificates, and packaging inserts for small brands."
+        },
+        {
+          "className": "",
+          "content": "Four-hour Saturday sessions for beginners, teams, and design students."
+        },
+        {
+          "className": "eyebrow",
+          "content": "Invitation families"
+        },
+        {
+          "className": "",
+          "content": "Every family starts with a consultation, paper pull, ink drawdown, and a physical proof before the final press run."
+        },
+        {
+          "className": "",
+          "content": "01 / Garden formal"
+        },
+        {
+          "className": "",
+          "content": "02 / City evening"
+        },
+        {
+          "className": "",
+          "content": "03 / Orchard lunch"
+        },
+        {
+          "className": "eyebrow",
+          "content": "Next sessions"
+        },
+        {
+          "className": "",
+          "content": "Set type, lock a chase, print a two-color postcard, and take home fifty copies."
+        },
+        {
+          "className": "",
+          "content": "Bring your suite draft and leave with paper, ink, and finishing decisions resolved."
+        },
+        {
+          "className": "eyebrow",
+          "content": "Process"
+        },
+        {
+          "className": "eyebrow",
+          "content": "Press consult"
+        },
+        {
+          "className": "",
+          "content": "Share a date, quantity, and the kind of printed object you are imagining. We reply within two studio days."
+        }
+      ],
+      "links": [
+        {
+          "className": "button button-primary",
+          "url": "#booking",
+          "text": "Start a commission"
+        },
+        {
+          "className": "button button-secondary",
+          "url": "#workshops",
+          "text": "View workshops"
+        }
+      ],
+      "forms": [
+        {
+          "className": "booking-form",
+          "action": "/contact",
+          "method": "post",
+          "fields": [
+            {
+              "label": "Name",
+              "type": "text",
+              "name": "name",
+              "placeholder": "Your name",
+              "required": true
+            },
+            {
+              "label": "Email",
+              "type": "email",
+              "name": "email",
+              "placeholder": "you@example.com",
+              "required": true
+            },
+            {
+              "label": "Project notes",
+              "type": "textarea",
+              "name": "message",
+              "placeholder": "Wedding suite, workshop date, brand cards...",
+              "required": false
+            }
+          ],
+          "buttonText": "Send the brief"
+        }
+      ],
+      "cards": [
+        {
+          "className": "service-card tall-card",
+          "title": "Wedding suites",
+          "text": "Save-the-dates, invitations, envelopes, menus, and place cards with one consistent print system.",
+          "links": []
+        },
+        {
+          "className": "service-card",
+          "title": "Brand paper goods",
+          "text": "Launch notes, thank-you cards, certificates, and packaging inserts for small brands.",
+          "links": []
+        },
+        {
+          "className": "service-card dark-card",
+          "title": "Studio workshops",
+          "text": "Four-hour Saturday sessions for beginners, teams, and design students.",
+          "links": []
+        },
+        {
+          "className": "suite-card suite-card-large",
+          "title": "Olive ink, soft deckle, blind pressed border.",
+          "text": "01 / Garden formal",
+          "links": []
+        },
+        {
+          "className": "suite-card",
+          "title": "Graphite type, foil flash, architectural spacing.",
+          "text": "02 / City evening",
+          "links": []
+        },
+        {
+          "className": "suite-card",
+          "title": "Persimmon accents, warm cotton stock, playful map insert.",
+          "text": "03 / Orchard lunch",
+          "links": []
+        },
+        {
+          "className": "",
+          "title": "Intro to platen press",
+          "text": "Set type, lock a chase, print a two-color postcard, and take home fifty copies.",
+          "links": []
+        },
+        {
+          "className": "",
+          "title": "Wedding proof day",
+          "text": "Bring your suite draft and leave with paper, ink, and finishing decisions resolved.",
+          "links": []
+        }
+      ],
+      "html": "<main id=\"top\">\n      <section class=\"hero section-shell\">\n        <div class=\"hero-copy\">\n          <p class=\"eyebrow\">Small-batch print, big-day detail</p>\n          <h1>Custom invitations and weekend print workshops from a working letterpress studio.</h1>\n          <p class=\"lede\">We pair hand-mixed inks, cotton papers, and antique presses to make tactile wedding suites, launch cards, and private workshop days in our bright canal-side shop.</p>\n          <div class=\"button-row\">\n            <a class=\"button button-primary\" href=\"#booking\">Start a commission</a>\n            <a class=\"button button-secondary\" href=\"#workshops\">View workshops</a>\n          </div>\n        </div>\n        <figure class=\"press-proof\" aria-label=\"Layered letterpress proof sheet illustration\">\n          <div class=\"proof-card proof-card-main\">\n            <span class=\"proof-kicker\">Proof 04</span>\n            <strong>Fern &amp; Brass</strong>\n            <span>blind emboss / moss ink / deckled edge</span>\n          </div>\n          <div class=\"proof-card proof-card-side\">\n            <span class=\"proof-dot\"></span>\n            <span class=\"proof-dot\"></span>\n            <span class=\"proof-dot\"></span>\n          </div>\n          <div class=\"registration-grid\" aria-hidden=\"true\"></div>\n        </figure>\n      </section>\n\n      <section class=\"services section-shell\" aria-labelledby=\"services-title\">\n        <div class=\"section-heading\">\n          <p class=\"eyebrow\">What we make</p>\n          <h2 id=\"services-title\">Designed slowly, printed with pressure.</h2>\n        </div>\n        <div class=\"service-grid\">\n          <article class=\"service-card tall-card\">\n            <span class=\"service-number\">01</span>\n            <h3>Wedding suites</h3>\n            <p>Save-the-dates, invitations, envelopes, menus, and place cards with one consistent print system.</p>\n          </article>\n          <article class=\"service-card\">\n            <span class=\"service-number\">02</span>\n            <h3>Brand paper goods</h3>\n            <p>Launch notes, thank-you cards, certificates, and packaging inserts for small brands.</p>\n          </article>\n          <article class=\"service-card dark-card\">\n            <span class=\"service-number\">03</span>\n            <h3>Studio workshops</h3>\n            <p>Four-hour Saturday sessions for beginners, teams, and design students.</p>\n          </article>\n        </div>\n      </section>\n\n      <section id=\"invitations\" class=\"collection section-shell\" aria-labelledby=\"collection-title\">\n        <div class=\"section-heading split-heading\">\n          <div>\n            <p class=\"eyebrow\">Invitation families</p>\n            <h2 id=\"collection-title\">Three print moods, each built for customization.</h2>\n          </div>\n          <p>Every family starts with a consultation, paper pull, ink drawdown, and a physical proof before the final press run.</p>\n        </div>\n        <div class=\"collection-grid\">\n          <article class=\"suite-card suite-card-large\">\n            <p>01 / Garden formal</p>\n            <h3>Olive ink, soft deckle, blind pressed border.</h3>\n          </article>\n          <article class=\"suite-card\">\n            <p>02 / City evening</p>\n            <h3>Graphite type, foil flash, architectural spacing.</h3>\n          </article>\n          <article class=\"suite-card\">\n            <p>03 / Orchard lunch</p>\n            <h3>Persimmon accents, warm cotton stock, playful map insert.</h3>\n          </article>\n        </div>\n      </section>\n\n      <section id=\"workshops\" class=\"workshops section-shell\" aria-labelledby=\"workshops-title\">\n        <div class=\"workshop-banner\">\n          <p class=\"eyebrow\">Next sessions</p>\n          <h2 id=\"workshops-title\">Weekend workshops for people who want ink under their fingernails.</h2>\n        </div>\n        <div class=\"workshop-list\">\n          <article>\n            <time datetime=\"2026-07-11\">July 11</time>\n            <h3>Intro to platen press</h3>\n            <p>Set type, lock a chase, print a two-color postcard, and take home fifty copies.</p>\n          </article>\n          <article>\n            <time datetime=\"2026-07-25\">July 25</time>\n            <h3>Wedding proof day</h3>\n            <p>Bring your suite draft and leave with paper, ink, and finishing decisions resolved.</p>\n          </article>\n        </div>\n      </section>\n\n      <section id=\"process\" class=\"process section-shell\" aria-labelledby=\"process-title\">\n        <div class=\"section-heading\">\n          <p class=\"eyebrow\">Process</p>\n          <h2 id=\"process-title\">A tactile production path with no mystery middle.</h2>\n        </div>\n        <ol class=\"process-steps\">\n          <li><strong>Brief</strong><span>We define mood, quantities, wording, and practical deadlines.</span></li>\n          <li><strong>Material pull</strong><span>We compare cotton papers, envelope colors, inks, and finishes.</span></li>\n          <li><strong>Physical proof</strong><span>You approve a real printed sample before the full edition starts.</span></li>\n          <li><strong>Press run</strong><span>We print, trim, assemble, and pack the finished suite.</span></li>\n        </ol>\n      </section>\n\n      <section id=\"booking\" class=\"booking section-shell\" aria-labelledby=\"booking-title\">\n        <div>\n          <p class=\"eyebrow\">Press consult</p>\n          <h2 id=\"booking-title\">Tell us what needs to feel unforgettable on paper.</h2>\n          <p>Share a date, quantity, and the kind of printed object you are imagining. We reply within two studio days.</p>\n        </div>\n        <form class=\"booking-form\" action=\"/contact\" method=\"post\">\n          <label>\n            <span>Name</span>\n            <input name=\"name\" type=\"text\" placeholder=\"Your name\" required>\n          </label>\n          <label>\n            <span>Email</span>\n            <input name=\"email\" type=\"email\" placeholder=\"you@example.com\" required>\n          </label>\n          <label class=\"wide-field\">\n            <span>Project notes</span>\n            <textarea name=\"message\" placeholder=\"Wedding suite, workshop date, brand cards...\" rows=\"5\"></textarea>\n          </label>\n          <button type=\"submit\">Send the brief</button>\n        </form>\n      </section>\n    </main>"
+    },
+    {
+      "id": "site-footer",
+      "selector": ".site-footer",
+      "tagName": "footer",
+      "className": "site-footer",
+      "text": "Vellum &amp; Volt Letterpress Studio Canal Street Workshop / Tuesday-Saturday / hello@vellumvolt.example",
+      "headings": [],
+      "paragraphs": [
+        {
+          "className": "",
+          "content": "Vellum &amp; Volt Letterpress Studio"
+        },
+        {
+          "className": "",
+          "content": "Canal Street Workshop / Tuesday-Saturday / hello@vellumvolt.example"
+        }
+      ],
+      "links": [],
+      "forms": [],
+      "cards": [],
+      "html": "<footer class=\"site-footer\">\n      <p>Vellum &amp; Volt Letterpress Studio</p>\n      <p>Canal Street Workshop / Tuesday-Saturday / hello@vellumvolt.example</p>\n    </footer>"
+    }
+  ],
+  "headings": [
+    {
+      "level": 1,
+      "className": "",
+      "content": "Custom invitations and weekend print workshops from a working letterpress studio."
+    },
+    {
+      "level": 2,
+      "className": "",
+      "content": "Designed slowly, printed with pressure."
+    },
+    {
+      "level": 3,
+      "className": "",
+      "content": "Wedding suites"
+    },
+    {
+      "level": 3,
+      "className": "",
+      "content": "Brand paper goods"
+    },
+    {
+      "level": 3,
+      "className": "",
+      "content": "Studio workshops"
+    },
+    {
+      "level": 2,
+      "className": "",
+      "content": "Three print moods, each built for customization."
+    },
+    {
+      "level": 3,
+      "className": "",
+      "content": "Olive ink, soft deckle, blind pressed border."
+    },
+    {
+      "level": 3,
+      "className": "",
+      "content": "Graphite type, foil flash, architectural spacing."
+    },
+    {
+      "level": 3,
+      "className": "",
+      "content": "Persimmon accents, warm cotton stock, playful map insert."
+    },
+    {
+      "level": 2,
+      "className": "",
+      "content": "Weekend workshops for people who want ink under their fingernails."
+    },
+    {
+      "level": 3,
+      "className": "",
+      "content": "Intro to platen press"
+    },
+    {
+      "level": 3,
+      "className": "",
+      "content": "Wedding proof day"
+    },
+    {
+      "level": 2,
+      "className": "",
+      "content": "A tactile production path with no mystery middle."
+    },
+    {
+      "level": 2,
+      "className": "",
+      "content": "Tell us what needs to feel unforgettable on paper."
+    }
+  ],
+  "paragraphs": [
+    {
+      "className": "eyebrow",
+      "content": "Small-batch print, big-day detail"
+    },
+    {
+      "className": "lede",
+      "content": "We pair hand-mixed inks, cotton papers, and antique presses to make tactile wedding suites, launch cards, and private workshop days in our bright canal-side shop."
+    },
+    {
+      "className": "eyebrow",
+      "content": "What we make"
+    },
+    {
+      "className": "",
+      "content": "Save-the-dates, invitations, envelopes, menus, and place cards with one consistent print system."
+    },
+    {
+      "className": "",
+      "content": "Launch notes, thank-you cards, certificates, and packaging inserts for small brands."
+    },
+    {
+      "className": "",
+      "content": "Four-hour Saturday sessions for beginners, teams, and design students."
+    },
+    {
+      "className": "eyebrow",
+      "content": "Invitation families"
+    },
+    {
+      "className": "",
+      "content": "Every family starts with a consultation, paper pull, ink drawdown, and a physical proof before the final press run."
+    },
+    {
+      "className": "",
+      "content": "01 / Garden formal"
+    },
+    {
+      "className": "",
+      "content": "02 / City evening"
+    },
+    {
+      "className": "",
+      "content": "03 / Orchard lunch"
+    },
+    {
+      "className": "eyebrow",
+      "content": "Next sessions"
+    },
+    {
+      "className": "",
+      "content": "Set type, lock a chase, print a two-color postcard, and take home fifty copies."
+    },
+    {
+      "className": "",
+      "content": "Bring your suite draft and leave with paper, ink, and finishing decisions resolved."
+    },
+    {
+      "className": "eyebrow",
+      "content": "Process"
+    },
+    {
+      "className": "eyebrow",
+      "content": "Press consult"
+    },
+    {
+      "className": "",
+      "content": "Share a date, quantity, and the kind of printed object you are imagining. We reply within two studio days."
+    },
+    {
+      "className": "",
+      "content": "Vellum &amp; Volt Letterpress Studio"
+    },
+    {
+      "className": "",
+      "content": "Canal Street Workshop / Tuesday-Saturday / hello@vellumvolt.example"
+    }
+  ],
+  "links": [
+    {
+      "className": "brand",
+      "url": "#top",
+      "text": "V Vellum &amp; Volt Letterpress Studio"
+    },
+    {
+      "className": "",
+      "url": "#invitations",
+      "text": "Invitations"
+    },
+    {
+      "className": "",
+      "url": "#workshops",
+      "text": "Workshops"
+    },
+    {
+      "className": "",
+      "url": "#process",
+      "text": "Process"
+    },
+    {
+      "className": "header-cta",
+      "url": "#booking",
+      "text": "Book a press consult"
+    },
+    {
+      "className": "button button-primary",
+      "url": "#booking",
+      "text": "Start a commission"
+    },
+    {
+      "className": "button button-secondary",
+      "url": "#workshops",
+      "text": "View workshops"
+    }
+  ],
+  "forms": [
+    {
+      "className": "booking-form",
+      "action": "/contact",
+      "method": "post",
+      "fields": [
+        {
+          "label": "Name",
+          "type": "text",
+          "name": "name",
+          "placeholder": "Your name",
+          "required": true
+        },
+        {
+          "label": "Email",
+          "type": "email",
+          "name": "email",
+          "placeholder": "you@example.com",
+          "required": true
+        },
+        {
+          "label": "Project notes",
+          "type": "textarea",
+          "name": "message",
+          "placeholder": "Wedding suite, workshop date, brand cards...",
+          "required": false
+        }
+      ],
+      "buttonText": "Send the brief"
+    }
+  ],
+  "cards": [
+    {
+      "className": "service-card tall-card",
+      "title": "Wedding suites",
+      "text": "Save-the-dates, invitations, envelopes, menus, and place cards with one consistent print system.",
+      "links": []
+    },
+    {
+      "className": "service-card",
+      "title": "Brand paper goods",
+      "text": "Launch notes, thank-you cards, certificates, and packaging inserts for small brands.",
+      "links": []
+    },
+    {
+      "className": "service-card dark-card",
+      "title": "Studio workshops",
+      "text": "Four-hour Saturday sessions for beginners, teams, and design students.",
+      "links": []
+    },
+    {
+      "className": "suite-card suite-card-large",
+      "title": "Olive ink, soft deckle, blind pressed border.",
+      "text": "01 / Garden formal",
+      "links": []
+    },
+    {
+      "className": "suite-card",
+      "title": "Graphite type, foil flash, architectural spacing.",
+      "text": "02 / City evening",
+      "links": []
+    },
+    {
+      "className": "suite-card",
+      "title": "Persimmon accents, warm cotton stock, playful map insert.",
+      "text": "03 / Orchard lunch",
+      "links": []
+    },
+    {
+      "className": "",
+      "title": "Intro to platen press",
+      "text": "Set type, lock a chase, print a two-color postcard, and take home fifty copies.",
+      "links": []
+    },
+    {
+      "className": "",
+      "title": "Wedding proof day",
+      "text": "Bring your suite draft and leave with paper, ink, and finishing decisions resolved.",
+      "links": []
+    }
+  ]
+}

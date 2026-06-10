@@ -1,0 +1,104 @@
+{
+  "sections": [
+    {
+      "id": "site-header",
+      "sourceSelector": ".site-header",
+      "strategy": "core-assembly",
+      "coreBlocks": ["core/group", "core/navigation-link", "core/buttons", "core/button"],
+      "customBlocks": [],
+      "styleResponsibilities": {
+        "blockSupports": ["spacing.padding", "layout.flex"],
+        "blockCss": [".site-header", ".brand", ".site-nav", ".header-cta"],
+        "pageCss": [":root tokens"]
+      },
+      "editableModel": "Brand text, nav labels, URLs, and CTA label remain text/link editable.",
+      "reason": "Header is a layout and link composition problem, not a custom data model."
+    },
+    {
+      "id": "hero",
+      "sourceSelector": ".hero",
+      "strategy": "core-assembly",
+      "coreBlocks": ["core/group", "core/paragraph", "core/heading", "core/buttons", "core/button"],
+      "customBlocks": [],
+      "styleResponsibilities": {
+        "blockSupports": ["spacing.padding", "layout.constrained"],
+        "blockCss": [".hero", ".button-row", ".press-proof", ".proof-card"],
+        "pageCss": ["responsive hero grid"]
+      },
+      "editableModel": "Eyebrow, heading, lede, and buttons are inline editable. Proof text is plain saved markup in a styled core group.",
+      "reason": "Core text/button blocks preserve editability; the proof illustration is deterministic layout CSS."
+    },
+    {
+      "id": "services",
+      "sourceSelector": ".services",
+      "strategy": "core-assembly",
+      "coreBlocks": ["core/group", "core/heading", "core/paragraph"],
+      "customBlocks": [],
+      "styleResponsibilities": {
+        "blockSupports": ["spacing.blockGap"],
+        "blockCss": [".service-grid", ".service-card", ".tall-card", ".dark-card"],
+        "pageCss": []
+      },
+      "editableModel": "Service numbers, titles, and descriptions are text editable.",
+      "reason": "Asymmetry is visual styling over simple repeated content."
+    },
+    {
+      "id": "collection",
+      "sourceSelector": ".collection",
+      "strategy": "core-assembly",
+      "coreBlocks": ["core/group", "core/heading", "core/paragraph"],
+      "customBlocks": [],
+      "styleResponsibilities": {
+        "blockSupports": ["spacing.padding"],
+        "blockCss": [".collection-grid", ".suite-card", ".suite-card-large"],
+        "pageCss": []
+      },
+      "editableModel": "Card labels and headlines are text editable.",
+      "reason": "Cards are static marketing content; no custom block needed."
+    },
+    {
+      "id": "workshops",
+      "sourceSelector": ".workshops",
+      "strategy": "core-assembly",
+      "coreBlocks": ["core/group", "core/heading", "core/paragraph"],
+      "customBlocks": [],
+      "styleResponsibilities": {
+        "blockSupports": ["layout.grid"],
+        "blockCss": [".workshops", ".workshop-banner", ".workshop-list"],
+        "pageCss": []
+      },
+      "editableModel": "Dates, titles, and descriptions are editable text.",
+      "reason": "Workshop cards are simple repeated content in this homepage."
+    },
+    {
+      "id": "booking",
+      "sourceSelector": ".booking",
+      "strategy": "mixed",
+      "coreBlocks": ["core/group", "core/paragraph", "core/heading"],
+      "customBlocks": ["wbdc/press-consult-form"],
+      "styleResponsibilities": {
+        "blockSupports": ["spacing.padding"],
+        "blockCss": [".booking", ".booking-form", ".wp-block-wbdc-press-consult-form"],
+        "pageCss": []
+      },
+      "editableModel": "Heading/body are core text. Form labels and submit text are inline RichText; action/method are inspector settings.",
+      "reason": "The form needs semantic saved markup and structured fields."
+    }
+  ],
+  "customBlocks": [
+    {
+      "name": "wbdc/press-consult-form",
+      "reason": "Core blocks cannot provide a semantic editable form with action/method/settings and structured field data.",
+      "attributes": [
+        { "name": "action", "type": "string", "role": "form-action", "default": "/contact" },
+        { "name": "method", "type": "string", "role": "form-method", "default": "post" },
+        { "name": "fields", "type": "array", "role": "form-fields" },
+        { "name": "buttonText", "type": "string", "role": "button-text", "default": "Send the brief" }
+      ],
+      "supports": ["spacing", "color", "typography", "border", "anchor", "className"],
+      "editorModel": "Frontend-like disabled controls with RichText labels and button text. InspectorControls for action/method.",
+      "saveContract": "Static semantic form with labels, inputs, textarea, and submit button."
+    }
+  ],
+  "htmlBlocks": []
+}
