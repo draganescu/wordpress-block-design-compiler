@@ -7,7 +7,10 @@ The source mockup is an editorial star-map homepage for a travelling food and te
 - Use `core/group` for block-level sections, article wrappers, and the `main` container.
 - Use `core/paragraph` and `core/heading` for ordinary editorial copy.
 - Keep the field etiquette section as core block composition because the text structure is simple and editor-friendly.
-- Recreate visual behavior in `wordpress/style.css` and custom block `style.css` files; no `core/html` is needed.
+- Put block-level spacing, color, typography, border, and gap decisions in `wordpress/block-tree.json` support-style attributes.
+- Keep `wordpress/style.css` to tokens, document defaults, core section grid glue, and responsive rules that core supports cannot express.
+- Keep `wordpress/blocks/*/style.css` scoped to custom block internals: sticky navigation layout, orbit map pseudo-elements, card variants, horizontal rails, and form controls.
+- No `core/html` is needed.
 
 ## Custom Blocks
 
@@ -21,3 +24,10 @@ The source mockup is an editorial star-map homepage for a travelling food and te
 ## Editor Model
 
 Visible text is edited with `RichText` in the canvas. Repeated rows live in array attributes. Form field structure is represented as data attributes, with labels and button text editable inline. There are no `htmlLines`, `innerHTML`, `innerContent`, `markup`, or `sourceHtml` fields.
+
+## Style Audit
+
+- `32 / 34` blocks carry support-style attributes.
+- Support-styled block coverage is `94.12%`.
+- Page CSS is `131` non-empty lines and limited to tokens, document defaults, page grid glue, and responsive exceptions.
+- Scoped custom block CSS covers child selectors and behaviors that block supports cannot target.

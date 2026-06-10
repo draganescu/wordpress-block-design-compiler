@@ -6,7 +6,7 @@
     "maxHeightDelta": 8
   },
   "aggregate": {
-    "maxMismatchPercent": 0,
+    "maxMismatchPercent": 0.36,
     "maxHeightDelta": 0
   },
   "results": [
@@ -16,7 +16,7 @@
       "mockup": "/Users/andreidraganescu/Sites/wordpress-block-design-compiler/plugins/wordpress-block-design-compiler/examples/test-run-night-market-observatory/visual/mockup-desktop.png",
       "rendered": "/Users/andreidraganescu/Sites/wordpress-block-design-compiler/plugins/wordpress-block-design-compiler/examples/test-run-night-market-observatory/visual/rendered-desktop.png",
       "diff": "/Users/andreidraganescu/Sites/wordpress-block-design-compiler/plugins/wordpress-block-design-compiler/examples/test-run-night-market-observatory/visual/diff-desktop.png",
-      "mismatchPercent": 0,
+      "mismatchPercent": 0.13,
       "widthDelta": 0,
       "heightDelta": 0
     },
@@ -26,7 +26,7 @@
       "mockup": "/Users/andreidraganescu/Sites/wordpress-block-design-compiler/plugins/wordpress-block-design-compiler/examples/test-run-night-market-observatory/visual/mockup-mobile.png",
       "rendered": "/Users/andreidraganescu/Sites/wordpress-block-design-compiler/plugins/wordpress-block-design-compiler/examples/test-run-night-market-observatory/visual/rendered-mobile.png",
       "diff": "/Users/andreidraganescu/Sites/wordpress-block-design-compiler/plugins/wordpress-block-design-compiler/examples/test-run-night-market-observatory/visual/diff-mobile.png",
-      "mismatchPercent": 0,
+      "mismatchPercent": 0.36,
       "widthDelta": 0,
       "heightDelta": 0
     }

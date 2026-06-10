@@ -9,7 +9,7 @@ The plugin does not try to make an autonomous server-side orchestrator. It gives
 - analyze the mockup structure and CSS
 - plan core blocks, custom blocks, and styling responsibilities
 - scaffold vanilla JavaScript static custom blocks
-- assemble editable `wordpress/block-tree.json`
+- assemble editable `wordpress/block-tree.json` with block supports/style attributes as the primary design surface
 - serialize the block tree through `@wordpress/blocks`, `@wordpress/block-library` core registrations, and registered custom-block `save()` functions
 - compare mockup and rendered output with screenshots and pixel diffs
 - return concrete repair tasks for the agent to fix
@@ -50,7 +50,7 @@ Use `claude/CLAUDE.md` as the Claude project instruction file when running this 
 - `create_workspace`: creates `mockup`, `analysis`, `plan`, `wordpress`, `rendered`, `reports`, and `visual` folders.
 - `analyze_mockup`: extracts a content inventory, sections, forms, links, cards, headings, CSS custom properties, and selectors.
 - `scaffold_custom_block`: writes `block.json`, `index.js`, and `style.css` for a vanilla JavaScript static block.
-- `serialize_wordpress_blocks`: boots a jsdom environment, registers official core blocks with `@wordpress/block-library`, registers custom blocks from `wordpress/blocks/*/index.js`, serializes `wordpress/block-tree.json` with `@wordpress/blocks`, writes canonical block markup to `wordpress/content.html`, and writes frontend preview HTML to `rendered/rendered-blocks.html`. Preview CSS is concatenated from `wordpress/style.css` and `wordpress/blocks/*/style.css`; the tool returns that source list. `mockup/style.css` is not included unless `includeMockupCss: true` is explicitly passed for debugging. It rejects source trees that contain `htmlLines`, `innerHTML`, `innerContent`, `html`, `markup`, or `sourceHtml`; unregistered core block names; attributes absent from WordPress block metadata; or `core/group` tag names outside block-level layout containers.
+- `serialize_wordpress_blocks`: boots a jsdom environment, registers official core blocks with `@wordpress/block-library`, registers custom blocks from `wordpress/blocks/*/index.js`, serializes `wordpress/block-tree.json` with `@wordpress/blocks`, writes canonical block markup to `wordpress/content.html`, writes frontend preview HTML to `rendered/rendered-blocks.html`, and writes `reports/style-audit.json`. Preview CSS is concatenated from `wordpress/style.css` and `wordpress/blocks/*/style.css`; the tool returns that source list. `mockup/style.css` is not included unless `includeMockupCss: true` is explicitly passed for debugging. It rejects source trees that contain `htmlLines`, `innerHTML`, `innerContent`, `html`, `markup`, or `sourceHtml`; unregistered core block names; attributes absent from WordPress block metadata; or `core/group` tag names outside block-level layout containers.
 - `compare_html`: captures mockup/rendered screenshots, generates diffs, and writes `reports/comparison.json` plus `reports/repair-tasks.md`.
 
 ## Workflow
@@ -63,3 +63,10 @@ Default comparison thresholds:
 - `maxHeightDelta <= 8`
 
 The repair loop is deliberately agent-led: the tool reports differences and image paths, then the agent fixes block composition, block source, or CSS as appropriate.
+
+Styling should be placed in this order:
+
+1. Block support/style attributes in `wordpress/block-tree.json`.
+2. Custom block attributes and style variation classes.
+3. Scoped custom block CSS for internals supports cannot target.
+4. Tiny page CSS for tokens, document defaults, and cross-block glue.

@@ -1,1 +1,53 @@
-/* Intentionally empty for the initial no-mockup-CSS baseline. Recreate block styling here during repair. */
+.sky-rail {
+  display: grid;
+  grid-auto-columns: minmax(340px, 42vw);
+  grid-auto-flow: column;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+}
+
+.sky-rail article {
+  min-height: 410px;
+  border: 1px solid var(--line);
+  background: rgba(8, 7, 13, 0.72);
+  padding: 1rem;
+  scroll-snap-align: start;
+}
+
+.sky-rail article.hot {
+  background: var(--acid);
+  color: var(--night);
+}
+
+.sky-rail time {
+  color: var(--acid);
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.sky-rail article.hot time {
+  color: var(--plum);
+}
+
+.sky-rail h3 {
+  font-size: clamp(1.4rem, 2.4vw, 2.5rem);
+  line-height: 0.96;
+  text-transform: uppercase;
+}
+
+.sky-rail p {
+  color: var(--muted);
+  line-height: 1.36;
+}
+
+.sky-rail article.hot p {
+  color: var(--ink);
+}
+
+@media (max-width: 900px) {
+  .sky-rail {
+    grid-auto-columns: minmax(295px, 86vw);
+  }
+}

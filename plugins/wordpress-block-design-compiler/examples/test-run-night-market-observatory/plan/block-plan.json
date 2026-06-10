@@ -58,5 +58,20 @@
     "wbdc/market-rsvp-form",
     "wbdc/market-footer"
   ],
+  "styleStrategy": {
+    "priority": [
+      "wordpress/block-tree.json attrs.style and support-backed block attributes",
+      "custom block attributes and style variation classes",
+      "wordpress/blocks/<slug>/style.css for scoped internals supports cannot target",
+      "wordpress/style.css for tokens, document defaults, shared page grid glue, and responsive exceptions"
+    ],
+    "audit": {
+      "blocksWithSupportAttrs": 32,
+      "blockCount": 34,
+      "supportStyledPercent": 94.12,
+      "pageCssLines": 131,
+      "pageCssRules": 25
+    }
+  },
   "htmlBlockUsage": []
 }

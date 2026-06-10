@@ -21,7 +21,7 @@ Initial comparison:
 
 Repair iterations:
 
-- `1`
+- `2`
 
 Repair pass 1:
 
@@ -31,12 +31,26 @@ Repair pass 1:
 
 Current comparison:
 
-- Max mismatch: `0%`
+- Max mismatch: `0.36%`
 - Max height delta: `0px`
-- Desktop mismatch: `0%`
+- Desktop mismatch: `0.13%`
 - Desktop height delta: `0px`
-- Mobile mismatch: `0%`
+- Mobile mismatch: `0.36%`
 - Mobile height delta: `0px`
+
+Repair pass 2:
+
+- Moved block-level color, spacing, typography, border, and gap values into `wordpress/block-tree.json` support-style attributes.
+- Added support-style handling for custom blocks in the local serializer preview shim.
+- Split the prior page-level stylesheet into a small global/page layer plus scoped `wordpress/blocks/*/style.css` files for internals that supports cannot target.
+- Added `reports/style-audit.json`.
+
+Style audit:
+
+- Blocks with support attributes: `32 / 34`
+- Support-styled blocks: `94.12%`
+- Page CSS: `131` non-empty lines / `25` rules
+- Block scoped CSS: `438` non-empty lines / `81` rules
 
 Current task summary:
 

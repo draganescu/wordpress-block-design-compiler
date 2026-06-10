@@ -1,1 +1,22 @@
-/* Intentionally empty for the initial no-mockup-CSS baseline. Recreate block styling here during repair. */
+.market-footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  max-width: var(--max);
+  margin: 0 auto;
+}
+
+.market-footer p {
+  margin: 0;
+}
+
+.market-footer a {
+  color: var(--acid);
+  font-weight: 900;
+}
+
+@media (max-width: 900px) {
+  .market-footer {
+    display: block;
+  }
+}

@@ -7,8 +7,9 @@ The assembled artifact is `wordpress/block-tree.json`. It must be a data-only bl
 Core-first means:
 
 - Use real core blocks registered by `@wordpress/block-library` where appropriate. Prefer static blocks with useful saved markup for local preview; dynamic core blocks may serialize only block comments outside WordPress.
-- Use block supports for spacing, color, border, typography, layout, alignment, anchor, and className before inventing attributes.
-- Use custom CSS when core supports cannot express exact visual styling.
+- Use block supports for spacing, color, border, dimensions, typography, layout, alignment, anchor, and className before inventing attributes.
+- Use block style variations/classes for named editor-facing design choices.
+- Use custom CSS only when block supports cannot express exact visual styling.
 - Use custom blocks only for a better content model, reusable repeated data, frontend behavior, semantic save contracts, or editor affordances.
 - Use only real registered core block names and attributes present in WordPress block metadata. Do not invent convenience core blocks.
 - Use `core/group` only for block-level layout containers. Do not use it to emit inline tags, definition-list internals, links, buttons, form fields, or arbitrary HTML.
@@ -119,4 +120,15 @@ CSS transfer requirements:
 
 - `mockup/style.css` belongs only to the source mockup.
 - The rendered block preview uses `wordpress/style.css` and `wordpress/blocks/*/style.css`.
-- Recreate the needed styling in WordPress CSS; do not import or concatenate the mockup stylesheet into the rendered preview.
+- Recreate styling as WordPress block data first: `attrs.style`, `layout`, `align`, `textColor`, `backgroundColor`, `fontSize`, spacing, border, typography, and dimensions settings.
+- Put custom block internals in `wordpress/blocks/<slug>/style.css` only when supports cannot target the needed child, pseudo-element, interaction state, responsive grid, sticky behavior, or form control.
+- Keep `wordpress/style.css` small: tokens, base document defaults, shared responsive glue, and cross-block rules only.
+- Do not import, concatenate, or mechanically copy the mockup stylesheet into the rendered preview.
+
+Style audit requirements:
+
+- `serialize_wordpress_blocks` writes `reports/style-audit.json`.
+- Read the audit after each serialization.
+- If page CSS is large, move block-level color, spacing, typography, border, dimensions, and layout decisions back into `wordpress/block-tree.json`.
+- If a block needs many scoped internal rules, prefer a custom block with explicit typed attributes and block-scoped CSS over page-level selectors.
+- Every remaining CSS rule should have a reason that maps to a support limitation.

@@ -7,21 +7,77 @@
   "editorScript": "file:./index.js",
   "style": "file:./style.css",
   "attributes": {
-    "ariaLabel": { "type": "string", "default": "Night Market Observatory navigation" },
-    "homeUrl": { "type": "string", "default": "#top" },
-    "homeLabel": { "type": "string", "default": "Night Market Observatory home" },
-    "sigil": { "type": "string", "default": "NMO" },
-    "title": { "type": "string", "default": "Night Market Observatory" },
-    "routeTag": { "type": "string", "default": "Route 07 / dusk to moonset / rotating city edition" },
-    "navLabel": { "type": "string", "default": "Primary" },
-    "links": { "type": "array", "default": [] },
-    "actionText": { "type": "string", "default": "Join tonight" },
-    "actionUrl": { "type": "string", "default": "#rsvp" }
+    "ariaLabel": {
+      "type": "string",
+      "default": "Night Market Observatory navigation"
+    },
+    "homeUrl": {
+      "type": "string",
+      "default": "#top"
+    },
+    "homeLabel": {
+      "type": "string",
+      "default": "Night Market Observatory home"
+    },
+    "sigil": {
+      "type": "string",
+      "default": "NMO"
+    },
+    "title": {
+      "type": "string",
+      "default": "Night Market Observatory"
+    },
+    "routeTag": {
+      "type": "string",
+      "default": "Route 07 / dusk to moonset / rotating city edition"
+    },
+    "navLabel": {
+      "type": "string",
+      "default": "Primary"
+    },
+    "links": {
+      "type": "array",
+      "default": []
+    },
+    "actionText": {
+      "type": "string",
+      "default": "Join tonight"
+    },
+    "actionUrl": {
+      "type": "string",
+      "default": "#rsvp"
+    },
+    "style": {
+      "type": "object",
+      "default": {}
+    }
   },
   "supports": {
     "anchor": true,
     "className": true,
-    "spacing": { "margin": true, "padding": true },
-    "html": false
+    "spacing": {
+      "margin": true,
+      "padding": true,
+      "blockGap": true
+    },
+    "html": false,
+    "color": {
+      "text": true,
+      "background": true,
+      "gradients": true
+    },
+    "typography": {
+      "fontSize": true,
+      "lineHeight": true
+    },
+    "border": {
+      "color": true,
+      "radius": true,
+      "style": true,
+      "width": true
+    },
+    "dimensions": {
+      "minHeight": true
+    }
   }
 }

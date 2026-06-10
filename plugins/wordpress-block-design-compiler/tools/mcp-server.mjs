@@ -12,6 +12,7 @@ const DEFAULT_VIEWPORTS = [
   { name: 'mobile', width: 390, height: 1200 },
 ];
 const customInnerBlocksStack = [];
+const customBlockPropsStack = [];
 const ALLOWED_GROUP_TAGS = new Set(['div', 'main', 'section', 'article', 'aside', 'header', 'footer']);
 let coreBlocksRegistered = false;
 let domEnvironmentReady = false;
@@ -334,8 +335,9 @@ async function serializeWordPressBlocks(args) {
   const contentPath = path.join(workspaceRoot, args.contentPath || 'wordpress/content.html');
   const outPath = path.join(workspaceRoot, args.outPath || 'rendered/rendered-blocks.html');
   const treeExists = fs.existsSync(treePath);
+  const tree = treeExists ? readJson(treePath) : null;
   const blockMarkup = treeExists
-    ? serializeBlockTreeWithWordPress(readJson(treePath), { workspaceRoot })
+    ? serializeBlockTreeWithWordPress(tree, { workspaceRoot })
     : fs.readFileSync(contentPath, 'utf8');
   const cssSources = [
     ...(args.includeMockupCss ? [cssSource(workspaceRoot, path.join(workspaceRoot, 'mockup/style.css'))] : []),
@@ -343,14 +345,18 @@ async function serializeWordPressBlocks(args) {
     ...findFiles(path.join(workspaceRoot, 'wordpress/blocks'), 'style.css').map((file) => cssSource(workspaceRoot, file)),
   ].filter((source) => source.css);
   const previewCss = cssSources.map((source) => `/* ${source.relativePath} */\n${source.css}`).join('\n\n');
+  const styleAudit = auditStyleUsage(tree, cssSources);
 
   if (treeExists) writeFile(contentPath, `${blockMarkup.trim()}\n`);
   writeFile(outPath, fullHtml('Rendered WordPress Blocks', previewCss, stripBlockComments(blockMarkup)));
+  writeJson(path.join(workspaceRoot, 'reports/style-audit.json'), styleAudit);
   return {
     treePath: treeExists ? treePath : null,
     contentPath,
     renderedPath: outPath,
     cssSources: cssSources.map((source) => source.relativePath),
+    styleAuditPath: path.join(workspaceRoot, 'reports/style-audit.json'),
+    styleAudit,
     next: 'Call compare_html, inspect screenshots/diffs, then write repair tasks against wordpress/block-tree.json, block save code, or CSS.',
   };
 }
@@ -455,11 +461,13 @@ function registerWorkspaceCustomBlock(blockRoot) {
 function normalizeCustomBlockSettings(name, settings, blockJson = {}) {
   const save = settings.save
     ? (props) => {
+        customBlockPropsStack.push({ name, attributes: props.attributes || {} });
         customInnerBlocksStack.push(props.innerBlocks || []);
         try {
           return settings.save(props);
         } finally {
           customInnerBlocksStack.pop();
+          customBlockPropsStack.pop();
         }
       }
     : undefined;
@@ -477,8 +485,8 @@ function normalizeCustomBlockSettings(name, settings, blockJson = {}) {
 function createBlockEditorShim() {
   const { createElement: el, RawHTML } = loadWordPressElement();
   const { serialize } = loadWordPressBlocks();
-  const useBlockProps = (props = {}) => props;
-  useBlockProps.save = (props = {}) => props;
+  const useBlockProps = (props = {}) => blockPropsWithSupports(props, customBlockPropsStack.at(-1));
+  useBlockProps.save = (props = {}) => blockPropsWithSupports(props, customBlockPropsStack.at(-1));
   const RichText = () => null;
   RichText.Content = ({ tagName = 'div', value = '', ...props }) => {
     const cleanProps = { ...props };
@@ -494,6 +502,190 @@ function createBlockEditorShim() {
       Content: () => el(RawHTML, null, serialize(customInnerBlocksStack.at(-1) || [], { isInnerBlocks: true })),
     },
   };
+}
+
+function blockPropsWithSupports(props = {}, context) {
+  if (!context) return props;
+  const attrs = context.attributes || {};
+  const supportStyle = styleSupportToReactStyle(attrs.style || {});
+  const mergedStyle = { ...supportStyle, ...(props.style || {}) };
+  const className = mergeClasses(
+    blockSupportClassName(context.name),
+    supportClassNames(attrs),
+    attrs.className,
+    props.className
+  );
+  return {
+    ...props,
+    ...(className ? { className } : {}),
+    ...(Object.keys(mergedStyle).length ? { style: mergedStyle } : {}),
+  };
+}
+
+function blockSupportClassName(name) {
+  return name ? `wp-block-${name.replace('/', '-')}` : '';
+}
+
+function supportClassNames(attrs) {
+  const classes = [];
+  if (attrs.textColor || attrs.style?.color?.text) classes.push('has-text-color');
+  if (attrs.backgroundColor || attrs.style?.color?.background || attrs.style?.color?.gradient) classes.push('has-background');
+  if (attrs.fontSize) classes.push(`has-${slug(attrs.fontSize)}-font-size`);
+  return classes;
+}
+
+function mergeClasses(...values) {
+  const seen = new Set();
+  const flatten = (value) => Array.isArray(value) ? value.flatMap(flatten) : String(value || '').split(/\s+/);
+  return values
+    .flatMap(flatten)
+    .filter((value) => {
+      if (!value || seen.has(value)) return false;
+      seen.add(value);
+      return true;
+    })
+    .join(' ');
+}
+
+function styleSupportToReactStyle(style) {
+  const out = {};
+  if (!style || typeof style !== 'object') return out;
+
+  assignIf(out, 'color', style.color?.text);
+  assignIf(out, 'backgroundColor', style.color?.background);
+  assignIf(out, 'background', style.color?.gradient);
+  assignIf(out, 'fontSize', style.typography?.fontSize);
+  assignIf(out, 'fontFamily', style.typography?.fontFamily);
+  assignIf(out, 'lineHeight', style.typography?.lineHeight);
+  assignIf(out, 'fontWeight', style.typography?.fontWeight);
+  assignIf(out, 'fontStyle', style.typography?.fontStyle);
+  assignIf(out, 'letterSpacing', style.typography?.letterSpacing);
+  assignIf(out, 'textTransform', style.typography?.textTransform);
+  assignIf(out, 'minHeight', style.dimensions?.minHeight);
+  assignBox(out, 'padding', style.spacing?.padding);
+  assignBox(out, 'margin', style.spacing?.margin);
+  assignIf(out, 'gap', style.spacing?.blockGap);
+  assignBorder(out, style.border);
+
+  for (const [key, value] of Object.entries(style)) {
+    if (key.startsWith('--')) out[key] = cssPresetValue(value);
+  }
+
+  return out;
+}
+
+function assignIf(out, key, value) {
+  if (value !== undefined && value !== null && value !== '') out[key] = cssPresetValue(value);
+}
+
+function assignBox(out, prefix, value) {
+  if (!value) return;
+  if (typeof value === 'string') {
+    out[prefix] = cssPresetValue(value);
+    return;
+  }
+  assignIf(out, `${prefix}Top`, value.top);
+  assignIf(out, `${prefix}Right`, value.right);
+  assignIf(out, `${prefix}Bottom`, value.bottom);
+  assignIf(out, `${prefix}Left`, value.left);
+}
+
+function assignBorder(out, border) {
+  if (!border || typeof border !== 'object') return;
+  assignIf(out, 'borderColor', border.color);
+  assignIf(out, 'borderWidth', border.width);
+  assignIf(out, 'borderStyle', border.style);
+  assignIf(out, 'borderRadius', border.radius);
+  for (const side of ['top', 'right', 'bottom', 'left']) {
+    const sideBorder = border[side];
+    if (!sideBorder || typeof sideBorder !== 'object') continue;
+    const prefix = `border${titleCase(side)}`;
+    assignIf(out, `${prefix}Color`, sideBorder.color);
+    assignIf(out, `${prefix}Width`, sideBorder.width);
+    assignIf(out, `${prefix}Style`, sideBorder.style);
+  }
+}
+
+function cssPresetValue(value) {
+  if (typeof value !== 'string') return value;
+  const match = value.match(/^var:preset\|([a-z0-9-]+)\|([a-z0-9-]+)$/i);
+  return match ? `var(--wp--preset--${match[1]}--${match[2]})` : value;
+}
+
+function auditStyleUsage(tree, cssSources) {
+  const blocks = collectTreeBlocks(tree);
+  const supportKeys = ['style', 'layout', 'align', 'backgroundColor', 'textColor', 'gradient', 'fontSize', 'borderColor'];
+  const blocksWithSupportAttrs = blocks.filter((block) => {
+    const attrs = block.attrs || block.attributes || {};
+    return supportKeys.some((key) => attrs[key] !== undefined);
+  });
+  const stylePaths = new Map();
+  for (const block of blocks) {
+    const attrs = block.attrs || block.attributes || {};
+    collectStylePaths(attrs.style, '', stylePaths);
+  }
+  const cssFiles = cssSources.map((source) => ({
+    path: source.relativePath,
+    bytes: Buffer.byteLength(source.css, 'utf8'),
+    lines: source.css.split(/\r?\n/).filter((line) => line.trim()).length,
+    rules: countCssRules(source.css),
+  }));
+  const pageCss = cssFiles.filter((file) => file.path === 'wordpress/style.css');
+  const blockCss = cssFiles.filter((file) => file.path.startsWith('wordpress/blocks/'));
+  return {
+    generatedAt: new Date().toISOString(),
+    blockCount: blocks.length,
+    coreBlockCount: blocks.filter((block) => (block.blockName || block.name || '').startsWith('core/')).length,
+    customBlockCount: blocks.filter((block) => !(block.blockName || block.name || '').startsWith('core/')).length,
+    blocksWithSupportAttrs: blocksWithSupportAttrs.length,
+    supportStyledPercent: blocks.length ? Number(((blocksWithSupportAttrs.length / blocks.length) * 100).toFixed(2)) : 0,
+    supportAttributeCounts: Object.fromEntries(
+      supportKeys.map((key) => [key, blocks.filter((block) => (block.attrs || block.attributes || {})[key] !== undefined).length])
+    ),
+    stylePaths: [...stylePaths.entries()].sort().map(([pathKey, count]) => ({ path: pathKey, count })),
+    css: {
+      totalBytes: cssFiles.reduce((sum, file) => sum + file.bytes, 0),
+      totalLines: cssFiles.reduce((sum, file) => sum + file.lines, 0),
+      totalRules: cssFiles.reduce((sum, file) => sum + file.rules, 0),
+      pageCssBytes: pageCss.reduce((sum, file) => sum + file.bytes, 0),
+      pageCssLines: pageCss.reduce((sum, file) => sum + file.lines, 0),
+      pageCssRules: pageCss.reduce((sum, file) => sum + file.rules, 0),
+      blockCssBytes: blockCss.reduce((sum, file) => sum + file.bytes, 0),
+      blockCssLines: blockCss.reduce((sum, file) => sum + file.lines, 0),
+      blockCssRules: blockCss.reduce((sum, file) => sum + file.rules, 0),
+      files: cssFiles,
+    },
+    guidance: [
+      'Prefer attrs.style, layout, align, color, spacing, typography, border, and dimensions support settings for block-level design.',
+      'Keep wordpress/style.css for tokens, document-level defaults, responsive grid behavior, and selectors that WordPress supports cannot express.',
+      'Keep wordpress/blocks/*/style.css scoped to custom block internals such as pseudo-elements, nested controls, horizontal rails, and ornamental geometry.',
+    ],
+  };
+}
+
+function collectTreeBlocks(tree) {
+  const roots = Array.isArray(tree) ? tree : tree?.blocks || [];
+  const blocks = [];
+  const visit = (block) => {
+    if (!block || typeof block !== 'object') return;
+    blocks.push(block);
+    for (const child of block.innerBlocks || []) visit(child);
+  };
+  for (const block of roots) visit(block);
+  return blocks;
+}
+
+function collectStylePaths(value, prefix, out) {
+  if (!value || typeof value !== 'object') return;
+  for (const [key, child] of Object.entries(value)) {
+    const next = prefix ? `${prefix}.${key}` : key;
+    if (child && typeof child === 'object' && !Array.isArray(child)) collectStylePaths(child, next, out);
+    else out.set(next, (out.get(next) || 0) + 1);
+  }
+}
+
+function countCssRules(css) {
+  return (String(css || '').match(/\{[^{}]*\}/g) || []).length;
 }
 
 function createComponentShim() {
@@ -890,6 +1082,7 @@ function defaultSupports() {
     spacing: { margin: true, padding: true, blockGap: true },
     typography: { fontSize: true, lineHeight: true },
     border: { color: true, radius: true, style: true, width: true },
+    dimensions: { minHeight: true },
     html: false,
   };
 }

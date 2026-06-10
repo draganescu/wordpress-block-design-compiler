@@ -7,16 +7,53 @@
   "editorScript": "file:./index.js",
   "style": "file:./style.css",
   "attributes": {
-    "action": { "type": "string", "default": "/night-market-rsvp" },
-    "method": { "type": "string", "default": "post" },
-    "fields": { "type": "array", "default": [] },
-    "buttonText": { "type": "string", "default": "Send route signal" }
+    "action": {
+      "type": "string",
+      "default": "/night-market-rsvp"
+    },
+    "method": {
+      "type": "string",
+      "default": "post"
+    },
+    "fields": {
+      "type": "array",
+      "default": []
+    },
+    "buttonText": {
+      "type": "string",
+      "default": "Send route signal"
+    },
+    "style": {
+      "type": "object",
+      "default": {}
+    }
   },
   "supports": {
     "anchor": true,
     "className": true,
-    "spacing": { "margin": true, "padding": true, "blockGap": true },
-    "border": { "color": true, "radius": true, "style": true, "width": true },
-    "html": false
+    "spacing": {
+      "margin": true,
+      "padding": true,
+      "blockGap": true
+    },
+    "border": {
+      "color": true,
+      "radius": true,
+      "style": true,
+      "width": true
+    },
+    "html": false,
+    "color": {
+      "text": true,
+      "background": true,
+      "gradients": true
+    },
+    "typography": {
+      "fontSize": true,
+      "lineHeight": true
+    },
+    "dimensions": {
+      "minHeight": true
+    }
   }
 }

@@ -13,55 +13,209 @@
         "routeTag": "Route 07 / dusk to moonset / rotating city edition",
         "navLabel": "Primary",
         "links": [
-          { "label": "Stalls", "url": "#stalls" },
-          { "label": "Sky Clock", "url": "#sky-clock" },
-          { "label": "Reserve", "url": "#rsvp" }
+          {
+            "label": "Stalls",
+            "url": "#stalls"
+          },
+          {
+            "label": "Sky Clock",
+            "url": "#sky-clock"
+          },
+          {
+            "label": "Reserve",
+            "url": "#rsvp"
+          }
         ],
         "actionText": "Join tonight",
-        "actionUrl": "#rsvp"
+        "actionUrl": "#rsvp",
+        "style": {
+          "spacing": {
+            "padding": {
+              "top": "0.8rem",
+              "right": "clamp(1rem, 3vw, 3rem)",
+              "bottom": "0.8rem",
+              "left": "clamp(1rem, 3vw, 3rem)"
+            }
+          },
+          "color": {
+            "text": "var(--paper)",
+            "background": "rgba(8, 7, 13, 0.82)"
+          },
+          "typography": {
+            "fontSize": "0.68rem",
+            "fontWeight": "900",
+            "letterSpacing": "0.08em",
+            "textTransform": "uppercase"
+          },
+          "border": {
+            "bottom": {
+              "color": "var(--line)",
+              "width": "1px",
+              "style": "solid"
+            }
+          }
+        }
       },
       "innerBlocks": []
     },
     {
       "blockName": "core/group",
-      "attrs": { "tagName": "main", "anchor": "top" },
+      "attrs": {
+        "tagName": "main",
+        "anchor": "top"
+      },
       "innerBlocks": [
         {
           "blockName": "wbdc/orbit-hero",
           "attrs": {
             "titleId": "hero-title",
             "eyebrow": "Travelling food observatory / 41.8781 N / market opens at civil twilight",
-            "titleLines": ["Eat", "under", "moving stars."],
+            "titleLines": [
+              "Eat",
+              "under",
+              "moving stars."
+            ],
             "thesis": "A night market that treats telescopes like street lamps and every stall as a coordinate in a temporary sky map.",
             "boardAriaLabel": "Tonight's field readings",
             "boardLabel": "Tonight's field",
             "boardStatus": "Cloud gap predicted at 21:14",
             "metrics": [
-              { "label": "stalls", "value": "18" },
-              { "label": "scopes", "value": "06" },
-              { "label": "meteor odds", "value": "34%" }
+              {
+                "label": "stalls",
+                "value": "18"
+              },
+              {
+                "label": "scopes",
+                "value": "06"
+              },
+              {
+                "label": "meteor odds",
+                "value": "34%"
+              }
             ],
             "visualAriaLabel": "Market orbit map",
             "nodes": [
-              { "label": "Dumpling Moon", "className": "dumpling" },
-              { "label": "Comet Tea", "className": "tea" },
-              { "label": "Lens Dock", "className": "lens" },
-              { "label": "Noodle Transit", "className": "noodle" }
-            ]
+              {
+                "label": "Dumpling Moon",
+                "className": "dumpling"
+              },
+              {
+                "label": "Comet Tea",
+                "className": "tea"
+              },
+              {
+                "label": "Lens Dock",
+                "className": "lens"
+              },
+              {
+                "label": "Noodle Transit",
+                "className": "noodle"
+              }
+            ],
+            "style": {
+              "spacing": {
+                "padding": {
+                  "top": "clamp(3.5rem, 8vw, 7rem)",
+                  "right": "clamp(1rem, 4vw, 3rem)",
+                  "bottom": "4rem",
+                  "left": "clamp(1rem, 4vw, 3rem)"
+                }
+              }
+            }
           },
           "innerBlocks": []
         },
         {
           "blockName": "core/group",
-          "attrs": { "tagName": "section", "anchor": "stalls", "className": "stall-section" },
+          "attrs": {
+            "tagName": "section",
+            "anchor": "stalls",
+            "className": "stall-section",
+            "style": {
+              "spacing": {
+                "padding": {
+                  "top": "5rem",
+                  "right": "clamp(1rem, 4vw, 3rem)",
+                  "bottom": "5rem",
+                  "left": "clamp(1rem, 4vw, 3rem)"
+                }
+              },
+              "border": {
+                "top": {
+                  "color": "var(--line)",
+                  "width": "1px",
+                  "style": "solid"
+                }
+              }
+            }
+          },
           "innerBlocks": [
             {
               "blockName": "core/group",
-              "attrs": { "tagName": "div", "className": "section-copy" },
+              "attrs": {
+                "tagName": "div",
+                "className": "section-copy",
+                "style": {
+                  "spacing": {
+                    "blockGap": "0.75rem"
+                  }
+                }
+              },
               "innerBlocks": [
-                { "blockName": "core/paragraph", "attrs": { "className": "micro", "content": "Market constellation / edible wayfinding" }, "innerBlocks": [] },
-                { "blockName": "core/heading", "attrs": { "level": 2, "content": "Follow the smell of charcoal, then the telescope line." }, "innerBlocks": [] },
-                { "blockName": "core/paragraph", "attrs": { "content": "The route is deliberately uneven: dense food heat near the entrance, quiet optical stations at the edge, and one loud dessert stall where people naturally gather after Saturn." }, "innerBlocks": [] }
+                {
+                  "blockName": "core/paragraph",
+                  "attrs": {
+                    "className": "micro",
+                    "content": "Market constellation / edible wayfinding",
+                    "style": {
+                      "typography": {
+                        "fontSize": "0.68rem",
+                        "fontWeight": "900",
+                        "letterSpacing": "0.14em",
+                        "textTransform": "uppercase"
+                      },
+                      "color": {
+                        "text": "var(--acid)"
+                      }
+                    }
+                  },
+                  "innerBlocks": []
+                },
+                {
+                  "blockName": "core/heading",
+                  "attrs": {
+                    "level": 2,
+                    "content": "Follow the smell of charcoal, then the telescope line.",
+                    "style": {
+                      "typography": {
+                        "fontSize": "clamp(2.6rem, 6vw, 6.8rem)",
+                        "lineHeight": "0.86",
+                        "fontWeight": "900",
+                        "fontFamily": "Georgia, \"Times New Roman\", serif"
+                      },
+                      "color": {
+                        "text": "var(--paper)"
+                      }
+                    }
+                  },
+                  "innerBlocks": []
+                },
+                {
+                  "blockName": "core/paragraph",
+                  "attrs": {
+                    "content": "The route is deliberately uneven: dense food heat near the entrance, quiet optical stations at the edge, and one loud dessert stall where people naturally gather after Saturn.",
+                    "style": {
+                      "typography": {
+                        "fontSize": "1.05rem",
+                        "lineHeight": "1.35"
+                      },
+                      "color": {
+                        "text": "var(--muted)"
+                      }
+                    }
+                  },
+                  "innerBlocks": []
+                }
               ]
             },
             {
@@ -69,11 +223,40 @@
               "attrs": {
                 "ariaLabel": "Featured market stalls",
                 "stalls": [
-                  { "kicker": "01 / hearth", "title": "Dumpling Moon", "body": "Black vinegar steam, crescent folds, and a viewfinder pointed at Mare Crisium.", "meta": "Queue heat: high", "variant": "wide" },
-                  { "kicker": "02 / signal", "title": "Comet Tea", "body": "Cold oolong poured over citrus ice while a volunteer calls out satellite passes.", "meta": "Best at 20:40", "variant": "" },
-                  { "kicker": "03 / optical", "title": "Lens Dock", "body": "A repair bench for borrowed binoculars, fogged glasses, and first-time observers.", "meta": "Focus checks free", "variant": "dark" },
-                  { "kicker": "04 / flame", "title": "Noodle Transit", "body": "Hand-pulled noodles thrown under a copper lamp with a live sky clock above the counter.", "meta": "Last bowl 23:10", "variant": "tall" }
-                ]
+                  {
+                    "kicker": "01 / hearth",
+                    "title": "Dumpling Moon",
+                    "body": "Black vinegar steam, crescent folds, and a viewfinder pointed at Mare Crisium.",
+                    "meta": "Queue heat: high",
+                    "variant": "wide"
+                  },
+                  {
+                    "kicker": "02 / signal",
+                    "title": "Comet Tea",
+                    "body": "Cold oolong poured over citrus ice while a volunteer calls out satellite passes.",
+                    "meta": "Best at 20:40",
+                    "variant": ""
+                  },
+                  {
+                    "kicker": "03 / optical",
+                    "title": "Lens Dock",
+                    "body": "A repair bench for borrowed binoculars, fogged glasses, and first-time observers.",
+                    "meta": "Focus checks free",
+                    "variant": "dark"
+                  },
+                  {
+                    "kicker": "04 / flame",
+                    "title": "Noodle Transit",
+                    "body": "Hand-pulled noodles thrown under a copper lamp with a live sky clock above the counter.",
+                    "meta": "Last bowl 23:10",
+                    "variant": "tall"
+                  }
+                ],
+                "style": {
+                  "spacing": {
+                    "blockGap": "1rem"
+                  }
+                }
               },
               "innerBlocks": []
             }
@@ -81,14 +264,81 @@
         },
         {
           "blockName": "core/group",
-          "attrs": { "tagName": "section", "anchor": "sky-clock", "className": "sky-clock-section" },
+          "attrs": {
+            "tagName": "section",
+            "anchor": "sky-clock",
+            "className": "sky-clock-section",
+            "style": {
+              "spacing": {
+                "padding": {
+                  "top": "5rem",
+                  "right": "clamp(1rem, 4vw, 3rem)",
+                  "bottom": "5rem",
+                  "left": "clamp(1rem, 4vw, 3rem)"
+                }
+              },
+              "border": {
+                "top": {
+                  "color": "var(--line)",
+                  "width": "1px",
+                  "style": "solid"
+                }
+              }
+            }
+          },
           "innerBlocks": [
             {
               "blockName": "core/group",
-              "attrs": { "tagName": "div", "className": "clock-heading" },
+              "attrs": {
+                "tagName": "div",
+                "className": "clock-heading",
+                "style": {
+                  "spacing": {
+                    "margin": {
+                      "bottom": "2rem"
+                    }
+                  }
+                }
+              },
               "innerBlocks": [
-                { "blockName": "core/paragraph", "attrs": { "className": "micro", "content": "Sky clock / move when the city darkens" }, "innerBlocks": [] },
-                { "blockName": "core/heading", "attrs": { "level": 2, "content": "The evening is scheduled by appetite and altitude." }, "innerBlocks": [] }
+                {
+                  "blockName": "core/paragraph",
+                  "attrs": {
+                    "className": "micro",
+                    "content": "Sky clock / move when the city darkens",
+                    "style": {
+                      "typography": {
+                        "fontSize": "0.68rem",
+                        "fontWeight": "900",
+                        "letterSpacing": "0.14em",
+                        "textTransform": "uppercase"
+                      },
+                      "color": {
+                        "text": "var(--acid)"
+                      }
+                    }
+                  },
+                  "innerBlocks": []
+                },
+                {
+                  "blockName": "core/heading",
+                  "attrs": {
+                    "level": 2,
+                    "content": "The evening is scheduled by appetite and altitude.",
+                    "style": {
+                      "typography": {
+                        "fontSize": "clamp(2.6rem, 6vw, 6.8rem)",
+                        "lineHeight": "0.86",
+                        "fontWeight": "900",
+                        "fontFamily": "Georgia, \"Times New Roman\", serif"
+                      },
+                      "color": {
+                        "text": "var(--paper)"
+                      }
+                    }
+                  },
+                  "innerBlocks": []
+                }
               ]
             },
             {
@@ -96,11 +346,43 @@
               "attrs": {
                 "ariaLabel": "Tonight's route schedule",
                 "items": [
-                  { "time": "19:42", "datetime": "2026-06-10T19:42:00", "title": "Lantern ignition", "body": "The market grid wakes up before the first telescope points above the roofline.", "hot": false },
-                  { "time": "21:14", "datetime": "2026-06-10T21:14:00", "title": "Cloud gap", "body": "All scopes swing east for the predicted break and the tea stall goes silent.", "hot": true },
-                  { "time": "22:03", "datetime": "2026-06-10T22:03:00", "title": "Saturn queue", "body": "Volunteers cap the line, pass around sesame cakes, and teach people how to look slowly.", "hot": false },
-                  { "time": "23:10", "datetime": "2026-06-10T23:10:00", "title": "Last bowl", "body": "Noodle Transit closes when the last planned object clears the billboard glare.", "hot": false }
-                ]
+                  {
+                    "time": "19:42",
+                    "datetime": "2026-06-10T19:42:00",
+                    "title": "Lantern ignition",
+                    "body": "The market grid wakes up before the first telescope points above the roofline.",
+                    "hot": false
+                  },
+                  {
+                    "time": "21:14",
+                    "datetime": "2026-06-10T21:14:00",
+                    "title": "Cloud gap",
+                    "body": "All scopes swing east for the predicted break and the tea stall goes silent.",
+                    "hot": true
+                  },
+                  {
+                    "time": "22:03",
+                    "datetime": "2026-06-10T22:03:00",
+                    "title": "Saturn queue",
+                    "body": "Volunteers cap the line, pass around sesame cakes, and teach people how to look slowly.",
+                    "hot": false
+                  },
+                  {
+                    "time": "23:10",
+                    "datetime": "2026-06-10T23:10:00",
+                    "title": "Last bowl",
+                    "body": "Noodle Transit closes when the last planned object clears the billboard glare.",
+                    "hot": false
+                  }
+                ],
+                "style": {
+                  "spacing": {
+                    "blockGap": "1rem",
+                    "padding": {
+                      "bottom": "1rem"
+                    }
+                  }
+                }
               },
               "innerBlocks": []
             }
@@ -108,36 +390,253 @@
         },
         {
           "blockName": "core/group",
-          "attrs": { "tagName": "section", "className": "field-notes" },
+          "attrs": {
+            "tagName": "section",
+            "className": "field-notes",
+            "style": {
+              "spacing": {
+                "padding": {
+                  "top": "5rem",
+                  "right": "clamp(1rem, 4vw, 3rem)",
+                  "bottom": "5rem",
+                  "left": "clamp(1rem, 4vw, 3rem)"
+                }
+              },
+              "border": {
+                "top": {
+                  "color": "var(--line)",
+                  "width": "1px",
+                  "style": "solid"
+                }
+              }
+            }
+          },
           "innerBlocks": [
-            { "blockName": "core/paragraph", "attrs": { "className": "vertical-label", "content": "field etiquette" }, "innerBlocks": [] },
-            { "blockName": "core/heading", "attrs": { "level": 2, "content": "Bright screens down. Bowls close. Eyes up." }, "innerBlocks": [] },
+            {
+              "blockName": "core/paragraph",
+              "attrs": {
+                "className": "vertical-label",
+                "content": "field etiquette",
+                "style": {
+                  "typography": {
+                    "fontSize": "0.68rem",
+                    "fontWeight": "900",
+                    "letterSpacing": "0.14em",
+                    "textTransform": "uppercase"
+                  },
+                  "color": {
+                    "text": "var(--acid)"
+                  }
+                }
+              },
+              "innerBlocks": []
+            },
+            {
+              "blockName": "core/heading",
+              "attrs": {
+                "level": 2,
+                "content": "Bright screens down. Bowls close. Eyes up.",
+                "style": {
+                  "typography": {
+                    "fontSize": "clamp(2.6rem, 6vw, 6.8rem)",
+                    "lineHeight": "0.86",
+                    "fontWeight": "900",
+                    "fontFamily": "Georgia, \"Times New Roman\", serif"
+                  },
+                  "color": {
+                    "text": "var(--paper)"
+                  }
+                }
+              },
+              "innerBlocks": []
+            },
             {
               "blockName": "core/group",
-              "attrs": { "tagName": "div", "className": "note-grid" },
+              "attrs": {
+                "tagName": "div",
+                "className": "note-grid",
+                "style": {
+                  "spacing": {
+                    "blockGap": "1rem"
+                  }
+                }
+              },
               "innerBlocks": [
                 {
                   "blockName": "core/group",
-                  "attrs": { "tagName": "article" },
+                  "attrs": {
+                    "tagName": "article",
+                    "style": {
+                      "border": {
+                        "top": {
+                          "color": "var(--pink)",
+                          "width": "6px",
+                          "style": "solid"
+                        }
+                      },
+                      "spacing": {
+                        "padding": {
+                          "top": "1rem"
+                        }
+                      }
+                    }
+                  },
                   "innerBlocks": [
-                    { "blockName": "core/heading", "attrs": { "level": 3, "content": "Red light only" }, "innerBlocks": [] },
-                    { "blockName": "core/paragraph", "attrs": { "content": "Every table has a red film sleeve for phones so dark adaptation survives the menu." }, "innerBlocks": [] }
+                    {
+                      "blockName": "core/heading",
+                      "attrs": {
+                        "level": 3,
+                        "content": "Red light only",
+                        "style": {
+                          "typography": {
+                            "fontSize": "clamp(1.4rem, 2.4vw, 2.5rem)",
+                            "lineHeight": "0.96",
+                            "fontWeight": "900",
+                            "textTransform": "uppercase",
+                            "fontFamily": "Georgia, \"Times New Roman\", serif"
+                          },
+                          "color": {
+                            "text": "var(--paper)"
+                          }
+                        }
+                      },
+                      "innerBlocks": []
+                    },
+                    {
+                      "blockName": "core/paragraph",
+                      "attrs": {
+                        "content": "Every table has a red film sleeve for phones so dark adaptation survives the menu.",
+                        "style": {
+                          "typography": {
+                            "fontSize": "1rem",
+                            "lineHeight": "1.35"
+                          },
+                          "color": {
+                            "text": "var(--muted)"
+                          }
+                        }
+                      },
+                      "innerBlocks": []
+                    }
                   ]
                 },
                 {
                   "blockName": "core/group",
-                  "attrs": { "tagName": "article" },
+                  "attrs": {
+                    "tagName": "article",
+                    "style": {
+                      "border": {
+                        "top": {
+                          "color": "var(--cyan)",
+                          "width": "6px",
+                          "style": "solid"
+                        }
+                      },
+                      "spacing": {
+                        "padding": {
+                          "top": "1rem"
+                        },
+                        "margin": {
+                          "left": "3rem"
+                        }
+                      }
+                    }
+                  },
                   "innerBlocks": [
-                    { "blockName": "core/heading", "attrs": { "level": 3, "content": "Shared eyepieces" }, "innerBlocks": [] },
-                    { "blockName": "core/paragraph", "attrs": { "content": "Scope hosts explain the object, then step back so the line can build its own language." }, "innerBlocks": [] }
+                    {
+                      "blockName": "core/heading",
+                      "attrs": {
+                        "level": 3,
+                        "content": "Shared eyepieces",
+                        "style": {
+                          "typography": {
+                            "fontSize": "clamp(1.4rem, 2.4vw, 2.5rem)",
+                            "lineHeight": "0.96",
+                            "fontWeight": "900",
+                            "textTransform": "uppercase",
+                            "fontFamily": "Georgia, \"Times New Roman\", serif"
+                          },
+                          "color": {
+                            "text": "var(--paper)"
+                          }
+                        }
+                      },
+                      "innerBlocks": []
+                    },
+                    {
+                      "blockName": "core/paragraph",
+                      "attrs": {
+                        "content": "Scope hosts explain the object, then step back so the line can build its own language.",
+                        "style": {
+                          "typography": {
+                            "fontSize": "1rem",
+                            "lineHeight": "1.35"
+                          },
+                          "color": {
+                            "text": "var(--muted)"
+                          }
+                        }
+                      },
+                      "innerBlocks": []
+                    }
                   ]
                 },
                 {
                   "blockName": "core/group",
-                  "attrs": { "tagName": "article" },
+                  "attrs": {
+                    "tagName": "article",
+                    "style": {
+                      "border": {
+                        "top": {
+                          "color": "var(--pink)",
+                          "width": "6px",
+                          "style": "solid"
+                        }
+                      },
+                      "spacing": {
+                        "padding": {
+                          "top": "1rem"
+                        }
+                      }
+                    }
+                  },
                   "innerBlocks": [
-                    { "blockName": "core/heading", "attrs": { "level": 3, "content": "Waste returns" }, "innerBlocks": [] },
-                    { "blockName": "core/paragraph", "attrs": { "content": "Bowls, cups, chopsticks, and lens cloths are routed through one visible return spine." }, "innerBlocks": [] }
+                    {
+                      "blockName": "core/heading",
+                      "attrs": {
+                        "level": 3,
+                        "content": "Waste returns",
+                        "style": {
+                          "typography": {
+                            "fontSize": "clamp(1.4rem, 2.4vw, 2.5rem)",
+                            "lineHeight": "0.96",
+                            "fontWeight": "900",
+                            "textTransform": "uppercase",
+                            "fontFamily": "Georgia, \"Times New Roman\", serif"
+                          },
+                          "color": {
+                            "text": "var(--paper)"
+                          }
+                        }
+                      },
+                      "innerBlocks": []
+                    },
+                    {
+                      "blockName": "core/paragraph",
+                      "attrs": {
+                        "content": "Bowls, cups, chopsticks, and lens cloths are routed through one visible return spine.",
+                        "style": {
+                          "typography": {
+                            "fontSize": "1rem",
+                            "lineHeight": "1.35"
+                          },
+                          "color": {
+                            "text": "var(--muted)"
+                          }
+                        }
+                      },
+                      "innerBlocks": []
+                    }
                   ]
                 }
               ]
@@ -146,15 +645,87 @@
         },
         {
           "blockName": "core/group",
-          "attrs": { "tagName": "section", "anchor": "rsvp", "className": "rsvp-section" },
+          "attrs": {
+            "tagName": "section",
+            "anchor": "rsvp",
+            "className": "rsvp-section",
+            "style": {
+              "spacing": {
+                "padding": {
+                  "top": "5rem",
+                  "right": "clamp(1rem, 4vw, 3rem)",
+                  "bottom": "5rem",
+                  "left": "clamp(1rem, 4vw, 3rem)"
+                }
+              },
+              "border": {
+                "top": {
+                  "color": "var(--line)",
+                  "width": "1px",
+                  "style": "solid"
+                }
+              }
+            }
+          },
           "innerBlocks": [
             {
               "blockName": "core/group",
-              "attrs": { "tagName": "div" },
+              "attrs": {
+                "tagName": "div"
+              },
               "innerBlocks": [
-                { "blockName": "core/paragraph", "attrs": { "className": "micro", "content": "Reserve a route card" }, "innerBlocks": [] },
-                { "blockName": "core/heading", "attrs": { "level": 2, "content": "Get the next coordinates before the market moves." }, "innerBlocks": [] },
-                { "blockName": "core/paragraph", "attrs": { "content": "We send the city, stall roster, cloud model, and viewing targets forty-eight hours before each edition." }, "innerBlocks": [] }
+                {
+                  "blockName": "core/paragraph",
+                  "attrs": {
+                    "className": "micro",
+                    "content": "Reserve a route card",
+                    "style": {
+                      "typography": {
+                        "fontSize": "1.05rem",
+                        "lineHeight": "1.35"
+                      },
+                      "color": {
+                        "text": "var(--muted)"
+                      }
+                    }
+                  },
+                  "innerBlocks": []
+                },
+                {
+                  "blockName": "core/heading",
+                  "attrs": {
+                    "level": 2,
+                    "content": "Get the next coordinates before the market moves.",
+                    "style": {
+                      "typography": {
+                        "fontSize": "clamp(2.6rem, 6vw, 6.8rem)",
+                        "lineHeight": "0.86",
+                        "fontWeight": "900",
+                        "fontFamily": "Georgia, \"Times New Roman\", serif"
+                      },
+                      "color": {
+                        "text": "var(--paper)"
+                      }
+                    }
+                  },
+                  "innerBlocks": []
+                },
+                {
+                  "blockName": "core/paragraph",
+                  "attrs": {
+                    "content": "We send the city, stall roster, cloud model, and viewing targets forty-eight hours before each edition.",
+                    "style": {
+                      "typography": {
+                        "fontSize": "1.05rem",
+                        "lineHeight": "1.35"
+                      },
+                      "color": {
+                        "text": "var(--muted)"
+                      }
+                    }
+                  },
+                  "innerBlocks": []
+                }
               ]
             },
             {
@@ -163,11 +734,47 @@
                 "action": "/night-market-rsvp",
                 "method": "post",
                 "fields": [
-                  { "label": "Name", "type": "text", "name": "name", "placeholder": "Your name", "required": true, "wide": false },
-                  { "label": "Email", "type": "email", "name": "email", "placeholder": "you@example.com", "required": true, "wide": false },
-                  { "label": "City preference", "type": "text", "name": "city", "placeholder": "Chicago, Rotterdam, Seoul...", "required": false, "wide": true }
+                  {
+                    "label": "Name",
+                    "type": "text",
+                    "name": "name",
+                    "placeholder": "Your name",
+                    "required": true,
+                    "wide": false
+                  },
+                  {
+                    "label": "Email",
+                    "type": "email",
+                    "name": "email",
+                    "placeholder": "you@example.com",
+                    "required": true,
+                    "wide": false
+                  },
+                  {
+                    "label": "City preference",
+                    "type": "text",
+                    "name": "city",
+                    "placeholder": "Chicago, Rotterdam, Seoul...",
+                    "required": false,
+                    "wide": true
+                  }
                 ],
-                "buttonText": "Send route signal"
+                "buttonText": "Send route signal",
+                "style": {
+                  "spacing": {
+                    "padding": "1rem",
+                    "blockGap": "1rem"
+                  },
+                  "color": {
+                    "text": "var(--night)",
+                    "background": "var(--paper)"
+                  },
+                  "border": {
+                    "color": "var(--paper)",
+                    "width": "1px",
+                    "style": "solid"
+                  }
+                }
               },
               "innerBlocks": []
             }
@@ -180,7 +787,31 @@
       "attrs": {
         "text": "Night Market Observatory / moving kitchens, public telescopes, temporary maps",
         "url": "#top",
-        "linkText": "Return to the first lantern"
+        "linkText": "Return to the first lantern",
+        "style": {
+          "spacing": {
+            "padding": {
+              "top": "1.5rem",
+              "right": "clamp(1rem, 4vw, 3rem)",
+              "bottom": "3rem",
+              "left": "clamp(1rem, 4vw, 3rem)"
+            }
+          },
+          "color": {
+            "text": "var(--muted)"
+          },
+          "typography": {
+            "fontSize": "0.75rem",
+            "textTransform": "uppercase"
+          },
+          "border": {
+            "top": {
+              "color": "var(--line)",
+              "width": "1px",
+              "style": "solid"
+            }
+          }
+        }
       },
       "innerBlocks": []
     }

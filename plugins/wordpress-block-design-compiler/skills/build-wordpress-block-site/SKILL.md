@@ -14,8 +14,8 @@ Use this skill when the user wants a website that should end as editable WordPre
 3. Run `analyze_mockup` and read `analysis/content-inventory.json`.
 4. Write `plan/block-plan.md` and `plan/block-plan.json`.
 5. Generate custom blocks only where core blocks cannot preserve both fidelity and editability.
-6. Assemble editable block content in `wordpress/block-tree.json`; put custom block source in `wordpress/blocks/<slug>/`; write generated WordPress preview CSS in `wordpress/style.css` and/or custom block `style.css` files.
-7. Run `serialize_wordpress_blocks`; it registers official core blocks with `@wordpress/block-library`, registers custom blocks from `wordpress/blocks/*/index.js`, serializes `wordpress/block-tree.json` with `@wordpress/blocks`, writes canonical block markup to `wordpress/content.html`, and writes frontend preview HTML to `rendered/rendered-blocks.html`. The preview CSS source list comes from `wordpress/style.css` and custom block `style.css` files. `mockup/style.css` is intentionally excluded from rendered block preview by default.
+6. Assemble editable block content in `wordpress/block-tree.json`; put custom block source in `wordpress/blocks/<slug>/`; put styling in block support/style attributes first, custom block scoped CSS second, and tiny page CSS last.
+7. Run `serialize_wordpress_blocks`; it registers official core blocks with `@wordpress/block-library`, registers custom blocks from `wordpress/blocks/*/index.js`, serializes `wordpress/block-tree.json` with `@wordpress/blocks`, writes canonical block markup to `wordpress/content.html`, writes frontend preview HTML to `rendered/rendered-blocks.html`, and writes `reports/style-audit.json`. The preview CSS source list comes from `wordpress/style.css` and custom block `style.css` files. `mockup/style.css` is intentionally excluded from rendered block preview by default.
 8. Run `compare_html`.
 9. Inspect screenshots and diffs, write `reports/repair-tasks.md`, fix each task as an agent, then repeat preview/compare until thresholds are met.
 
@@ -33,12 +33,21 @@ The plan must answer:
 
 - Which sections are core block assemblies.
 - Which sections require custom blocks and why.
-- Which styling belongs in block supports, block attributes, block CSS, or page CSS.
+- Which styling belongs in block support attributes, block style variations/classes, custom block scoped CSS, or page CSS.
 - Which content remains inline editable.
 - Which settings belong in InspectorControls or BlockControls.
 - Which parts may use `core/html`, with explicit reasons.
 
-Prefer core blocks, block supports, style variations, and scoped CSS before custom blocks. Use custom blocks for reusable data models, real forms/search/booking widgets, nontrivial repeated components, or semantic save contracts.
+Prefer core blocks, block supports, and style variations before custom blocks. Use custom blocks for reusable data models, real forms/search/booking widgets, nontrivial repeated components, or semantic save contracts.
+
+Styling priority is strict:
+
+1. Use block support attributes in `wordpress/block-tree.json`: `style.spacing`, `style.color`, `style.typography`, `style.border`, `style.dimensions`, `layout`, `align`, `className`, preset color/spacing/font attributes, and native block attributes.
+2. Use custom block attributes and style variations/classes when an editor-facing design choice needs a named setting.
+3. Use `wordpress/blocks/<slug>/style.css` only for scoped internals that supports cannot express: pseudo-elements, nested form controls, sticky behavior, horizontal rails, overlapping children, responsive grid templates, ornaments, and interaction states.
+4. Use `wordpress/style.css` only for design tokens, document-level defaults, shared responsive rules, and page-specific glue that cannot be attached to a block.
+
+Do not solve visual parity by dumping the mockup stylesheet into `wordpress/style.css`. After serialization, inspect `reports/style-audit.json`; a good transform should show substantial `blocksWithSupportAttrs` usage and keep page CSS small enough to explain line-by-line.
 
 Use only real WordPress core block names and attributes registered by `@wordpress/block-library`. Do not invent convenience core blocks such as `core/link`, and do not use `core/group` as an arbitrary HTML element factory. `core/group` is for block-level layout containers only; inline elements, definition lists, navigation shells, telemetry panels, and other semantic structures need either real core blocks or custom blocks with typed attributes.
 

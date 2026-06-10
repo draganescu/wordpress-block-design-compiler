@@ -16,7 +16,7 @@ Block requirements:
 
 - `block.json` uses `apiVersion: 3`.
 - Declare all attributes with types and defaults where useful.
-- Declare supports for style controls: spacing, color, typography, border, align, anchor, className.
+- Declare supports for style controls: spacing, color, typography, border, dimensions, align, anchor, className.
 - `edit` should render like the frontend while being editable.
 - Visible copy uses in-canvas `RichText`.
 - Repeated visible items should render in canvas; if item management is needed, use inspector controls or a small toolbar, not raw JSON textareas.
@@ -25,6 +25,8 @@ Block requirements:
 - `save()` is the single source of frontend structure; the local preview serializes it through `@wordpress/blocks`.
 - Do not output attribute metadata as visible text.
 - Do not use `dangerouslySetInnerHTML` or HTML blob attributes for generated custom blocks.
+- Root block color, spacing, typography, border, and min-height styling should come from supports-backed attributes in `wordpress/block-tree.json`, not from hard-coded CSS.
+- Use the block `style.css` only for scoped internal layout and visuals that supports cannot address.
 
 Form-like blocks:
 
