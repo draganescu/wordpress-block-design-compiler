@@ -1,0 +1,18 @@
+{
+  "name": "wordpress-block-design-compiler-plugin",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Codex/Claude plugin tools for compiling HTML designs into editable WordPress blocks.",
+  "bin": {
+    "wbdc-mcp": "./tools/mcp-server.mjs"
+  },
+  "scripts": {
+    "check": "node --check tools/mcp-server.mjs"
+  },
+  "dependencies": {
+    "pixelmatch": "^7.1.0",
+    "playwright": "^1.54.0",
+    "pngjs": "^7.0.0"
+  }
+}

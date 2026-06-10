@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "wordpress-block-design-compiler": {
+      "command": "node",
+      "args": [
+        "/Users/andreidraganescu/Sites/wordpress-block-design-compiler/plugins/wordpress-block-design-compiler/tools/mcp-server.mjs"
+      ]
+    }
+  }
+}

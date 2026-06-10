@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "wordpress-block-design-compiler": {
+      "command": "node",
+      "args": [
+        "./tools/mcp-server.mjs"
+      ]
+    }
+  }
+}
