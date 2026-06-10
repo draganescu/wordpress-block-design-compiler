@@ -1,0 +1,21 @@
+{
+  "apiVersion": 3,
+  "name": "wbdc/water-control-grid",
+  "title": "Water Control Grid",
+  "category": "design",
+  "description": "Asymmetric Dutch dam metric grid.",
+  "editorScript": "file:./index.js",
+  "style": "file:./style.css",
+  "attributes": {
+    "ariaLabel": { "type": "string", "default": "" },
+    "tiles": { "type": "array", "default": [] }
+  },
+  "supports": {
+    "anchor": true,
+    "align": ["wide", "full"],
+    "className": true,
+    "color": { "text": true, "background": true },
+    "spacing": { "margin": true, "padding": true, "blockGap": true },
+    "html": false
+  }
+}

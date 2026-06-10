@@ -1,0 +1,20 @@
+{
+  "apiVersion": 3,
+  "name": "wbdc/dam-timeline-rail",
+  "title": "Dam Timeline Rail",
+  "category": "design",
+  "description": "Horizontal timeline rail for Dutch dam history.",
+  "editorScript": "file:./index.js",
+  "style": "file:./style.css",
+  "attributes": {
+    "ariaLabel": { "type": "string", "default": "" },
+    "events": { "type": "array", "default": [] }
+  },
+  "supports": {
+    "anchor": true,
+    "align": ["wide", "full"],
+    "className": true,
+    "spacing": { "margin": true, "padding": true, "blockGap": true },
+    "html": false
+  }
+}

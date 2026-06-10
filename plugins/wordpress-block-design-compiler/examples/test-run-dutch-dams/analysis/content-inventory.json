@@ -1,0 +1,580 @@
+{
+  "sections": [
+    {
+      "id": "dam-nav",
+      "selector": ".dam-nav",
+      "tagName": "header",
+      "className": "dam-nav",
+      "text": "NL-Delta Mastering the Water Ledger Timeline Section Open archive",
+      "headings": [],
+      "paragraphs": [],
+      "links": [
+        {
+          "className": "nav-mark",
+          "url": "#top",
+          "text": "NL-Delta Mastering the Water"
+        },
+        {
+          "className": "",
+          "url": "#ledger",
+          "text": "Ledger"
+        },
+        {
+          "className": "",
+          "url": "#timeline",
+          "text": "Timeline"
+        },
+        {
+          "className": "",
+          "url": "#section",
+          "text": "Section"
+        },
+        {
+          "className": "nav-action",
+          "url": "#archive",
+          "text": "Open archive"
+        }
+      ],
+      "forms": [],
+      "cards": [],
+      "html": "<header class=\"dam-nav\" aria-label=\"Mission navigation\">\n      <a class=\"nav-mark\" href=\"#top\" aria-label=\"Mastering the Water home\">\n        <span>NL-Delta</span>\n        <strong>Mastering the Water</strong>\n      </a>\n      <nav class=\"nav-links\" aria-label=\"Primary\">\n        <a href=\"#ledger\">Ledger</a>\n        <a href=\"#timeline\">Timeline</a>\n        <a href=\"#section\">Section</a>\n      </nav>\n      <a class=\"nav-action\" href=\"#archive\">Open archive</a>\n    </header>"
+    },
+    {
+      "id": "top",
+      "selector": "#top",
+      "tagName": "main",
+      "className": "",
+      "text": "Dutch civil works dossier / tide, soil, risk, memory Mastering the Water A country below sea level writes its survival in concrete, clay, gates, sensors, and stubborn public trust. System status North Sea pressure front active Barrier length 32 km Protected land 55 pct Primary threat storm surge 01 / hydraulic intelligence A dam is not a wall. It is a national operating system. 01 Afsluitdijk The 1932 closure turned the Zuiderzee into IJsselmeer and rewired Dutch food, flood, and transport systems. 32 km 02 Delta Works Thirteen engineered interventions distribute risk instead of pretending water can be defeated. 13 works 03 Maeslantkering Two floating arms close only when Rotterdam needs a steel horizon. 360 m arms 04 Room for the River The newest lesson is counterintuitive: retreat, widen, absorb, and make space for seasonal violence. 34 projects Horizontal scroll study / compressed national memory A thousand years of negotiation, compressed into one moving datum. 1100 Earthen dikes Local communities build raised defensive lines from clay, reeds, timber, and collective labor. 1932 Afsluitdijk closes The sea is cut, not erased. Fresh water and reclaimed land become a political instrument. 1953 Flood disaster The North Sea flood resets every tolerance, budget, and moral assumption about safety. 1997 Maeslantkering A movable storm surge barrier turns port access and flood defense into choreography. Now Adaptive delta Future resilience is measured by sensors, sand motors, flexible policy, and controlled overflow. 03 / sectional truth The visible monument is only the top line of the machine. North Sea load basalt armor sand core clay seal Every layer has a job: break wave energy, drain pressure, hold mass, and fail slowly enough to respond. Archive plates / hover reveals / field evidence History is stored in survey lines, warning paint, and water marks on concrete. Plate A Closure day Workers, bicycles, flags, hard wind, and the instant a saltwater map changed name. Plate B Storm protocol Gates are rehearsed like theater because hesitation is measured in centimeters. Plate C Future shore Sand engines and overflow plains make defense look less like resistance and more like rhythm. 04 / civic contract The Dutch dam is infrastructure as public memory: maintained, contested, updated, never finished. Return to the waterline",
+      "headings": [
+        {
+          "level": 1,
+          "className": "",
+          "content": "Mastering the Water"
+        },
+        {
+          "level": 2,
+          "className": "",
+          "content": "A dam is not a wall. It is a national operating system."
+        },
+        {
+          "level": 3,
+          "className": "",
+          "content": "Afsluitdijk"
+        },
+        {
+          "level": 3,
+          "className": "",
+          "content": "Delta Works"
+        },
+        {
+          "level": 3,
+          "className": "",
+          "content": "Maeslantkering"
+        },
+        {
+          "level": 3,
+          "className": "",
+          "content": "Room for the River"
+        },
+        {
+          "level": 2,
+          "className": "",
+          "content": "A thousand years of negotiation, compressed into one moving datum."
+        },
+        {
+          "level": 3,
+          "className": "",
+          "content": "Earthen dikes"
+        },
+        {
+          "level": 3,
+          "className": "",
+          "content": "Afsluitdijk closes"
+        },
+        {
+          "level": 3,
+          "className": "",
+          "content": "Flood disaster"
+        },
+        {
+          "level": 3,
+          "className": "",
+          "content": "Maeslantkering"
+        },
+        {
+          "level": 3,
+          "className": "",
+          "content": "Adaptive delta"
+        },
+        {
+          "level": 2,
+          "className": "",
+          "content": "The visible monument is only the top line of the machine."
+        },
+        {
+          "level": 2,
+          "className": "",
+          "content": "History is stored in survey lines, warning paint, and water marks on concrete."
+        },
+        {
+          "level": 3,
+          "className": "",
+          "content": "Closure day"
+        },
+        {
+          "level": 3,
+          "className": "",
+          "content": "Storm protocol"
+        },
+        {
+          "level": 3,
+          "className": "",
+          "content": "Future shore"
+        },
+        {
+          "level": 2,
+          "className": "",
+          "content": "The Dutch dam is infrastructure as public memory: maintained, contested, updated, never finished."
+        }
+      ],
+      "paragraphs": [
+        {
+          "className": "micro",
+          "content": "Dutch civil works dossier / tide, soil, risk, memory"
+        },
+        {
+          "className": "thesis",
+          "content": "A country below sea level writes its survival in concrete, clay, gates, sensors, and stubborn public trust."
+        },
+        {
+          "className": "",
+          "content": "System status"
+        },
+        {
+          "className": "",
+          "content": "The 1932 closure turned the Zuiderzee into IJsselmeer and rewired Dutch food, flood, and transport systems."
+        },
+        {
+          "className": "",
+          "content": "Thirteen engineered interventions distribute risk instead of pretending water can be defeated."
+        },
+        {
+          "className": "",
+          "content": "Two floating arms close only when Rotterdam needs a steel horizon."
+        },
+        {
+          "className": "",
+          "content": "The newest lesson is counterintuitive: retreat, widen, absorb, and make space for seasonal violence."
+        },
+        {
+          "className": "micro",
+          "content": "Horizontal scroll study / compressed national memory"
+        },
+        {
+          "className": "",
+          "content": "Local communities build raised defensive lines from clay, reeds, timber, and collective labor."
+        },
+        {
+          "className": "",
+          "content": "The sea is cut, not erased. Fresh water and reclaimed land become a political instrument."
+        },
+        {
+          "className": "",
+          "content": "The North Sea flood resets every tolerance, budget, and moral assumption about safety."
+        },
+        {
+          "className": "",
+          "content": "A movable storm surge barrier turns port access and flood defense into choreography."
+        },
+        {
+          "className": "",
+          "content": "Future resilience is measured by sensors, sand motors, flexible policy, and controlled overflow."
+        },
+        {
+          "className": "section-index",
+          "content": "03 / sectional truth"
+        },
+        {
+          "className": "micro",
+          "content": "Archive plates / hover reveals / field evidence"
+        },
+        {
+          "className": "",
+          "content": "Workers, bicycles, flags, hard wind, and the instant a saltwater map changed name."
+        },
+        {
+          "className": "",
+          "content": "Gates are rehearsed like theater because hesitation is measured in centimeters."
+        },
+        {
+          "className": "",
+          "content": "Sand engines and overflow plains make defense look less like resistance and more like rhythm."
+        },
+        {
+          "className": "section-index",
+          "content": "04 / civic contract"
+        }
+      ],
+      "links": [
+        {
+          "className": "text-link",
+          "url": "#top",
+          "text": "Return to the waterline"
+        }
+      ],
+      "forms": [],
+      "cards": [
+        {
+          "className": "control-tile control-tile--wide",
+          "title": "Afsluitdijk",
+          "text": "The 1932 closure turned the Zuiderzee into IJsselmeer and rewired Dutch food, flood, and transport systems.",
+          "links": []
+        },
+        {
+          "className": "control-tile",
+          "title": "Delta Works",
+          "text": "Thirteen engineered interventions distribute risk instead of pretending water can be defeated.",
+          "links": []
+        },
+        {
+          "className": "control-tile control-tile--dark",
+          "title": "Maeslantkering",
+          "text": "Two floating arms close only when Rotterdam needs a steel horizon.",
+          "links": []
+        },
+        {
+          "className": "control-tile control-tile--tall",
+          "title": "Room for the River",
+          "text": "The newest lesson is counterintuitive: retreat, widen, absorb, and make space for seasonal violence.",
+          "links": []
+        },
+        {
+          "className": "timeline-node",
+          "title": "Earthen dikes",
+          "text": "Local communities build raised defensive lines from clay, reeds, timber, and collective labor.",
+          "links": []
+        },
+        {
+          "className": "timeline-node",
+          "title": "Afsluitdijk closes",
+          "text": "The sea is cut, not erased. Fresh water and reclaimed land become a political instrument.",
+          "links": []
+        },
+        {
+          "className": "timeline-node is-hot",
+          "title": "Flood disaster",
+          "text": "The North Sea flood resets every tolerance, budget, and moral assumption about safety.",
+          "links": []
+        },
+        {
+          "className": "timeline-node",
+          "title": "Maeslantkering",
+          "text": "A movable storm surge barrier turns port access and flood defense into choreography.",
+          "links": []
+        },
+        {
+          "className": "timeline-node",
+          "title": "Adaptive delta",
+          "text": "Future resilience is measured by sensors, sand motors, flexible policy, and controlled overflow.",
+          "links": []
+        },
+        {
+          "className": "archive-plate plate-one",
+          "title": "Closure day",
+          "text": "Workers, bicycles, flags, hard wind, and the instant a saltwater map changed name.",
+          "links": []
+        },
+        {
+          "className": "archive-plate plate-two",
+          "title": "Storm protocol",
+          "text": "Gates are rehearsed like theater because hesitation is measured in centimeters.",
+          "links": []
+        },
+        {
+          "className": "archive-plate plate-three",
+          "title": "Future shore",
+          "text": "Sand engines and overflow plains make defense look less like resistance and more like rhythm.",
+          "links": []
+        }
+      ],
+      "html": "<main id=\"top\">\n      <section class=\"gateway\" aria-labelledby=\"gateway-title\">\n        <div class=\"gateway-type\">\n          <p class=\"micro\">Dutch civil works dossier / tide, soil, risk, memory</p>\n          <h1 id=\"gateway-title\">\n            <span>Mastering</span>\n            <span>the Water</span>\n          </h1>\n          <p class=\"thesis\">A country below sea level writes its survival in concrete, clay, gates, sensors, and stubborn public trust.</p>\n        </div>\n\n        <aside class=\"gateway-panel\" aria-label=\"Delta mission telemetry\">\n          <p>System status</p>\n          <strong>North Sea pressure front active</strong>\n          <dl>\n            <div><dt>Barrier length</dt><dd>32 km</dd></div>\n            <div><dt>Protected land</dt><dd>55 pct</dd></div>\n            <div><dt>Primary threat</dt><dd>storm surge</dd></div>\n          </dl>\n        </aside>\n      </section>\n\n      <section id=\"ledger\" class=\"ledger-section\" aria-labelledby=\"ledger-title\">\n        <div class=\"section-index\">01 / hydraulic intelligence</div>\n        <h2 id=\"ledger-title\">A dam is not a wall. It is a national operating system.</h2>\n        <section class=\"wp-block-wbdc-water-control-grid water-control-grid\" aria-label=\"Dutch dam control metrics\">\n          <article class=\"control-tile control-tile--wide\">\n            <span>01</span>\n            <h3>Afsluitdijk</h3>\n            <p>The 1932 closure turned the Zuiderzee into IJsselmeer and rewired Dutch food, flood, and transport systems.</p>\n            <strong>32 km</strong>\n          </article>\n          <article class=\"control-tile\">\n            <span>02</span>\n            <h3>Delta Works</h3>\n            <p>Thirteen engineered interventions distribute risk instead of pretending water can be defeated.</p>\n            <strong>13 works</strong>\n          </article>\n          <article class=\"control-tile control-tile--dark\">\n            <span>03</span>\n            <h3>Maeslantkering</h3>\n            <p>Two floating arms close only when Rotterdam needs a steel horizon.</p>\n            <strong>360 m arms</strong>\n          </article>\n          <article class=\"control-tile control-tile--tall\">\n            <span>04</span>\n            <h3>Room for the River</h3>\n            <p>The newest lesson is counterintuitive: retreat, widen, absorb, and make space for seasonal violence.</p>\n            <strong>34 projects</strong>\n          </article>\n        </section>\n      </section>\n\n      <section id=\"timeline\" class=\"timeline-section\" aria-labelledby=\"timeline-title\">\n        <p class=\"micro\">Horizontal scroll study / compressed national memory</p>\n        <h2 id=\"timeline-title\">A thousand years of negotiation, compressed into one moving datum.</h2>\n        <section class=\"wp-block-wbdc-dam-timeline-rail dam-timeline-rail\" aria-label=\"Dutch dam engineering timeline\">\n          <article class=\"timeline-node\">\n            <time>1100</time>\n            <h3>Earthen dikes</h3>\n            <p>Local communities build raised defensive lines from clay, reeds, timber, and collective labor.</p>\n          </article>\n          <article class=\"timeline-node\">\n            <time>1932</time>\n            <h3>Afsluitdijk closes</h3>\n            <p>The sea is cut, not erased. Fresh water and reclaimed land become a political instrument.</p>\n          </article>\n          <article class=\"timeline-node is-hot\">\n            <time>1953</time>\n            <h3>Flood disaster</h3>\n            <p>The North Sea flood resets every tolerance, budget, and moral assumption about safety.</p>\n          </article>\n          <article class=\"timeline-node\">\n            <time>1997</time>\n            <h3>Maeslantkering</h3>\n            <p>A movable storm surge barrier turns port access and flood defense into choreography.</p>\n          </article>\n          <article class=\"timeline-node\">\n            <time>Now</time>\n            <h3>Adaptive delta</h3>\n            <p>Future resilience is measured by sensors, sand motors, flexible policy, and controlled overflow.</p>\n          </article>\n        </section>\n      </section>\n\n      <section id=\"section\" class=\"cutaway-section\" aria-labelledby=\"cutaway-title\">\n        <div>\n          <p class=\"section-index\">03 / sectional truth</p>\n          <h2 id=\"cutaway-title\">The visible monument is only the top line of the machine.</h2>\n        </div>\n        <figure class=\"wp-block-wbdc-dam-cross-section dam-cross-section\" aria-label=\"Dam cross section diagram\">\n          <div class=\"slice slice-water\"><span>North Sea load</span></div>\n          <div class=\"slice slice-armour\"><span>basalt armor</span></div>\n          <div class=\"slice slice-core\"><span>sand core</span></div>\n          <div class=\"slice slice-clay\"><span>clay seal</span></div>\n          <figcaption>Every layer has a job: break wave energy, drain pressure, hold mass, and fail slowly enough to respond.</figcaption>\n        </figure>\n      </section>\n\n      <section id=\"archive\" class=\"archive-section\" aria-labelledby=\"archive-title\">\n        <div class=\"archive-copy\">\n          <p class=\"micro\">Archive plates / hover reveals / field evidence</p>\n          <h2 id=\"archive-title\">History is stored in survey lines, warning paint, and water marks on concrete.</h2>\n        </div>\n        <section class=\"wp-block-wbdc-archive-reveal-band archive-reveal-band\" aria-label=\"Dutch dam archive plates\">\n          <article class=\"archive-plate plate-one\">\n            <span>Plate A</span>\n            <h3>Closure day</h3>\n            <p>Workers, bicycles, flags, hard wind, and the instant a saltwater map changed name.</p>\n          </article>\n          <article class=\"archive-plate plate-two\">\n            <span>Plate B</span>\n            <h3>Storm protocol</h3>\n            <p>Gates are rehearsed like theater because hesitation is measured in centimeters.</p>\n          </article>\n          <article class=\"archive-plate plate-three\">\n            <span>Plate C</span>\n            <h3>Future shore</h3>\n            <p>Sand engines and overflow plains make defense look less like resistance and more like rhythm.</p>\n          </article>\n        </section>\n      </section>\n\n      <section class=\"closing-slab\" aria-labelledby=\"closing-title\">\n        <p class=\"section-index\">04 / civic contract</p>\n        <h2 id=\"closing-title\">The Dutch dam is infrastructure as public memory: maintained, contested, updated, never finished.</h2>\n        <a class=\"text-link\" href=\"#top\">Return to the waterline</a>\n      </section>\n    </main>"
+    }
+  ],
+  "headings": [
+    {
+      "level": 1,
+      "className": "",
+      "content": "Mastering the Water"
+    },
+    {
+      "level": 2,
+      "className": "",
+      "content": "A dam is not a wall. It is a national operating system."
+    },
+    {
+      "level": 3,
+      "className": "",
+      "content": "Afsluitdijk"
+    },
+    {
+      "level": 3,
+      "className": "",
+      "content": "Delta Works"
+    },
+    {
+      "level": 3,
+      "className": "",
+      "content": "Maeslantkering"
+    },
+    {
+      "level": 3,
+      "className": "",
+      "content": "Room for the River"
+    },
+    {
+      "level": 2,
+      "className": "",
+      "content": "A thousand years of negotiation, compressed into one moving datum."
+    },
+    {
+      "level": 3,
+      "className": "",
+      "content": "Earthen dikes"
+    },
+    {
+      "level": 3,
+      "className": "",
+      "content": "Afsluitdijk closes"
+    },
+    {
+      "level": 3,
+      "className": "",
+      "content": "Flood disaster"
+    },
+    {
+      "level": 3,
+      "className": "",
+      "content": "Maeslantkering"
+    },
+    {
+      "level": 3,
+      "className": "",
+      "content": "Adaptive delta"
+    },
+    {
+      "level": 2,
+      "className": "",
+      "content": "The visible monument is only the top line of the machine."
+    },
+    {
+      "level": 2,
+      "className": "",
+      "content": "History is stored in survey lines, warning paint, and water marks on concrete."
+    },
+    {
+      "level": 3,
+      "className": "",
+      "content": "Closure day"
+    },
+    {
+      "level": 3,
+      "className": "",
+      "content": "Storm protocol"
+    },
+    {
+      "level": 3,
+      "className": "",
+      "content": "Future shore"
+    },
+    {
+      "level": 2,
+      "className": "",
+      "content": "The Dutch dam is infrastructure as public memory: maintained, contested, updated, never finished."
+    }
+  ],
+  "paragraphs": [
+    {
+      "className": "micro",
+      "content": "Dutch civil works dossier / tide, soil, risk, memory"
+    },
+    {
+      "className": "thesis",
+      "content": "A country below sea level writes its survival in concrete, clay, gates, sensors, and stubborn public trust."
+    },
+    {
+      "className": "",
+      "content": "System status"
+    },
+    {
+      "className": "",
+      "content": "The 1932 closure turned the Zuiderzee into IJsselmeer and rewired Dutch food, flood, and transport systems."
+    },
+    {
+      "className": "",
+      "content": "Thirteen engineered interventions distribute risk instead of pretending water can be defeated."
+    },
+    {
+      "className": "",
+      "content": "Two floating arms close only when Rotterdam needs a steel horizon."
+    },
+    {
+      "className": "",
+      "content": "The newest lesson is counterintuitive: retreat, widen, absorb, and make space for seasonal violence."
+    },
+    {
+      "className": "micro",
+      "content": "Horizontal scroll study / compressed national memory"
+    },
+    {
+      "className": "",
+      "content": "Local communities build raised defensive lines from clay, reeds, timber, and collective labor."
+    },
+    {
+      "className": "",
+      "content": "The sea is cut, not erased. Fresh water and reclaimed land become a political instrument."
+    },
+    {
+      "className": "",
+      "content": "The North Sea flood resets every tolerance, budget, and moral assumption about safety."
+    },
+    {
+      "className": "",
+      "content": "A movable storm surge barrier turns port access and flood defense into choreography."
+    },
+    {
+      "className": "",
+      "content": "Future resilience is measured by sensors, sand motors, flexible policy, and controlled overflow."
+    },
+    {
+      "className": "section-index",
+      "content": "03 / sectional truth"
+    },
+    {
+      "className": "micro",
+      "content": "Archive plates / hover reveals / field evidence"
+    },
+    {
+      "className": "",
+      "content": "Workers, bicycles, flags, hard wind, and the instant a saltwater map changed name."
+    },
+    {
+      "className": "",
+      "content": "Gates are rehearsed like theater because hesitation is measured in centimeters."
+    },
+    {
+      "className": "",
+      "content": "Sand engines and overflow plains make defense look less like resistance and more like rhythm."
+    },
+    {
+      "className": "section-index",
+      "content": "04 / civic contract"
+    }
+  ],
+  "links": [
+    {
+      "className": "nav-mark",
+      "url": "#top",
+      "text": "NL-Delta Mastering the Water"
+    },
+    {
+      "className": "",
+      "url": "#ledger",
+      "text": "Ledger"
+    },
+    {
+      "className": "",
+      "url": "#timeline",
+      "text": "Timeline"
+    },
+    {
+      "className": "",
+      "url": "#section",
+      "text": "Section"
+    },
+    {
+      "className": "nav-action",
+      "url": "#archive",
+      "text": "Open archive"
+    },
+    {
+      "className": "text-link",
+      "url": "#top",
+      "text": "Return to the waterline"
+    }
+  ],
+  "forms": [],
+  "cards": [
+    {
+      "className": "control-tile control-tile--wide",
+      "title": "Afsluitdijk",
+      "text": "The 1932 closure turned the Zuiderzee into IJsselmeer and rewired Dutch food, flood, and transport systems.",
+      "links": []
+    },
+    {
+      "className": "control-tile",
+      "title": "Delta Works",
+      "text": "Thirteen engineered interventions distribute risk instead of pretending water can be defeated.",
+      "links": []
+    },
+    {
+      "className": "control-tile control-tile--dark",
+      "title": "Maeslantkering",
+      "text": "Two floating arms close only when Rotterdam needs a steel horizon.",
+      "links": []
+    },
+    {
+      "className": "control-tile control-tile--tall",
+      "title": "Room for the River",
+      "text": "The newest lesson is counterintuitive: retreat, widen, absorb, and make space for seasonal violence.",
+      "links": []
+    },
+    {
+      "className": "timeline-node",
+      "title": "Earthen dikes",
+      "text": "Local communities build raised defensive lines from clay, reeds, timber, and collective labor.",
+      "links": []
+    },
+    {
+      "className": "timeline-node",
+      "title": "Afsluitdijk closes",
+      "text": "The sea is cut, not erased. Fresh water and reclaimed land become a political instrument.",
+      "links": []
+    },
+    {
+      "className": "timeline-node is-hot",
+      "title": "Flood disaster",
+      "text": "The North Sea flood resets every tolerance, budget, and moral assumption about safety.",
+      "links": []
+    },
+    {
+      "className": "timeline-node",
+      "title": "Maeslantkering",
+      "text": "A movable storm surge barrier turns port access and flood defense into choreography.",
+      "links": []
+    },
+    {
+      "className": "timeline-node",
+      "title": "Adaptive delta",
+      "text": "Future resilience is measured by sensors, sand motors, flexible policy, and controlled overflow.",
+      "links": []
+    },
+    {
+      "className": "archive-plate plate-one",
+      "title": "Closure day",
+      "text": "Workers, bicycles, flags, hard wind, and the instant a saltwater map changed name.",
+      "links": []
+    },
+    {
+      "className": "archive-plate plate-two",
+      "title": "Storm protocol",
+      "text": "Gates are rehearsed like theater because hesitation is measured in centimeters.",
+      "links": []
+    },
+    {
+      "className": "archive-plate plate-three",
+      "title": "Future shore",
+      "text": "Sand engines and overflow plains make defense look less like resistance and more like rhythm.",
+      "links": []
+    }
+  ]
+}

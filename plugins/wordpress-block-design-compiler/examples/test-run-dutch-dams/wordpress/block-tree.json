@@ -1,0 +1,202 @@
+{
+  "version": 2,
+  "contract": "data-only",
+  "blocks": [
+    {
+      "blockName": "core/group",
+      "attrs": { "tagName": "header", "className": "dam-nav", "ariaLabel": "Mission navigation" },
+      "innerBlocks": [
+        {
+          "blockName": "core/link",
+          "attrs": { "url": "#top", "className": "nav-mark", "ariaLabel": "Mastering the Water home" },
+          "innerBlocks": [
+            { "blockName": "core/group", "attrs": { "tagName": "span", "content": "NL-Delta" }, "innerBlocks": [] },
+            { "blockName": "core/group", "attrs": { "tagName": "strong", "content": "Mastering the Water" }, "innerBlocks": [] }
+          ]
+        },
+        {
+          "blockName": "core/group",
+          "attrs": { "tagName": "nav", "className": "nav-links", "ariaLabel": "Primary" },
+          "innerBlocks": [
+            { "blockName": "core/link", "attrs": { "url": "#ledger", "content": "Ledger" }, "innerBlocks": [] },
+            { "blockName": "core/link", "attrs": { "url": "#timeline", "content": "Timeline" }, "innerBlocks": [] },
+            { "blockName": "core/link", "attrs": { "url": "#section", "content": "Section" }, "innerBlocks": [] }
+          ]
+        },
+        { "blockName": "core/link", "attrs": { "url": "#archive", "className": "nav-action", "content": "Open archive" }, "innerBlocks": [] }
+      ]
+    },
+    {
+      "blockName": "core/group",
+      "attrs": { "tagName": "main", "anchor": "top" },
+      "innerBlocks": [
+        {
+          "blockName": "core/group",
+          "attrs": { "tagName": "section", "className": "gateway", "ariaLabelledby": "gateway-title" },
+          "innerBlocks": [
+            {
+              "blockName": "core/group",
+              "attrs": { "tagName": "div", "className": "gateway-type" },
+              "innerBlocks": [
+                { "blockName": "core/paragraph", "attrs": { "className": "micro", "content": "Dutch civil works dossier / tide, soil, risk, memory" }, "innerBlocks": [] },
+                {
+                  "blockName": "core/heading",
+                  "attrs": { "level": 1, "anchor": "gateway-title" },
+                  "innerBlocks": [
+                    { "blockName": "core/group", "attrs": { "tagName": "span", "content": "Mastering" }, "innerBlocks": [] },
+                    { "blockName": "core/group", "attrs": { "tagName": "span", "content": "the Water" }, "innerBlocks": [] }
+                  ]
+                },
+                { "blockName": "core/paragraph", "attrs": { "className": "thesis", "content": "A country below sea level writes its survival in concrete, clay, gates, sensors, and stubborn public trust." }, "innerBlocks": [] }
+              ]
+            },
+            {
+              "blockName": "core/group",
+              "attrs": { "tagName": "aside", "className": "gateway-panel", "ariaLabel": "Delta mission telemetry" },
+              "innerBlocks": [
+                { "blockName": "core/paragraph", "attrs": { "content": "System status" }, "innerBlocks": [] },
+                { "blockName": "core/group", "attrs": { "tagName": "strong", "content": "North Sea pressure front active" }, "innerBlocks": [] },
+                {
+                  "blockName": "core/group",
+                  "attrs": { "tagName": "dl" },
+                  "innerBlocks": [
+                    {
+                      "blockName": "core/group",
+                      "attrs": { "tagName": "div" },
+                      "innerBlocks": [
+                        { "blockName": "core/group", "attrs": { "tagName": "dt", "content": "Barrier length" }, "innerBlocks": [] },
+                        { "blockName": "core/group", "attrs": { "tagName": "dd", "content": "32 km" }, "innerBlocks": [] }
+                      ]
+                    },
+                    {
+                      "blockName": "core/group",
+                      "attrs": { "tagName": "div" },
+                      "innerBlocks": [
+                        { "blockName": "core/group", "attrs": { "tagName": "dt", "content": "Protected land" }, "innerBlocks": [] },
+                        { "blockName": "core/group", "attrs": { "tagName": "dd", "content": "55 pct" }, "innerBlocks": [] }
+                      ]
+                    },
+                    {
+                      "blockName": "core/group",
+                      "attrs": { "tagName": "div" },
+                      "innerBlocks": [
+                        { "blockName": "core/group", "attrs": { "tagName": "dt", "content": "Primary threat" }, "innerBlocks": [] },
+                        { "blockName": "core/group", "attrs": { "tagName": "dd", "content": "storm surge" }, "innerBlocks": [] }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "blockName": "core/group",
+          "attrs": { "tagName": "section", "anchor": "ledger", "className": "ledger-section", "ariaLabelledby": "ledger-title" },
+          "innerBlocks": [
+            { "blockName": "core/group", "attrs": { "tagName": "div", "className": "section-index", "content": "01 / hydraulic intelligence" }, "innerBlocks": [] },
+            { "blockName": "core/heading", "attrs": { "level": 2, "anchor": "ledger-title", "content": "A dam is not a wall. It is a national operating system." }, "innerBlocks": [] },
+            {
+              "blockName": "wbdc/water-control-grid",
+              "attrs": {
+                "ariaLabel": "Dutch dam control metrics",
+                "tiles": [
+                  { "number": "01", "title": "Afsluitdijk", "body": "The 1932 closure turned the Zuiderzee into IJsselmeer and rewired Dutch food, flood, and transport systems.", "metric": "32 km", "variant": "wide" },
+                  { "number": "02", "title": "Delta Works", "body": "Thirteen engineered interventions distribute risk instead of pretending water can be defeated.", "metric": "13 works", "variant": "" },
+                  { "number": "03", "title": "Maeslantkering", "body": "Two floating arms close only when Rotterdam needs a steel horizon.", "metric": "360 m arms", "variant": "dark" },
+                  { "number": "04", "title": "Room for the River", "body": "The newest lesson is counterintuitive: retreat, widen, absorb, and make space for seasonal violence.", "metric": "34 projects", "variant": "tall" }
+                ]
+              },
+              "innerBlocks": []
+            }
+          ]
+        },
+        {
+          "blockName": "core/group",
+          "attrs": { "tagName": "section", "anchor": "timeline", "className": "timeline-section", "ariaLabelledby": "timeline-title" },
+          "innerBlocks": [
+            { "blockName": "core/paragraph", "attrs": { "className": "micro", "content": "Horizontal scroll study / compressed national memory" }, "innerBlocks": [] },
+            { "blockName": "core/heading", "attrs": { "level": 2, "anchor": "timeline-title", "content": "A thousand years of negotiation, compressed into one moving datum." }, "innerBlocks": [] },
+            {
+              "blockName": "wbdc/dam-timeline-rail",
+              "attrs": {
+                "ariaLabel": "Dutch dam engineering timeline",
+                "events": [
+                  { "year": "1100", "title": "Earthen dikes", "body": "Local communities build raised defensive lines from clay, reeds, timber, and collective labor.", "hot": false },
+                  { "year": "1932", "title": "Afsluitdijk closes", "body": "The sea is cut, not erased. Fresh water and reclaimed land become a political instrument.", "hot": false },
+                  { "year": "1953", "title": "Flood disaster", "body": "The North Sea flood resets every tolerance, budget, and moral assumption about safety.", "hot": true },
+                  { "year": "1997", "title": "Maeslantkering", "body": "A movable storm surge barrier turns port access and flood defense into choreography.", "hot": false },
+                  { "year": "Now", "title": "Adaptive delta", "body": "Future resilience is measured by sensors, sand motors, flexible policy, and controlled overflow.", "hot": false }
+                ]
+              },
+              "innerBlocks": []
+            }
+          ]
+        },
+        {
+          "blockName": "core/group",
+          "attrs": { "tagName": "section", "anchor": "section", "className": "cutaway-section", "ariaLabelledby": "cutaway-title" },
+          "innerBlocks": [
+            {
+              "blockName": "core/group",
+              "attrs": { "tagName": "div" },
+              "innerBlocks": [
+                { "blockName": "core/paragraph", "attrs": { "className": "section-index", "content": "03 / sectional truth" }, "innerBlocks": [] },
+                { "blockName": "core/heading", "attrs": { "level": 2, "anchor": "cutaway-title", "content": "The visible monument is only the top line of the machine." }, "innerBlocks": [] }
+              ]
+            },
+            {
+              "blockName": "wbdc/dam-cross-section",
+              "attrs": {
+                "ariaLabel": "Dam cross section diagram",
+                "caption": "Every layer has a job: break wave energy, drain pressure, hold mass, and fail slowly enough to respond.",
+                "layers": [
+                  { "className": "slice-water", "label": "North Sea load" },
+                  { "className": "slice-armour", "label": "basalt armor" },
+                  { "className": "slice-core", "label": "sand core" },
+                  { "className": "slice-clay", "label": "clay seal" }
+                ]
+              },
+              "innerBlocks": []
+            }
+          ]
+        },
+        {
+          "blockName": "core/group",
+          "attrs": { "tagName": "section", "anchor": "archive", "className": "archive-section", "ariaLabelledby": "archive-title" },
+          "innerBlocks": [
+            {
+              "blockName": "core/group",
+              "attrs": { "tagName": "div", "className": "archive-copy" },
+              "innerBlocks": [
+                { "blockName": "core/paragraph", "attrs": { "className": "micro", "content": "Archive plates / hover reveals / field evidence" }, "innerBlocks": [] },
+                { "blockName": "core/heading", "attrs": { "level": 2, "anchor": "archive-title", "content": "History is stored in survey lines, warning paint, and water marks on concrete." }, "innerBlocks": [] }
+              ]
+            },
+            {
+              "blockName": "wbdc/archive-reveal-band",
+              "attrs": {
+                "ariaLabel": "Dutch dam archive plates",
+                "plates": [
+                  { "label": "Plate A", "title": "Closure day", "body": "Workers, bicycles, flags, hard wind, and the instant a saltwater map changed name.", "className": "plate-one" },
+                  { "label": "Plate B", "title": "Storm protocol", "body": "Gates are rehearsed like theater because hesitation is measured in centimeters.", "className": "plate-two" },
+                  { "label": "Plate C", "title": "Future shore", "body": "Sand engines and overflow plains make defense look less like resistance and more like rhythm.", "className": "plate-three" }
+                ]
+              },
+              "innerBlocks": []
+            }
+          ]
+        },
+        {
+          "blockName": "core/group",
+          "attrs": { "tagName": "section", "className": "closing-slab", "ariaLabelledby": "closing-title" },
+          "innerBlocks": [
+            { "blockName": "core/paragraph", "attrs": { "className": "section-index", "content": "04 / civic contract" }, "innerBlocks": [] },
+            { "blockName": "core/heading", "attrs": { "level": 2, "anchor": "closing-title", "content": "The Dutch dam is infrastructure as public memory: maintained, contested, updated, never finished." }, "innerBlocks": [] },
+            { "blockName": "core/link", "attrs": { "url": "#top", "className": "text-link", "content": "Return to the waterline" }, "innerBlocks": [] }
+          ]
+        }
+      ]
+    }
+  ]
+}

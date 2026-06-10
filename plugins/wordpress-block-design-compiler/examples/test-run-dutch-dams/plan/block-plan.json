@@ -1,0 +1,40 @@
+{
+  "sections": [
+    {
+      "id": "top",
+      "title": "Gateway",
+      "coreBlocks": ["core/group", "core/link", "core/heading", "core/paragraph"],
+      "customBlocks": []
+    },
+    {
+      "id": "ledger",
+      "title": "Hydraulic intelligence ledger",
+      "coreBlocks": ["core/group", "core/heading"],
+      "customBlocks": ["wbdc/water-control-grid"]
+    },
+    {
+      "id": "timeline",
+      "title": "Compressed engineering timeline",
+      "coreBlocks": ["core/group", "core/heading", "core/paragraph"],
+      "customBlocks": ["wbdc/dam-timeline-rail"]
+    },
+    {
+      "id": "section",
+      "title": "Dam cross-section",
+      "coreBlocks": ["core/group", "core/heading", "core/paragraph"],
+      "customBlocks": ["wbdc/dam-cross-section"]
+    },
+    {
+      "id": "archive",
+      "title": "Archive reveal band",
+      "coreBlocks": ["core/group", "core/heading", "core/paragraph"],
+      "customBlocks": ["wbdc/archive-reveal-band"]
+    }
+  ],
+  "customBlocks": [
+    "wbdc/water-control-grid",
+    "wbdc/dam-timeline-rail",
+    "wbdc/dam-cross-section",
+    "wbdc/archive-reveal-band"
+  ]
+}
