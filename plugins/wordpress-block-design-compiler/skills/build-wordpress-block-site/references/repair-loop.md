@@ -9,12 +9,19 @@ Loop:
 3. Inspect mockup screenshot, rendered screenshot, editor screenshot, and diff for each viewport.
 4. Write `reports/repair-tasks.md`.
 5. Fix tasks as code changes.
-6. Repeat until thresholds pass.
+6. Repeat until both rendered and editor thresholds pass.
 
 Default thresholds:
 
 - `maxMismatchPercent <= 1`
 - `maxHeightDelta <= 8`
+
+Completion criteria:
+
+- `reports/comparison.json` must include `aggregates.rendered` and `aggregates.editor`.
+- `aggregates.rendered.maxMismatchPercent` and `aggregates.editor.maxMismatchPercent` must both be at or below `maxMismatchPercent`.
+- `aggregates.rendered.maxHeightDelta` and `aggregates.editor.maxHeightDelta` must both be at or below `maxHeightDelta`.
+- Do not declare success when the saved frontend passes but the editable editor canvas remains visually divergent.
 
 Task format:
 
@@ -33,8 +40,16 @@ Repair order:
 2. Semantic failures: fake forms, missing links, wrong buttons, lost labels.
 3. Macro layout: section order, hero geometry, major grids, asymmetry.
 4. Responsive structure: columns, button rows, wrapping, mobile order.
-5. Component scale: marquee, cards, forms, buttons, media objects.
-6. Fine polish: spacing, color, typography, shadows, borders.
+5. Editor-surface drift: `edit()` wrapper tree, RichText tags/classes, disabled form geometry, editor-only helper markup, and editor-specific CSS.
+6. Component scale: marquee, cards, forms, buttons, media objects.
+7. Fine polish: spacing, color, typography, shadows, borders.
+
+Surface-specific repair decisions:
+
+- If rendered and editor both fail in the same area, fix the shared block tree, custom block data model, shared CSS, or custom block structure first.
+- If rendered passes but editor fails, fix custom block `edit()` output, editor-only classes, or block-owned editor CSS. Do not change `save()` or frontend CSS unless the shared structure is actually wrong.
+- If editor passes but rendered fails, fix `save()` output, support attributes, or frontend scoped CSS without adding editor-only differences.
+- If core block editor output adds unavoidable editor wrappers, ignore those wrappers only through comparison CSS; do not use that as permission for block-owned markup to diverge.
 
 Rules:
 
@@ -45,3 +60,4 @@ Rules:
 - Use block-tree changes when the issue is missing content, wrong order, wrong block choice, broken editability, or semantic markup.
 - Use CSS when structure and content are correct but visual mapping is off.
 - Treat editor-surface diffs as first-class failures when the saved frontend looks right but the block `edit()` output, editable text, wrapper classes, or editor-only CSS drift from the mockup.
+- Keep `edit()` and `save()` visually paired. A good repair often extracts a shared render helper or mirrors the same element tree with `RichText` replacing static text.

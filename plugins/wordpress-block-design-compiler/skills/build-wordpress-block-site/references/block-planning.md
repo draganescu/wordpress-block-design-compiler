@@ -57,6 +57,7 @@ Plan shape:
         "pageCss": [":root tokens"]
       },
       "editableModel": "what remains inline editable and what goes to inspector",
+      "editorParity": "how edit() or core editor output preserves the same visual structure as the mockup",
       "reason": "why this mapping preserves fidelity and editability"
     }
   ],
@@ -67,6 +68,7 @@ Plan shape:
       "attributes": [],
       "supports": [],
       "editorModel": "RichText in canvas, InspectorControls, BlockControls",
+      "editorParity": "same wrapper/classes/order as save(); disabled controls keep frontend geometry",
       "saveContract": "semantic frontend markup"
     }
   ]
@@ -112,9 +114,18 @@ Tree shape:
 Custom block serialization requirements:
 
 - Each generated custom block must implement `save()` in `index.js`; that `save()` is the single source of frontend markup for WordPress and preview comparison.
+- Each generated custom block must implement `edit()` as a visual twin of `save()`: same root tag, class names, child order, repeated-item wrappers, and component geometry, with `RichText` or disabled controls replacing static frontend text/inputs.
 - The serializer registers official core blocks, registers `wordpress/blocks/*/index.js`, and calls WordPress package serialization. Do not create a parallel markup-generation layer.
 - The block tree references custom blocks by `blockName` and `attrs`; it never embeds the custom block's saved HTML.
 - Custom blocks should be generated for semantic shells that core cannot represent cleanly, such as bespoke navigation, definition-list telemetry panels, search/subscription/booking forms, maps, marquees, archive reveal systems, and data visualizations.
+
+Editor parity requirements:
+
+- `compare_html` measures both `rendered/rendered-blocks.html` and `editor/block-editor.html` against the mockup.
+- A transform is complete only when `aggregates.rendered` and `aggregates.editor` are both under threshold.
+- If rendered passes but editor fails, change custom block `edit()` implementations, block-owned editor CSS, or editable markup choices. Do not damage saved frontend parity to improve editor parity.
+- If both rendered and editor fail in the same area, fix the shared block tree, custom block structure, or scoped CSS so both surfaces converge together.
+- Do not accept a custom block whose `save()` is pixel-close but whose `edit()` is a generic inspector panel, raw inputs, simplified placeholder, or visibly different wrapper tree.
 
 CSS transfer requirements:
 

@@ -228,7 +228,7 @@ async function createWorkspace(args) {
     throw new Error(`Workspace exists: ${workspaceRoot}. Pass force=true to reuse it.`);
   }
 
-  for (const dir of ['mockup', 'analysis', 'plan', 'wordpress/blocks', 'rendered', 'reports', 'visual']) {
+  for (const dir of ['mockup', 'analysis', 'plan', 'wordpress/blocks', 'rendered', 'editor', 'reports', 'visual']) {
     fs.mkdirSync(path.join(workspaceRoot, dir), { recursive: true });
   }
 
@@ -250,6 +250,7 @@ async function createWorkspace(args) {
       blockPlan: path.join(workspaceRoot, 'plan/block-plan.json'),
       blockTree: path.join(workspaceRoot, 'wordpress/block-tree.json'),
       blockContent: path.join(workspaceRoot, 'wordpress/content.html'),
+      editorPreview: path.join(workspaceRoot, 'editor/block-editor.html'),
       wordpressCss: path.join(workspaceRoot, 'wordpress/style.css'),
     },
     next: 'Replace the starter mockup with the designed HTML/CSS/JS, then call analyze_mockup. Assemble blocks in wordpress/block-tree.json.',
@@ -364,7 +365,7 @@ async function serializeWordPressBlocks(args) {
     cssSources: cssSources.map((source) => source.relativePath),
     styleAuditPath: path.join(workspaceRoot, 'reports/style-audit.json'),
     styleAudit,
-    next: 'Call compare_html, inspect screenshots/diffs, then write repair tasks against wordpress/block-tree.json, block save code, or CSS.',
+    next: 'Call compare_html, inspect rendered and editor screenshots/diffs, then write repair tasks against wordpress/block-tree.json, custom block edit/save code, or CSS.',
   };
 }
 
@@ -1413,6 +1414,10 @@ function renderRepairTasks(tasks, report) {
     ...(report.editorPath ? [`Editor: ${report.editorPath}`] : []),
     `Max mismatch: ${report.aggregate.maxMismatchPercent}%`,
     `Max height delta: ${report.aggregate.maxHeightDelta}px`,
+    ...(report.aggregates ? [
+      `Rendered aggregate: ${report.aggregates.rendered.maxMismatchPercent}% mismatch, ${report.aggregates.rendered.maxHeightDelta}px height delta`,
+      `Editor aggregate: ${report.aggregates.editor.maxMismatchPercent}% mismatch, ${report.aggregates.editor.maxHeightDelta}px height delta`,
+    ] : []),
     '',
   ];
   if (!tasks.length) {

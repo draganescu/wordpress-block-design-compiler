@@ -17,9 +17,14 @@ Use this skill when the user wants a website that should end as editable WordPre
 6. Assemble editable block content in `wordpress/block-tree.json`; put custom block source in `wordpress/blocks/<slug>/`; put styling in block support/style attributes first, custom block scoped CSS second, and tiny page CSS last.
 7. Run `serialize_wordpress_blocks`; it registers official core blocks with `@wordpress/block-library`, registers custom blocks from `wordpress/blocks/*/index.js`, serializes `wordpress/block-tree.json` with `@wordpress/blocks`, writes canonical block markup to `wordpress/content.html`, writes frontend preview HTML to `rendered/rendered-blocks.html`, writes a no-build editable block editor preview to `editor/block-editor.html`, and writes `reports/style-audit.json`. The preview CSS source list comes from `wordpress/style.css` and custom block `style.css` files. `mockup/style.css` is intentionally excluded from rendered block preview by default.
 8. Run `compare_html`.
-9. Inspect rendered frontend screenshots, editable editor screenshots, and diffs. Write `reports/repair-tasks.md`, fix each task as an agent, then repeat preview/compare until thresholds are met.
+9. Inspect rendered frontend screenshots, editable editor screenshots, and diffs. Write `reports/repair-tasks.md`, fix each task as an agent, then repeat preview/compare until both saved frontend and editor-preview thresholds are met.
 
 Default thresholds: `maxMismatchPercent <= 1` and `maxHeightDelta <= 8`.
+
+Completion requires both `reports/comparison.json` aggregates to pass:
+
+- `aggregates.rendered.maxMismatchPercent <= maxMismatchPercent` and `aggregates.rendered.maxHeightDelta <= maxHeightDelta`
+- `aggregates.editor.maxMismatchPercent <= maxMismatchPercent` and `aggregates.editor.maxHeightDelta <= maxHeightDelta`
 
 ## Design Stage
 
@@ -36,6 +41,7 @@ The plan must answer:
 - Which styling belongs in block support attributes, block style variations/classes, custom block scoped CSS, or page CSS.
 - Which content remains inline editable.
 - Which settings belong in InspectorControls or BlockControls.
+- How each core assembly or custom block will keep the editable editor canvas visually aligned with the saved frontend.
 - Which parts may use `core/html`, with explicit reasons.
 
 Prefer core blocks, block supports, and style variations before custom blocks. Use custom blocks for reusable data models, real forms/search/booking widgets, nontrivial repeated components, or semantic save contracts.
@@ -60,6 +66,8 @@ Generated blocks must use vanilla JavaScript with WordPress globals. No JSX/buil
 Visible content belongs in the canvas with `RichText`. Behavior and design settings belong in `InspectorControls`, `BlockControls`, and native block supports. Do not render `TextControl` or `TextareaControl` as the primary in-canvas UI for visible content.
 
 Forms, search boxes, subscriptions, booking widgets, and contact/inquiry UI must render real semantic `<form>` markup on save.
+
+The `edit()` output must visually match the mockup and the saved frontend, not merely expose controls. Use the same root tag, class names, child order, repeated-item layout, and visual structure as `save()`. Editor-only wrappers, controls, helper labels, and disabled form behavior must not change layout geometry in screenshot comparison.
 
 ## Assembly
 
@@ -92,8 +100,9 @@ Repair from large to small:
 1. Missing/extra/escaped content and semantic failures.
 2. Macro section layout and grid geometry.
 3. Responsive structure.
-4. Component scale, wrapper, and selector failures.
-5. Spacing, color, and typography polish.
+4. Editor-surface drift: `edit()` structure, RichText tag/class parity, disabled form geometry, wrapper classes, and editor-only CSS.
+5. Component scale, wrapper, and selector failures.
+6. Spacing, color, and typography polish.
 
 Do not spend a pass on minor spacing while obvious missing buttons, stacked button groups, broken marquees, wrong grid geometry, or fake forms remain.
 

@@ -5,6 +5,8 @@ Rendered: /Users/andreidraganescu/Sites/wordpress-block-design-compiler/plugins/
 Editor: /Users/andreidraganescu/Sites/wordpress-block-design-compiler/plugins/wordpress-block-design-compiler/examples/test-run-night-market-observatory/editor/block-editor.html
 Max mismatch: 25.99%
 Max height delta: 905px
+Rendered aggregate: 0.36% mismatch, 0px height delta
+Editor aggregate: 25.99% mismatch, 905px height delta
 
 - [ ] Priority: high
   Surface: editor preview

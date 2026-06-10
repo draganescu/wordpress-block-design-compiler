@@ -11,7 +11,7 @@ The plugin does not try to make an autonomous server-side orchestrator. It gives
 - scaffold vanilla JavaScript static custom blocks
 - assemble editable `wordpress/block-tree.json` with block supports/style attributes as the primary design surface
 - serialize the block tree through `@wordpress/blocks`, `@wordpress/block-library` core registrations, and registered custom-block `save()` functions
-- compare mockup and rendered output with screenshots and pixel diffs
+- compare mockup against both rendered frontend output and editable editor output with screenshots and pixel diffs
 - return concrete repair tasks for the agent to fix
 
 ## Codex
@@ -62,7 +62,7 @@ Default comparison thresholds:
 - `maxMismatchPercent <= 1`
 - `maxHeightDelta <= 8`
 
-The repair loop is deliberately agent-led: the tool reports differences and image paths, then the agent fixes block composition, block source, or CSS as appropriate.
+The repair loop is deliberately agent-led: the tool reports differences and image paths, then the agent fixes block composition, block source, or CSS as appropriate. A run is complete only when both `aggregates.rendered` and `aggregates.editor` in `reports/comparison.json` are under the mismatch and height thresholds.
 
 Styling should be placed in this order:
 
