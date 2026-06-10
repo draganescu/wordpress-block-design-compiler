@@ -3,98 +3,51 @@
   "contract": "data-only",
   "blocks": [
     {
-      "blockName": "core/group",
-      "attrs": { "tagName": "header", "className": "dam-nav", "ariaLabel": "Mission navigation" },
-      "innerBlocks": [
-        {
-          "blockName": "core/link",
-          "attrs": { "url": "#top", "className": "nav-mark", "ariaLabel": "Mastering the Water home" },
-          "innerBlocks": [
-            { "blockName": "core/group", "attrs": { "tagName": "span", "content": "NL-Delta" }, "innerBlocks": [] },
-            { "blockName": "core/group", "attrs": { "tagName": "strong", "content": "Mastering the Water" }, "innerBlocks": [] }
-          ]
-        },
-        {
-          "blockName": "core/group",
-          "attrs": { "tagName": "nav", "className": "nav-links", "ariaLabel": "Primary" },
-          "innerBlocks": [
-            { "blockName": "core/link", "attrs": { "url": "#ledger", "content": "Ledger" }, "innerBlocks": [] },
-            { "blockName": "core/link", "attrs": { "url": "#timeline", "content": "Timeline" }, "innerBlocks": [] },
-            { "blockName": "core/link", "attrs": { "url": "#section", "content": "Section" }, "innerBlocks": [] }
-          ]
-        },
-        { "blockName": "core/link", "attrs": { "url": "#archive", "className": "nav-action", "content": "Open archive" }, "innerBlocks": [] }
-      ]
+      "blockName": "wbdc/dam-navigation",
+      "attrs": {
+        "ariaLabel": "Mission navigation",
+        "homeUrl": "#top",
+        "homeLabel": "Mastering the Water home",
+        "mark": "NL-Delta",
+        "title": "Mastering the Water",
+        "navLabel": "Primary",
+        "links": [
+          { "label": "Ledger", "url": "#ledger" },
+          { "label": "Timeline", "url": "#timeline" },
+          { "label": "Section", "url": "#section" }
+        ],
+        "actionText": "Open archive",
+        "actionUrl": "#archive"
+      },
+      "innerBlocks": []
     },
     {
       "blockName": "core/group",
       "attrs": { "tagName": "main", "anchor": "top" },
       "innerBlocks": [
         {
-          "blockName": "core/group",
-          "attrs": { "tagName": "section", "className": "gateway", "ariaLabelledby": "gateway-title" },
-          "innerBlocks": [
-            {
-              "blockName": "core/group",
-              "attrs": { "tagName": "div", "className": "gateway-type" },
-              "innerBlocks": [
-                { "blockName": "core/paragraph", "attrs": { "className": "micro", "content": "Dutch civil works dossier / tide, soil, risk, memory" }, "innerBlocks": [] },
-                {
-                  "blockName": "core/heading",
-                  "attrs": { "level": 1, "anchor": "gateway-title" },
-                  "innerBlocks": [
-                    { "blockName": "core/group", "attrs": { "tagName": "span", "content": "Mastering" }, "innerBlocks": [] },
-                    { "blockName": "core/group", "attrs": { "tagName": "span", "content": "the Water" }, "innerBlocks": [] }
-                  ]
-                },
-                { "blockName": "core/paragraph", "attrs": { "className": "thesis", "content": "A country below sea level writes its survival in concrete, clay, gates, sensors, and stubborn public trust." }, "innerBlocks": [] }
-              ]
-            },
-            {
-              "blockName": "core/group",
-              "attrs": { "tagName": "aside", "className": "gateway-panel", "ariaLabel": "Delta mission telemetry" },
-              "innerBlocks": [
-                { "blockName": "core/paragraph", "attrs": { "content": "System status" }, "innerBlocks": [] },
-                { "blockName": "core/group", "attrs": { "tagName": "strong", "content": "North Sea pressure front active" }, "innerBlocks": [] },
-                {
-                  "blockName": "core/group",
-                  "attrs": { "tagName": "dl" },
-                  "innerBlocks": [
-                    {
-                      "blockName": "core/group",
-                      "attrs": { "tagName": "div" },
-                      "innerBlocks": [
-                        { "blockName": "core/group", "attrs": { "tagName": "dt", "content": "Barrier length" }, "innerBlocks": [] },
-                        { "blockName": "core/group", "attrs": { "tagName": "dd", "content": "32 km" }, "innerBlocks": [] }
-                      ]
-                    },
-                    {
-                      "blockName": "core/group",
-                      "attrs": { "tagName": "div" },
-                      "innerBlocks": [
-                        { "blockName": "core/group", "attrs": { "tagName": "dt", "content": "Protected land" }, "innerBlocks": [] },
-                        { "blockName": "core/group", "attrs": { "tagName": "dd", "content": "55 pct" }, "innerBlocks": [] }
-                      ]
-                    },
-                    {
-                      "blockName": "core/group",
-                      "attrs": { "tagName": "div" },
-                      "innerBlocks": [
-                        { "blockName": "core/group", "attrs": { "tagName": "dt", "content": "Primary threat" }, "innerBlocks": [] },
-                        { "blockName": "core/group", "attrs": { "tagName": "dd", "content": "storm surge" }, "innerBlocks": [] }
-                      ]
-                    }
-                  ]
-                }
-              ]
-            }
-          ]
+          "blockName": "wbdc/dam-gateway",
+          "attrs": {
+            "titleId": "gateway-title",
+            "eyebrow": "Dutch civil works dossier / tide, soil, risk, memory",
+            "titleLines": ["Mastering", "the Water"],
+            "thesis": "A country below sea level writes its survival in concrete, clay, gates, sensors, and stubborn public trust.",
+            "panelAriaLabel": "Delta mission telemetry",
+            "panelLabel": "System status",
+            "panelStatus": "North Sea pressure front active",
+            "metrics": [
+              { "label": "Barrier length", "value": "32 km" },
+              { "label": "Protected land", "value": "55 pct" },
+              { "label": "Primary threat", "value": "storm surge" }
+            ]
+          },
+          "innerBlocks": []
         },
         {
           "blockName": "core/group",
-          "attrs": { "tagName": "section", "anchor": "ledger", "className": "ledger-section", "ariaLabelledby": "ledger-title" },
+          "attrs": { "tagName": "section", "anchor": "ledger", "className": "ledger-section" },
           "innerBlocks": [
-            { "blockName": "core/group", "attrs": { "tagName": "div", "className": "section-index", "content": "01 / hydraulic intelligence" }, "innerBlocks": [] },
+            { "blockName": "core/paragraph", "attrs": { "className": "section-index", "content": "01 / hydraulic intelligence" }, "innerBlocks": [] },
             { "blockName": "core/heading", "attrs": { "level": 2, "anchor": "ledger-title", "content": "A dam is not a wall. It is a national operating system." }, "innerBlocks": [] },
             {
               "blockName": "wbdc/water-control-grid",
@@ -113,7 +66,7 @@
         },
         {
           "blockName": "core/group",
-          "attrs": { "tagName": "section", "anchor": "timeline", "className": "timeline-section", "ariaLabelledby": "timeline-title" },
+          "attrs": { "tagName": "section", "anchor": "timeline", "className": "timeline-section" },
           "innerBlocks": [
             { "blockName": "core/paragraph", "attrs": { "className": "micro", "content": "Horizontal scroll study / compressed national memory" }, "innerBlocks": [] },
             { "blockName": "core/heading", "attrs": { "level": 2, "anchor": "timeline-title", "content": "A thousand years of negotiation, compressed into one moving datum." }, "innerBlocks": [] },
@@ -135,7 +88,7 @@
         },
         {
           "blockName": "core/group",
-          "attrs": { "tagName": "section", "anchor": "section", "className": "cutaway-section", "ariaLabelledby": "cutaway-title" },
+          "attrs": { "tagName": "section", "anchor": "section", "className": "cutaway-section" },
           "innerBlocks": [
             {
               "blockName": "core/group",
@@ -163,7 +116,7 @@
         },
         {
           "blockName": "core/group",
-          "attrs": { "tagName": "section", "anchor": "archive", "className": "archive-section", "ariaLabelledby": "archive-title" },
+          "attrs": { "tagName": "section", "anchor": "archive", "className": "archive-section" },
           "innerBlocks": [
             {
               "blockName": "core/group",
@@ -189,11 +142,17 @@
         },
         {
           "blockName": "core/group",
-          "attrs": { "tagName": "section", "className": "closing-slab", "ariaLabelledby": "closing-title" },
+          "attrs": { "tagName": "section", "className": "closing-slab" },
           "innerBlocks": [
             { "blockName": "core/paragraph", "attrs": { "className": "section-index", "content": "04 / civic contract" }, "innerBlocks": [] },
             { "blockName": "core/heading", "attrs": { "level": 2, "anchor": "closing-title", "content": "The Dutch dam is infrastructure as public memory: maintained, contested, updated, never finished." }, "innerBlocks": [] },
-            { "blockName": "core/link", "attrs": { "url": "#top", "className": "text-link", "content": "Return to the waterline" }, "innerBlocks": [] }
+            {
+              "blockName": "core/buttons",
+              "attrs": { "className": "closing-link-row" },
+              "innerBlocks": [
+                { "blockName": "core/button", "attrs": { "url": "#top", "className": "text-link", "text": "Return to the waterline" }, "innerBlocks": [] }
+              ]
+            }
           ]
         }
       ]

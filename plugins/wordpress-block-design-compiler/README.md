@@ -50,7 +50,7 @@ Use `claude/CLAUDE.md` as the Claude project instruction file when running this 
 - `create_workspace`: creates `mockup`, `analysis`, `plan`, `wordpress`, `rendered`, `reports`, and `visual` folders.
 - `analyze_mockup`: extracts a content inventory, sections, forms, links, cards, headings, CSS custom properties, and selectors.
 - `scaffold_custom_block`: writes `block.json`, `index.js`, and `style.css` for a vanilla JavaScript static block.
-- `serialize_wordpress_blocks`: registers custom blocks from `wordpress/blocks/*/index.js`, serializes `wordpress/block-tree.json` with `@wordpress/blocks`, writes canonical block markup to `wordpress/content.html`, and writes frontend preview HTML to `rendered/rendered-blocks.html`. It rejects source trees that contain `htmlLines`, `innerHTML`, `innerContent`, `html`, `markup`, or `sourceHtml`.
+- `serialize_wordpress_blocks`: registers custom blocks from `wordpress/blocks/*/index.js`, serializes `wordpress/block-tree.json` with `@wordpress/blocks`, writes canonical block markup to `wordpress/content.html`, and writes frontend preview HTML to `rendered/rendered-blocks.html`. It rejects source trees that contain `htmlLines`, `innerHTML`, `innerContent`, `html`, `markup`, or `sourceHtml`; unsupported core block names; unsupported core attributes; or `core/group` tag names outside block-level layout containers.
 - `compare_html`: captures mockup/rendered screenshots, generates diffs, and writes `reports/comparison.json` plus `reports/repair-tasks.md`.
 
 ## Workflow

@@ -12,7 +12,7 @@
         next[index] = Object.assign({}, next[index], { label: value });
         props.setAttributes({ layers: next });
       };
-      return el('figure', useBlockProps({ className: 'dam-cross-section' }),
+      return el('figure', useBlockProps({ className: 'dam-cross-section', 'aria-label': props.attributes.ariaLabel || undefined }),
         layers.map(function (layer, index) {
           return el('div', { key: index, className: ['slice', layer.className || ''].filter(Boolean).join(' ') },
             el(RichText, { tagName: 'span', value: layer.label || '', allowedFormats: [], onChange: function (value) { updateLayer(index, value); } })
@@ -22,7 +22,7 @@
       );
     },
     save: function Save(props) {
-      return el('figure', useBlockProps.save({ className: 'dam-cross-section' }),
+      return el('figure', useBlockProps.save({ className: 'dam-cross-section', 'aria-label': props.attributes.ariaLabel || undefined }),
         (props.attributes.layers || []).map(function (layer, index) {
           return el('div', { key: index, className: ['slice', layer.className || ''].filter(Boolean).join(' ') },
             el(RichText.Content, { tagName: 'span', value: layer.label || '' })

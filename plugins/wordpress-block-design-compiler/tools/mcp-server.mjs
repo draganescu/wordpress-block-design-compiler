@@ -12,6 +12,21 @@ const DEFAULT_VIEWPORTS = [
   { name: 'mobile', width: 390, height: 1200 },
 ];
 const customInnerBlocksStack = [];
+const ALLOWED_GROUP_TAGS = new Set(['div', 'main', 'section', 'article', 'aside', 'header', 'footer']);
+const CORE_BLOCK_ATTRS = {
+  'core/group': new Set(['anchor', 'className', 'align', 'style', 'layout', 'tagName', 'metadata', 'lock']),
+  'core/paragraph': new Set(['anchor', 'className', 'align', 'style', 'content', 'dropCap', 'fontSize', 'textColor', 'backgroundColor', 'gradient', 'metadata', 'lock']),
+  'core/heading': new Set(['anchor', 'className', 'align', 'style', 'content', 'level', 'fontSize', 'textColor', 'backgroundColor', 'gradient', 'metadata', 'lock']),
+  'core/buttons': new Set(['anchor', 'className', 'align', 'style', 'layout', 'metadata', 'lock']),
+  'core/button': new Set(['anchor', 'className', 'align', 'style', 'url', 'title', 'text', 'linkTarget', 'rel', 'width', 'fontSize', 'textColor', 'backgroundColor', 'gradient', 'metadata', 'lock']),
+  'core/list': new Set(['anchor', 'className', 'align', 'style', 'ordered', 'reversed', 'start', 'type', 'values', 'metadata', 'lock']),
+  'core/list-item': new Set(['anchor', 'className', 'style', 'content', 'metadata', 'lock']),
+  'core/separator': new Set(['anchor', 'className', 'align', 'style', 'opacity', 'metadata', 'lock']),
+  'core/spacer': new Set(['anchor', 'className', 'style', 'height', 'metadata', 'lock']),
+  'core/columns': new Set(['anchor', 'className', 'align', 'style', 'isStackedOnMobile', 'verticalAlignment', 'metadata', 'lock']),
+  'core/column': new Set(['anchor', 'className', 'style', 'width', 'verticalAlignment', 'layout', 'metadata', 'lock']),
+  'core/html': new Set(['content', 'metadata', 'lock']),
+};
 
 const TOOLS = [
   {
@@ -371,6 +386,7 @@ function toWordPressBlock(block, createBlock) {
   const blockName = block.blockName || block.name;
   if (!blockName || typeof blockName !== 'string') throw new Error('Every block tree item needs blockName or name.');
   const attrs = block.attrs || block.attributes || {};
+  validateBlockContract(blockName, attrs);
   const innerBlocks = (block.innerBlocks || []).map((child) => toWordPressBlock(child, createBlock));
   return createBlock(blockName, attrs, innerBlocks);
 }
@@ -379,6 +395,25 @@ function assertDataOnlyBlock(block) {
   for (const key of ['htmlLines', 'innerHTML', 'innerContent', 'html', 'markup', 'sourceHtml', 'innerHtml']) {
     if (Object.prototype.hasOwnProperty.call(block, key)) {
       throw new Error(`Data-only block tree violation in ${block.blockName || block.name || 'unknown block'}: remove ${key}. Use attrs, style, className, and innerBlocks only.`);
+    }
+  }
+}
+
+function validateBlockContract(blockName, attrs) {
+  if (!blockName.startsWith('core/')) return;
+  const allowed = CORE_BLOCK_ATTRS[blockName];
+  if (!allowed) {
+    throw new Error(`${blockName} is not available in the local serializer. Use a real supported core block or a custom block; do not invent core blocks.`);
+  }
+  for (const key of Object.keys(attrs || {})) {
+    if (!allowed.has(key)) {
+      throw new Error(`${blockName} does not support "${key}" in this compiler contract. Move semantic attributes into a custom block or supported WordPress attributes.`);
+    }
+  }
+  if (blockName === 'core/group') {
+    const tagName = attrs.tagName || 'div';
+    if (!ALLOWED_GROUP_TAGS.has(tagName)) {
+      throw new Error(`core/group tagName "${tagName}" is not allowed. Use core/group only for block-level containers or create a semantic custom block.`);
     }
   }
 }
@@ -395,66 +430,66 @@ function registerSerializableCoreBlocks() {
   const blockChildren = (attrs, innerBlocks) => attrs.content || attrs.text ? content(attrs) : innerContent(innerBlocks);
 
   register('core/group', {
-    attributes: commonCoreAttributes(),
+    attributes: coreAttributes('core/group'),
     save: ({ attributes, innerBlocks }) => el(validTag(attributes.tagName || attributes.tag || 'div'), blockProps(attributes, 'wp-block-group'), blockChildren(attributes, innerBlocks)),
   });
   register('core/paragraph', {
-    attributes: commonCoreAttributes({ content: { type: 'string' }, text: { type: 'string' } }),
+    attributes: coreAttributes('core/paragraph'),
     save: ({ attributes }) => el('p', blockProps(attributes, 'wp-block-paragraph'), content(attributes)),
   });
   register('core/heading', {
-    attributes: commonCoreAttributes({ level: { type: 'number', default: 2 }, content: { type: 'string' }, text: { type: 'string' } }),
+    attributes: coreAttributes('core/heading'),
     save: ({ attributes, innerBlocks }) => el(`h${clampHeadingLevel(attributes.level)}`, blockProps(attributes, 'wp-block-heading'), blockChildren(attributes, innerBlocks)),
   });
-  register('core/link', {
-    attributes: commonCoreAttributes({ url: { type: 'string' }, href: { type: 'string' }, content: { type: 'string' }, text: { type: 'string' } }),
-    save: ({ attributes, innerBlocks }) => el('a', { ...blockProps(attributes, ''), href: attributes.url || attributes.href || '#' }, blockChildren(attributes, innerBlocks)),
-  });
   register('core/buttons', {
-    attributes: commonCoreAttributes(),
+    attributes: coreAttributes('core/buttons'),
     save: ({ attributes, innerBlocks }) => el('div', blockProps(attributes, 'wp-block-buttons'), innerContent(innerBlocks)),
   });
   register('core/button', {
-    attributes: commonCoreAttributes({ url: { type: 'string' }, href: { type: 'string' }, text: { type: 'string' }, content: { type: 'string' }, opensInNewTab: { type: 'boolean' }, linkClassName: { type: 'string' }, linkStyle: { type: 'object' } }),
+    attributes: coreAttributes('core/button'),
     save: ({ attributes }) => el('div', blockProps(attributes, 'wp-block-button'),
       el('a', {
-        className: classList('wp-block-button__link', attributes.linkClassName),
-        href: attributes.url || attributes.href || '#',
-        style: styleToReactStyle(attributes.linkStyle || {}),
-        target: attributes.opensInNewTab ? '_blank' : undefined,
-        rel: attributes.opensInNewTab ? 'noreferrer noopener' : undefined,
-      }, content(attributes))
+        className: 'wp-block-button__link',
+        href: attributes.url || '#',
+        target: attributes.linkTarget || undefined,
+        rel: attributes.rel || undefined,
+        title: attributes.title || undefined,
+      }, el(RawHTML, null, richText(attributes.text || '')))
     ),
   });
   register('core/list', {
-    attributes: commonCoreAttributes({ ordered: { type: 'boolean' }, items: { type: 'array' } }),
+    attributes: coreAttributes('core/list'),
     save: ({ attributes, innerBlocks }) => {
       const tagName = attributes.ordered ? 'ol' : 'ul';
-      if (Array.isArray(attributes.items)) {
-        return el(tagName, blockProps(attributes, 'wp-block-list'), attributes.items.map((item, index) => el('li', { key: index }, el(RawHTML, null, richText(typeof item === 'string' ? item : item.content || item.text || '')))));
+      if (attributes.values) {
+        return el(tagName, blockProps(attributes, 'wp-block-list'), el(RawHTML, null, richText(attributes.values)));
       }
       return el(tagName, blockProps(attributes, 'wp-block-list'), innerContent(innerBlocks));
     },
   });
   register('core/list-item', {
-    attributes: commonCoreAttributes({ content: { type: 'string' }, text: { type: 'string' } }),
+    attributes: coreAttributes('core/list-item'),
     save: ({ attributes, innerBlocks }) => el('li', blockProps(attributes, ''), blockChildren(attributes, innerBlocks)),
   });
   register('core/separator', {
-    attributes: commonCoreAttributes(),
+    attributes: coreAttributes('core/separator'),
     save: ({ attributes }) => el('hr', blockProps(attributes, 'wp-block-separator')),
   });
   register('core/spacer', {
-    attributes: commonCoreAttributes({ height: { type: 'string' } }),
+    attributes: coreAttributes('core/spacer'),
     save: ({ attributes }) => el('div', blockProps({ ...attributes, style: { ...(attributes.style || {}), height: attributes.height || attributes.style?.height } }, 'wp-block-spacer')),
   });
   register('core/columns', {
-    attributes: commonCoreAttributes(),
+    attributes: coreAttributes('core/columns'),
     save: ({ attributes, innerBlocks }) => el('div', blockProps(attributes, 'wp-block-columns'), innerContent(innerBlocks)),
   });
   register('core/column', {
-    attributes: commonCoreAttributes(),
+    attributes: coreAttributes('core/column'),
     save: ({ attributes, innerBlocks }) => el('div', blockProps(attributes, 'wp-block-column'), innerContent(innerBlocks)),
+  });
+  register('core/html', {
+    attributes: coreAttributes('core/html'),
+    save: ({ attributes }) => el(RawHTML, null, attributes.content || ''),
   });
 }
 
@@ -543,27 +578,15 @@ function createComponentShim() {
   };
 }
 
-function commonCoreAttributes(extra = {}) {
-  return {
-    anchor: { type: 'string' },
-    id: { type: 'string' },
-    content: { type: 'string' },
-    text: { type: 'string' },
-    className: { type: 'string' },
-    classes: { type: 'array' },
-    align: { type: 'string' },
-    style: { type: 'object' },
-    inlineStyle: { type: 'object' },
-    role: { type: 'string' },
-    ariaLabel: { type: 'string' },
-    ariaLabelledby: { type: 'string' },
-    ariaHidden: { type: ['boolean', 'string'] },
-    datetime: { type: 'string' },
-    data: { type: 'object' },
-    tagName: { type: 'string' },
-    tag: { type: 'string' },
-    ...extra,
-  };
+function coreAttributes(blockName) {
+  return Object.fromEntries([...CORE_BLOCK_ATTRS[blockName]].map((key) => [key, attributeDefinition(key)]));
+}
+
+function attributeDefinition(key) {
+  if (['style', 'layout', 'metadata', 'lock'].includes(key)) return { type: 'object' };
+  if (['ordered', 'reversed', 'dropCap', 'isStackedOnMobile'].includes(key)) return { type: 'boolean' };
+  if (['level', 'start'].includes(key)) return { type: 'number' };
+  return { type: 'string' };
 }
 
 function blockProps(attrs, defaultClassName) {

@@ -12,7 +12,7 @@
         next[index] = Object.assign({}, next[index], { [key]: value });
         props.setAttributes({ plates: next });
       };
-      return el('section', useBlockProps({ className: 'archive-reveal-band' }),
+      return el('section', useBlockProps({ className: 'archive-reveal-band', 'aria-label': props.attributes.ariaLabel || undefined }),
         plates.map(function (plate, index) {
           return el('article', { key: index, className: ['archive-plate', plate.className || ''].filter(Boolean).join(' ') },
             el(RichText, { tagName: 'span', value: plate.label || '', allowedFormats: [], onChange: function (value) { updatePlate(index, 'label', value); } }),
@@ -23,7 +23,7 @@
       );
     },
     save: function Save(props) {
-      return el('section', useBlockProps.save({ className: 'archive-reveal-band' }), (props.attributes.plates || []).map(function (plate, index) {
+      return el('section', useBlockProps.save({ className: 'archive-reveal-band', 'aria-label': props.attributes.ariaLabel || undefined }), (props.attributes.plates || []).map(function (plate, index) {
         return el('article', { key: index, className: ['archive-plate', plate.className || ''].filter(Boolean).join(' ') },
           el(RichText.Content, { tagName: 'span', value: plate.label || '' }),
           el(RichText.Content, { tagName: 'h3', value: plate.title || '' }),

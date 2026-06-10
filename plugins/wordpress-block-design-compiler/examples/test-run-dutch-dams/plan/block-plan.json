@@ -1,15 +1,21 @@
 {
   "sections": [
     {
+      "id": "navigation",
+      "title": "Semantic site navigation",
+      "coreBlocks": [],
+      "customBlocks": ["wbdc/dam-navigation"]
+    },
+    {
       "id": "top",
-      "title": "Gateway",
-      "coreBlocks": ["core/group", "core/link", "core/heading", "core/paragraph"],
-      "customBlocks": []
+      "title": "Gateway and telemetry panel",
+      "coreBlocks": ["core/group"],
+      "customBlocks": ["wbdc/dam-gateway"]
     },
     {
       "id": "ledger",
       "title": "Hydraulic intelligence ledger",
-      "coreBlocks": ["core/group", "core/heading"],
+      "coreBlocks": ["core/group", "core/heading", "core/paragraph"],
       "customBlocks": ["wbdc/water-control-grid"]
     },
     {
@@ -29,9 +35,17 @@
       "title": "Archive reveal band",
       "coreBlocks": ["core/group", "core/heading", "core/paragraph"],
       "customBlocks": ["wbdc/archive-reveal-band"]
+    },
+    {
+      "id": "closing",
+      "title": "Civic contract close",
+      "coreBlocks": ["core/group", "core/heading", "core/paragraph", "core/buttons", "core/button"],
+      "customBlocks": []
     }
   ],
   "customBlocks": [
+    "wbdc/dam-navigation",
+    "wbdc/dam-gateway",
     "wbdc/water-control-grid",
     "wbdc/dam-timeline-rail",
     "wbdc/dam-cross-section",

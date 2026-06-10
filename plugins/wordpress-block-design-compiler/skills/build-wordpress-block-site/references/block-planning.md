@@ -6,10 +6,12 @@ The assembled artifact is `wordpress/block-tree.json`. It must be a data-only bl
 
 Core-first means:
 
-- Use core Group, Columns, Column, Heading, Paragraph, List, Buttons, Button, Image, Separator, Spacer, Details, Quote, Table, and HTML where appropriate.
+- Use supported core blocks where appropriate: Group, Columns, Column, Heading, Paragraph, List, List Item, Buttons, Button, Separator, Spacer, and HTML.
 - Use block supports for spacing, color, border, typography, layout, alignment, anchor, and className before inventing attributes.
 - Use custom CSS when core supports cannot express exact visual styling.
 - Use custom blocks only for a better content model, reusable repeated data, frontend behavior, semantic save contracts, or editor affordances.
+- Use only real supported core block names and real supported core attributes. Do not invent convenience core blocks.
+- Use `core/group` only for block-level layout containers. Do not use it to emit inline tags, definition-list internals, links, buttons, form fields, or arbitrary HTML.
 
 Do not use custom blocks for:
 
@@ -34,6 +36,8 @@ Invalid assembly examples:
 - Any `htmlLines`, `innerHTML`, `innerContent`, `html`, `markup`, or `sourceHtml` field in `wordpress/block-tree.json`.
 - A custom block whose attributes are a raw HTML blob instead of a useful editor model.
 - Structural HTML hidden inside rich-text content instead of represented as blocks or custom-block attributes.
+- An invented core block such as `core/link`.
+- `core/group` with inline or special-purpose tag names such as `span`, `strong`, `time`, `dl`, `dt`, or `dd`.
 
 Plan shape:
 
@@ -109,3 +113,4 @@ Custom block serialization requirements:
 - Each generated custom block must implement `save()` in `index.js`; that `save()` is the single source of frontend markup for WordPress and preview comparison.
 - The local serializer registers `wordpress/blocks/*/index.js` and calls WordPress package serialization. Do not create a parallel markup-generation layer.
 - The block tree references custom blocks by `blockName` and `attrs`; it never embeds the custom block's saved HTML.
+- Custom blocks should be generated for semantic shells that core cannot represent cleanly, such as bespoke navigation, definition-list telemetry panels, search/subscription/booking forms, maps, marquees, archive reveal systems, and data visualizations.

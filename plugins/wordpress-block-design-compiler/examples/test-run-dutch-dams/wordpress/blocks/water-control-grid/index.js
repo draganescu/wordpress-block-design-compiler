@@ -12,7 +12,7 @@
         next[index] = Object.assign({}, next[index], { [key]: value });
         props.setAttributes({ tiles: next });
       };
-      return el('section', useBlockProps({ className: 'water-control-grid' }),
+      return el('section', useBlockProps({ className: 'water-control-grid', 'aria-label': props.attributes.ariaLabel || undefined }),
         tiles.map(function (tile, index) {
           return el('article', { key: index, className: ['control-tile', tile.variant ? 'control-tile--' + tile.variant : ''].filter(Boolean).join(' ') },
             el(RichText, { tagName: 'span', value: tile.number || '', allowedFormats: [], onChange: function (value) { updateTile(index, 'number', value); } }),
@@ -24,7 +24,7 @@
       );
     },
     save: function Save(props) {
-      const blockProps = useBlockProps.save({ className: 'water-control-grid' });
+      const blockProps = useBlockProps.save({ className: 'water-control-grid', 'aria-label': props.attributes.ariaLabel || undefined });
       return el('section', blockProps, (props.attributes.tiles || []).map(function (tile, index) {
         return el('article', { key: index, className: ['control-tile', tile.variant ? 'control-tile--' + tile.variant : ''].filter(Boolean).join(' ') },
           el(RichText.Content, { tagName: 'span', value: tile.number || '' }),

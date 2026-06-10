@@ -40,6 +40,8 @@ The plan must answer:
 
 Prefer core blocks, block supports, style variations, and scoped CSS before custom blocks. Use custom blocks for reusable data models, real forms/search/booking widgets, nontrivial repeated components, or semantic save contracts.
 
+Use only real WordPress core block names and attributes supported by the compiler. Do not invent convenience core blocks such as `core/link`, and do not use `core/group` as an arbitrary HTML element factory. `core/group` is for block-level layout containers only; inline elements, definition lists, navigation shells, telemetry panels, and other semantic structures need either real core blocks or custom blocks with typed attributes.
+
 ## Custom Blocks
 
 Read `references/custom-block-standards.md` before creating custom blocks.
@@ -55,6 +57,8 @@ Forms, search boxes, subscriptions, booking widgets, and contact/inquiry UI must
 The block assembly source of truth is `wordpress/block-tree.json`, not hand-written block comments or saved HTML. The tree is data-only: `blockName`, `attrs`, `innerBlocks`, block styles, support-like attributes, and classes. `serialize_wordpress_blocks` turns that data into canonical block markup by calling WordPress block package serialization and each registered block's `save()` implementation.
 
 Never put `htmlLines`, `innerHTML`, `innerContent`, `html`, `markup`, or `sourceHtml` in `wordpress/block-tree.json`. The serializer rejects those fields.
+
+The serializer also rejects unsupported core block names, unsupported core block attributes, and non-layout `core/group` tag names. If WordPress core cannot model a structure cleanly, generate a custom static block whose attributes represent the editable content model.
 
 The tree should match the mockup, not merely contain the same text. Preserve source order, links, labels, placeholders, repeated items, and button group layout. Use stable class names that map cleanly to CSS.
 
