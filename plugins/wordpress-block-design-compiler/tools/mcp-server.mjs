@@ -1,9 +1,11 @@
 #!/usr/bin/env node
 import fs from 'node:fs';
 import path from 'node:path';
+import { createRequire } from 'node:module';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const PLUGIN_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const require = createRequire(import.meta.url);
 const DEFAULT_VIEWPORTS = [
   { name: 'desktop', width: 1440, height: 1200 },
   { name: 'mobile', width: 390, height: 1200 },
@@ -71,13 +73,14 @@ const TOOLS = [
   },
   {
     name: 'build_rendered_preview',
-    description: 'Build rendered/rendered-blocks.html from wordpress/content.html plus mockup and block CSS.',
+    description: 'Build wordpress/content.html and rendered/rendered-blocks.html from wordpress/block-tree.json plus mockup and block CSS.',
     inputSchema: {
       type: 'object',
       additionalProperties: false,
       required: ['workspaceRoot'],
       properties: {
         workspaceRoot: { type: 'string' },
+        treePath: { type: 'string', default: 'wordpress/block-tree.json' },
         contentPath: { type: 'string', default: 'wordpress/content.html' },
         outPath: { type: 'string', default: 'rendered/rendered-blocks.html' },
       },
@@ -221,7 +224,8 @@ async function createWorkspace(args) {
   writeFile(path.join(workspaceRoot, 'brief.md'), `${args.prompt.trim()}\n`);
   writeFile(path.join(workspaceRoot, 'mockup/index.html'), starterHtml(args.prompt));
   writeFile(path.join(workspaceRoot, 'mockup/style.css'), starterCss());
-  writeFile(path.join(workspaceRoot, 'wordpress/content.html'), '<!-- Assemble editable WordPress block markup here. -->\n');
+  writeJson(path.join(workspaceRoot, 'wordpress/block-tree.json'), { version: 1, blocks: [] });
+  writeFile(path.join(workspaceRoot, 'wordpress/content.html'), '<!-- Generated from wordpress/block-tree.json by build_rendered_preview. -->\n');
   writeJson(path.join(workspaceRoot, 'plan/block-plan.json'), { sections: [], customBlocks: [] });
   copyReference('design-prompt.md', path.join(workspaceRoot, 'plan/design-prompt.md'));
 
@@ -232,9 +236,10 @@ async function createWorkspace(args) {
       mockupHtml: path.join(workspaceRoot, 'mockup/index.html'),
       mockupCss: path.join(workspaceRoot, 'mockup/style.css'),
       blockPlan: path.join(workspaceRoot, 'plan/block-plan.json'),
+      blockTree: path.join(workspaceRoot, 'wordpress/block-tree.json'),
       blockContent: path.join(workspaceRoot, 'wordpress/content.html'),
     },
-    next: 'Replace the starter mockup with the designed HTML/CSS/JS, then call analyze_mockup.',
+    next: 'Replace the starter mockup with the designed HTML/CSS/JS, then call analyze_mockup. Assemble blocks in wordpress/block-tree.json.',
   };
 }
 
@@ -311,27 +316,78 @@ async function scaffoldCustomBlock(args) {
   return {
     blockRoot,
     files: ['block.json', 'index.js', 'style.css'].map((file) => path.join(blockRoot, file)),
-    next: 'Edit the generated block source to match the mockup component exactly, then use it in wordpress/content.html.',
+    next: 'Edit the generated block source to match the mockup component exactly, then reference it from wordpress/block-tree.json.',
   };
 }
 
 async function buildRenderedPreview(args) {
   const workspaceRoot = resolvePath(args.workspaceRoot);
+  const treePath = path.join(workspaceRoot, args.treePath || 'wordpress/block-tree.json');
   const contentPath = path.join(workspaceRoot, args.contentPath || 'wordpress/content.html');
   const outPath = path.join(workspaceRoot, args.outPath || 'rendered/rendered-blocks.html');
-  const content = fs.readFileSync(contentPath, 'utf8');
+  const treeExists = fs.existsSync(treePath);
+  const blockMarkup = treeExists ? serializeBlockTree(readJson(treePath)) : null;
+  const previewHtml = treeExists ? stripBlockComments(blockMarkup) : fs.readFileSync(contentPath, 'utf8');
   const cssParts = [
     readIfExists(path.join(workspaceRoot, 'mockup/style.css')),
     readIfExists(path.join(workspaceRoot, 'wordpress/style.css')),
     ...findFiles(path.join(workspaceRoot, 'wordpress/blocks'), 'style.css').map((file) => fs.readFileSync(file, 'utf8')),
   ].filter(Boolean);
 
-  writeFile(outPath, fullHtml('Rendered WordPress Blocks', cssParts.join('\n\n'), content));
+  if (treeExists) writeFile(contentPath, `${blockMarkup.trim()}\n`);
+  writeFile(outPath, fullHtml('Rendered WordPress Blocks', cssParts.join('\n\n'), previewHtml));
   return {
+    treePath: treeExists ? treePath : null,
+    contentPath,
     renderedPath: outPath,
     cssSources: cssParts.length,
-    next: 'Call compare_html, inspect screenshots/diffs, then write repair tasks.',
+    next: 'Call compare_html, inspect screenshots/diffs, then write repair tasks against wordpress/block-tree.json, block source, or CSS.',
   };
+}
+
+function serializeBlockTree(tree) {
+  const blocks = Array.isArray(tree) ? tree : tree.blocks;
+  if (!Array.isArray(blocks)) {
+    throw new Error('Block tree must be an array or an object with a blocks array.');
+  }
+  const { serializeRawBlock } = loadWordPressBlocks();
+  return blocks.map((block) => serializeRawBlock(normalizeRawBlock(block))).join('\n\n');
+}
+
+function normalizeRawBlock(block) {
+  if (!block || typeof block !== 'object') throw new Error('Every block tree item must be an object.');
+  const blockName = block.blockName || block.name;
+  if (!blockName || typeof blockName !== 'string') throw new Error('Every block tree item needs blockName or name.');
+  const innerBlocks = (block.innerBlocks || []).map(normalizeRawBlock);
+  const hasInnerContent = Object.prototype.hasOwnProperty.call(block, 'innerContent');
+  if (innerBlocks.length && !hasInnerContent) {
+    throw new Error(`${blockName} has innerBlocks and must include innerContent with null placeholders.`);
+  }
+  const innerHTML = block.innerHTML ?? block.html ?? (Array.isArray(block.htmlLines) ? block.htmlLines.join('\n') : '');
+  const innerContent = hasInnerContent ? block.innerContent : [innerHTML];
+  const placeholderCount = innerContent.filter((item) => item === null).length;
+  if (innerBlocks.length && placeholderCount !== innerBlocks.length) {
+    throw new Error(`${blockName} innerContent must contain one null placeholder per inner block.`);
+  }
+  return {
+    blockName,
+    attrs: block.attrs || block.attributes || {},
+    innerBlocks,
+    innerHTML,
+    innerContent,
+  };
+}
+
+function loadWordPressBlocks() {
+  try {
+    return require('@wordpress/blocks');
+  } catch (error) {
+    throw new Error(`build_rendered_preview needs @wordpress/blocks. Run npm install in ${PLUGIN_ROOT}. Missing dependency: ${error.message}`);
+  }
+}
+
+function stripBlockComments(markup) {
+  return String(markup || '').replace(/<!--\s*\/?wp:[\s\S]*?-->\n?/g, '');
 }
 
 async function compareHtml(args) {
@@ -904,6 +960,10 @@ function resolvePath(value) {
 
 function readIfExists(filePath) {
   return fs.existsSync(filePath) ? fs.readFileSync(filePath, 'utf8') : '';
+}
+
+function readJson(filePath) {
+  return JSON.parse(fs.readFileSync(filePath, 'utf8'));
 }
 
 function writeFile(filePath, content) {

@@ -8,6 +8,8 @@ Use core blocks for the page structure, text, navigation, cards, ordered process
 
 Use one custom static block for the press consult form. The form should not be a `core/html` blob because it needs editable labels, placeholders, button text, action/method settings, and semantic saved `<form>` markup.
 
+Assembled source of truth: `wordpress/block-tree.json`. `wordpress/content.html` is generated from that tree through `@wordpress/blocks` and should not be hand-edited.
+
 ## Sections
 
 - Header: core Group plus Navigation-style link markup. Style with `.site-header`, `.brand`, `.site-nav`, and `.header-cta`.

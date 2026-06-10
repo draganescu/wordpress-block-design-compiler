@@ -9,8 +9,9 @@ The plugin does not try to make an autonomous server-side orchestrator. It gives
 - analyze the mockup structure and CSS
 - plan core blocks, custom blocks, and styling responsibilities
 - scaffold vanilla JavaScript static custom blocks
-- assemble editable block markup
-- render a standalone preview
+- assemble editable `wordpress/block-tree.json`
+- serialize the block tree with `@wordpress/blocks`
+- render a standalone preview from the serialized save HTML
 - compare mockup and rendered output with screenshots and pixel diffs
 - return concrete repair tasks for the agent to fix
 
@@ -50,7 +51,7 @@ Use `claude/CLAUDE.md` as the Claude project instruction file when running this 
 - `create_workspace`: creates `mockup`, `analysis`, `plan`, `wordpress`, `rendered`, `reports`, and `visual` folders.
 - `analyze_mockup`: extracts a content inventory, sections, forms, links, cards, headings, CSS custom properties, and selectors.
 - `scaffold_custom_block`: writes `block.json`, `index.js`, and `style.css` for a vanilla JavaScript static block.
-- `build_rendered_preview`: wraps block assembly and CSS into `rendered/rendered-blocks.html`.
+- `build_rendered_preview`: serializes `wordpress/block-tree.json` into generated `wordpress/content.html`, strips block comments for frontend preview, and wraps the result with CSS into `rendered/rendered-blocks.html`.
 - `compare_html`: captures mockup/rendered screenshots, generates diffs, and writes `reports/comparison.json` plus `reports/repair-tasks.md`.
 
 ## Workflow

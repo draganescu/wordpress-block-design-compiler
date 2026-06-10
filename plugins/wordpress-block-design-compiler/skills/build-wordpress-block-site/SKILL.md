@@ -1,6 +1,6 @@
 ---
 name: build-wordpress-block-site
-description: Use when a user asks to create a website, landing page, homepage, microsite, or theme page that should become editable WordPress block content. Runs a staged workflow: generate a beautiful HTML/CSS/JS mockup, plan core and custom blocks, generate vanilla JS custom blocks, assemble block markup, compare screenshots, and iterate from explicit repair tasks until visual drift is low.
+description: Use when a user asks to create a website, landing page, homepage, microsite, or theme page that should become editable WordPress block content. Runs a staged workflow: generate a beautiful HTML/CSS/JS mockup, plan core and custom blocks, generate vanilla JS custom blocks, assemble a parsed WordPress block tree, compare screenshots, and iterate from explicit repair tasks until visual drift is low.
 ---
 
 # Build WordPress Block Site
@@ -14,8 +14,8 @@ Use this skill when the user wants a website that should end as editable WordPre
 3. Run `analyze_mockup` and read `analysis/content-inventory.json`.
 4. Write `plan/block-plan.md` and `plan/block-plan.json`.
 5. Generate custom blocks only where core blocks cannot preserve both fidelity and editability.
-6. Assemble editable block content in `wordpress/content.html`; put custom block source in `wordpress/blocks/<slug>/`.
-7. Run `build_rendered_preview`.
+6. Assemble editable block content in `wordpress/block-tree.json`; put custom block source in `wordpress/blocks/<slug>/`.
+7. Run `build_rendered_preview`; it serializes `wordpress/block-tree.json` through `@wordpress/blocks` and writes generated `wordpress/content.html`.
 8. Run `compare_html`.
 9. Inspect screenshots and diffs, write `reports/repair-tasks.md`, fix each task as an agent, then repeat preview/compare until thresholds are met.
 
@@ -52,7 +52,11 @@ Forms, search boxes, subscriptions, booking widgets, and contact/inquiry UI must
 
 ## Assembly
 
-The block assembly should match the mockup, not merely contain the same text. Preserve source order, links, labels, placeholders, repeated items, and button group layout. Use stable class names that map cleanly to CSS.
+The block assembly source of truth is `wordpress/block-tree.json`, not hand-written block comments. Use WordPress parsed/raw block shape: `blockName`, `attrs`, `innerBlocks`, `innerHTML` or `htmlLines`, and `innerContent` with one `null` placeholder per child block. `build_rendered_preview` serializes this tree with `@wordpress/blocks`.
+
+The tree should match the mockup, not merely contain the same text. Preserve source order, links, labels, placeholders, repeated items, and button group layout. Use stable class names that map cleanly to CSS.
+
+Do not wrap arbitrary markup in a mismatched block comment. For example, a process section is a `core/group` section containing a `core/list`; it is not a `core/list` whose saved markup is a `<section>`.
 
 ## Repair Loop
 
@@ -84,7 +88,8 @@ When done, leave the workspace with:
 - `mockup/style.css`
 - `plan/block-plan.md`
 - `plan/block-plan.json`
-- `wordpress/content.html`
+- `wordpress/block-tree.json`
+- `wordpress/content.html` generated from the block tree
 - `wordpress/blocks/*`
 - `rendered/rendered-blocks.html`
 - `reports/comparison.json`
