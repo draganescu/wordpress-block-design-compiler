@@ -1,11 +1,9 @@
 #!/usr/bin/env node
 import fs from 'node:fs';
 import path from 'node:path';
-import { createRequire } from 'node:module';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const PLUGIN_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const require = createRequire(import.meta.url);
 const DEFAULT_VIEWPORTS = [
   { name: 'desktop', width: 1440, height: 1200 },
   { name: 'mobile', width: 390, height: 1200 },
@@ -73,7 +71,7 @@ const TOOLS = [
   },
   {
     name: 'build_rendered_preview',
-    description: 'Build wordpress/content.html and rendered/rendered-blocks.html from wordpress/block-tree.json plus mockup and block CSS.',
+    description: 'Render data-only wordpress/block-tree.json into wordpress/content.html and rendered/rendered-blocks.html plus mockup and block CSS.',
     inputSchema: {
       type: 'object',
       additionalProperties: false,
@@ -224,8 +222,8 @@ async function createWorkspace(args) {
   writeFile(path.join(workspaceRoot, 'brief.md'), `${args.prompt.trim()}\n`);
   writeFile(path.join(workspaceRoot, 'mockup/index.html'), starterHtml(args.prompt));
   writeFile(path.join(workspaceRoot, 'mockup/style.css'), starterCss());
-  writeJson(path.join(workspaceRoot, 'wordpress/block-tree.json'), { version: 1, blocks: [] });
-  writeFile(path.join(workspaceRoot, 'wordpress/content.html'), '<!-- Generated from wordpress/block-tree.json by build_rendered_preview. -->\n');
+  writeJson(path.join(workspaceRoot, 'wordpress/block-tree.json'), { version: 2, contract: 'data-only', blocks: [] });
+  writeFile(path.join(workspaceRoot, 'wordpress/content.html'), '<!-- Generated plain preview HTML from wordpress/block-tree.json by build_rendered_preview. -->\n');
   writeJson(path.join(workspaceRoot, 'plan/block-plan.json'), { sections: [], customBlocks: [] });
   copyReference('design-prompt.md', path.join(workspaceRoot, 'plan/design-prompt.md'));
 
@@ -311,11 +309,12 @@ async function scaffoldCustomBlock(args) {
     supports: defaultSupports(),
   });
   writeFile(path.join(blockRoot, 'index.js'), generateIndexJs({ name, title, slug, attributes, form }));
+  writeFile(path.join(blockRoot, 'render.mjs'), generateRenderMjs({ name, slug, form }));
   writeFile(path.join(blockRoot, 'style.css'), generateBlockCss({ name, slug, form }));
 
   return {
     blockRoot,
-    files: ['block.json', 'index.js', 'style.css'].map((file) => path.join(blockRoot, file)),
+    files: ['block.json', 'index.js', 'render.mjs', 'style.css'].map((file) => path.join(blockRoot, file)),
     next: 'Edit the generated block source to match the mockup component exactly, then reference it from wordpress/block-tree.json.',
   };
 }
@@ -326,15 +325,16 @@ async function buildRenderedPreview(args) {
   const contentPath = path.join(workspaceRoot, args.contentPath || 'wordpress/content.html');
   const outPath = path.join(workspaceRoot, args.outPath || 'rendered/rendered-blocks.html');
   const treeExists = fs.existsSync(treePath);
-  const blockMarkup = treeExists ? serializeBlockTree(readJson(treePath)) : null;
-  const previewHtml = treeExists ? stripBlockComments(blockMarkup) : fs.readFileSync(contentPath, 'utf8');
+  const previewHtml = treeExists
+    ? await renderBlockTree(readJson(treePath), { workspaceRoot })
+    : fs.readFileSync(contentPath, 'utf8');
   const cssParts = [
     readIfExists(path.join(workspaceRoot, 'mockup/style.css')),
     readIfExists(path.join(workspaceRoot, 'wordpress/style.css')),
     ...findFiles(path.join(workspaceRoot, 'wordpress/blocks'), 'style.css').map((file) => fs.readFileSync(file, 'utf8')),
   ].filter(Boolean);
 
-  if (treeExists) writeFile(contentPath, `${blockMarkup.trim()}\n`);
+  if (treeExists) writeFile(contentPath, `${previewHtml.trim()}\n`);
   writeFile(outPath, fullHtml('Rendered WordPress Blocks', cssParts.join('\n\n'), previewHtml));
   return {
     treePath: treeExists ? treePath : null,
@@ -345,49 +345,194 @@ async function buildRenderedPreview(args) {
   };
 }
 
-function serializeBlockTree(tree) {
+async function renderBlockTree(tree, context) {
   const blocks = Array.isArray(tree) ? tree : tree.blocks;
   if (!Array.isArray(blocks)) {
     throw new Error('Block tree must be an array or an object with a blocks array.');
   }
-  const { serializeRawBlock } = loadWordPressBlocks();
-  return blocks.map((block) => serializeRawBlock(normalizeRawBlock(block))).join('\n\n');
+  return (await Promise.all(blocks.map((block) => renderBlock(block, context)))).join('\n');
 }
 
-function normalizeRawBlock(block) {
+async function renderBlock(block, context) {
   if (!block || typeof block !== 'object') throw new Error('Every block tree item must be an object.');
+  assertDataOnlyBlock(block);
   const blockName = block.blockName || block.name;
   if (!blockName || typeof blockName !== 'string') throw new Error('Every block tree item needs blockName or name.');
-  const innerBlocks = (block.innerBlocks || []).map(normalizeRawBlock);
-  const hasInnerContent = Object.prototype.hasOwnProperty.call(block, 'innerContent');
-  if (innerBlocks.length && !hasInnerContent) {
-    throw new Error(`${blockName} has innerBlocks and must include innerContent with null placeholders.`);
+  const attrs = block.attrs || block.attributes || {};
+  const innerHtml = (await Promise.all((block.innerBlocks || []).map((child) => renderBlock(child, context)))).join('\n');
+
+  if (CORE_RENDERERS[blockName]) return CORE_RENDERERS[blockName](attrs, innerHtml);
+  if (blockName.startsWith('core/')) throw new Error(`No preview renderer for ${blockName}. Add a core renderer instead of saved HTML.`);
+  return renderCustomBlock(blockName, attrs, innerHtml, context);
+}
+
+function assertDataOnlyBlock(block) {
+  for (const key of ['htmlLines', 'innerHTML', 'innerContent', 'html', 'markup', 'sourceHtml', 'innerHtml']) {
+    if (Object.prototype.hasOwnProperty.call(block, key)) {
+      throw new Error(`Data-only block tree violation in ${block.blockName || block.name || 'unknown block'}: remove ${key}. Use attrs, style, className, and innerBlocks only.`);
+    }
   }
-  const innerHTML = block.innerHTML ?? block.html ?? (Array.isArray(block.htmlLines) ? block.htmlLines.join('\n') : '');
-  const innerContent = hasInnerContent ? block.innerContent : [innerHTML];
-  const placeholderCount = innerContent.filter((item) => item === null).length;
-  if (innerBlocks.length && placeholderCount !== innerBlocks.length) {
-    throw new Error(`${blockName} innerContent must contain one null placeholder per inner block.`);
-  }
-  return {
-    blockName,
-    attrs: block.attrs || block.attributes || {},
-    innerBlocks,
-    innerHTML,
-    innerContent,
+}
+
+const CORE_RENDERERS = {
+  'core/group': renderGroup,
+  'core/paragraph': (attrs) => tag('p', blockAttrs(attrs, 'wp-block-paragraph'), richText(attrs.content || attrs.text || '')),
+  'core/heading': (attrs, innerHtml) => tag(`h${clampHeadingLevel(attrs.level)}`, blockAttrs(attrs, 'wp-block-heading'), innerHtml || richText(attrs.content || attrs.text || '')),
+  'core/link': (attrs, innerHtml) => tag('a', { ...blockAttrs(attrs, ''), href: attrs.url || attrs.href || '#' }, innerHtml || richText(attrs.content || attrs.text || '')),
+  'core/buttons': (attrs, innerHtml) => tag('div', blockAttrs(attrs, 'wp-block-buttons'), innerHtml),
+  'core/button': renderButton,
+  'core/list': renderList,
+  'core/list-item': (attrs, innerHtml) => tag('li', blockAttrs(attrs, ''), innerHtml || richText(attrs.content || attrs.text || '')),
+  'core/separator': (attrs) => tag('hr', blockAttrs(attrs, 'wp-block-separator'), '', true),
+  'core/spacer': (attrs) => tag('div', blockAttrs({ ...attrs, style: { ...(attrs.style || {}), css: `${attrs.height ? `height:${attrs.height};` : ''}${styleToCss(attrs.style)}` } }, 'wp-block-spacer'), ''),
+  'core/columns': (attrs, innerHtml) => tag('div', blockAttrs(attrs, 'wp-block-columns'), innerHtml),
+  'core/column': (attrs, innerHtml) => tag('div', blockAttrs(attrs, 'wp-block-column'), innerHtml),
+};
+
+function renderGroup(attrs, innerHtml) {
+  const tagName = validTag(attrs.tagName || attrs.tag || 'div');
+  return tag(tagName, blockAttrs(attrs, 'wp-block-group'), innerHtml || richText(attrs.content || attrs.text || ''));
+}
+
+function renderButton(attrs) {
+  const wrapperAttrs = blockAttrs(attrs, 'wp-block-button');
+  const url = attrs.url || attrs.href || '#';
+  const linkAttrs = {
+    class: classList('wp-block-button__link', attrs.linkClassName),
+    href: url,
+    style: styleToCss(attrs.linkStyle || {}),
+    target: attrs.opensInNewTab ? '_blank' : '',
+    rel: attrs.opensInNewTab ? 'noreferrer noopener' : '',
   };
+  return tag('div', wrapperAttrs, tag('a', linkAttrs, richText(attrs.text || attrs.content || '')));
 }
 
-function loadWordPressBlocks() {
-  try {
-    return require('@wordpress/blocks');
-  } catch (error) {
-    throw new Error(`build_rendered_preview needs @wordpress/blocks. Run npm install in ${PLUGIN_ROOT}. Missing dependency: ${error.message}`);
+function renderList(attrs, innerHtml) {
+  const tagName = attrs.ordered ? 'ol' : 'ul';
+  const items = Array.isArray(attrs.items)
+    ? attrs.items.map((item) => tag('li', {}, richText(typeof item === 'string' ? item : item.content || item.text || ''))).join('\n')
+    : innerHtml;
+  return tag(tagName, blockAttrs(attrs, attrs.ordered ? 'wp-block-list' : 'wp-block-list'), items);
+}
+
+async function renderCustomBlock(blockName, attrs, innerHtml, context) {
+  const slugName = blockName.split('/')[1];
+  if (!slugName) throw new Error(`Invalid custom block name: ${blockName}`);
+  const renderPath = path.join(context.workspaceRoot, 'wordpress/blocks', slugName, 'render.mjs');
+  if (!fs.existsSync(renderPath)) {
+    throw new Error(`${blockName} needs wordpress/blocks/${slugName}/render.mjs for preview rendering from attrs.`);
+  }
+  const url = `${pathToFileURL(renderPath).href}?mtime=${fs.statSync(renderPath).mtimeMs}`;
+  const module = await import(url);
+  if (typeof module.render !== 'function') throw new Error(`${renderPath} must export function render(attrs, helpers).`);
+  return module.render(attrs, {
+    classList,
+    escapeAttribute,
+    escapeHtml,
+    richText,
+    styleToCss,
+    tag,
+    innerHtml,
+  });
+}
+
+function blockAttrs(attrs, defaultClassName) {
+  const classes = [
+    defaultClassName,
+    attrs.className,
+    Array.isArray(attrs.classes) ? attrs.classes.join(' ') : '',
+    attrs.align ? `align${attrs.align}` : '',
+  ];
+  const renderedAttrs = {
+    id: attrs.anchor || attrs.id || '',
+    class: classList(...classes),
+    style: styleToCss(attrs.style || attrs.inlineStyle || {}),
+    role: attrs.role || '',
+    'aria-label': attrs.ariaLabel || '',
+    'aria-labelledby': attrs.ariaLabelledby || '',
+    'aria-hidden': attrs.ariaHidden === true ? 'true' : attrs.ariaHidden || '',
+    datetime: attrs.datetime || '',
+  };
+  if (attrs.data && typeof attrs.data === 'object' && !Array.isArray(attrs.data)) {
+    for (const [key, value] of Object.entries(attrs.data)) {
+      renderedAttrs[`data-${camelToKebab(key)}`] = value;
+    }
+  }
+  return renderedAttrs;
+}
+
+function classList(...values) {
+  return values
+    .flatMap((value) => String(value || '').split(/\s+/))
+    .map((value) => value.trim())
+    .filter(Boolean)
+    .filter((value, index, all) => all.indexOf(value) === index)
+    .join(' ');
+}
+
+function styleToCss(style) {
+  if (!style) return '';
+  if (typeof style === 'string') return style.trim();
+  const css = [];
+  if (style.css) css.push(String(style.css).trim());
+  for (const [key, value] of Object.entries(style)) {
+    if (value === undefined || value === null || key === 'css') continue;
+    if (typeof value !== 'object') css.push(`${camelToKebab(key)}:${value}`);
+  }
+  if (style.color?.text) css.push(`color:${style.color.text}`);
+  if (style.color?.background) css.push(`background-color:${style.color.background}`);
+  appendBoxStyle(css, 'padding', style.spacing?.padding);
+  appendBoxStyle(css, 'margin', style.spacing?.margin);
+  if (style.spacing?.blockGap) css.push(`gap:${style.spacing.blockGap}`);
+  if (style.typography?.fontSize) css.push(`font-size:${style.typography.fontSize}`);
+  if (style.typography?.lineHeight) css.push(`line-height:${style.typography.lineHeight}`);
+  if (style.typography?.fontWeight) css.push(`font-weight:${style.typography.fontWeight}`);
+  if (style.border?.color) css.push(`border-color:${style.border.color}`);
+  if (style.border?.width) css.push(`border-width:${style.border.width}`);
+  if (style.border?.style) css.push(`border-style:${style.border.style}`);
+  if (style.border?.radius) css.push(`border-radius:${style.border.radius}`);
+  return css.filter(Boolean).join(';');
+}
+
+function appendBoxStyle(css, property, value) {
+  if (!value) return;
+  if (typeof value === 'string') {
+    css.push(`${property}:${value}`);
+    return;
+  }
+  for (const [side, sideValue] of Object.entries(value)) {
+    if (sideValue) css.push(`${property}-${camelToKebab(side)}:${sideValue}`);
   }
 }
 
-function stripBlockComments(markup) {
-  return String(markup || '').replace(/<!--\s*\/?wp:[\s\S]*?-->\n?/g, '');
+function tag(name, attrs = {}, content = '', selfClosing = false) {
+  const attributes = Object.entries(attrs)
+    .filter(([, value]) => value !== undefined && value !== null && value !== false && value !== '')
+    .map(([key, value]) => `${key}="${escapeAttribute(value)}"`)
+    .join(' ');
+  const open = attributes ? `<${name} ${attributes}>` : `<${name}>`;
+  return selfClosing ? open : `${open}${content}</${name}>`;
+}
+
+function richText(value) {
+  return String(value ?? '');
+}
+
+function clampHeadingLevel(value) {
+  const level = Number(value || 2);
+  return Math.min(6, Math.max(1, Number.isFinite(level) ? level : 2));
+}
+
+function validTag(value) {
+  return /^[a-z][a-z0-9-]*$/i.test(value) ? value.toLowerCase() : 'div';
+}
+
+function camelToKebab(value) {
+  return String(value).replace(/[A-Z]/g, (char) => `-${char.toLowerCase()}`);
+}
+
+function escapeAttribute(value) {
+  return escapeHtml(value).replace(/'/g, '&#039;');
 }
 
 async function compareHtml(args) {
@@ -828,6 +973,41 @@ function saveElement(attribute, slugValue) {
   }
   if (!isInlineEditable(attribute)) return '';
   return `attributes.${attribute.name} ? el(RichText.Content, { tagName: ${JSON.stringify(tagFor(attribute))}, className: ${JSON.stringify(`${slugValue}__${slug(attribute.name)}`)}, value: attributes.${attribute.name} }) : null`;
+}
+
+function generateRenderMjs({ name, slug: slugValue, form }) {
+  const className = `wp-block-${name.replace('/', '-')}`;
+  if (form) {
+    return `export function render(attrs, helpers) {
+  const { classList, escapeAttribute, escapeHtml, richText, tag } = helpers;
+  const fields = Array.isArray(attrs.fields) && attrs.fields.length ? attrs.fields : [];
+  const fieldHtml = fields.map((field, index) => {
+    const name = field.name || String(field.label || 'field-' + index).toLowerCase().replace(/[^a-z0-9]+/g, '-');
+    const label = tag('span', {}, richText(field.label || name));
+    const control = field.type === 'textarea'
+      ? '<textarea name="' + escapeAttribute(name) + '" placeholder="' + escapeAttribute(field.placeholder || '') + '"' + (field.required ? ' required' : '') + '></textarea>'
+      : '<input type="' + escapeAttribute(field.type || 'text') + '" name="' + escapeAttribute(name) + '" placeholder="' + escapeAttribute(field.placeholder || '') + '"' + (field.required ? ' required' : '') + '>';
+    return tag('label', { class: field.type === 'textarea' ? 'wide-field' : '' }, label + control);
+  }).join('\\n');
+  return tag('section', { class: classList(${JSON.stringify(className)}, ${JSON.stringify(slugValue)}, attrs.className) },
+    tag('form', { class: classList(${JSON.stringify(`${slugValue}__form`)}, attrs.formClassName), action: attrs.action || '#', method: attrs.method || 'post' },
+      fieldHtml + tag('button', { type: 'submit' }, escapeHtml(attrs.buttonText || 'Submit'))
+    )
+  );
+}
+`;
+  }
+
+  return `export function render(attrs, helpers) {
+  const { classList, richText, tag } = helpers;
+  return tag('section', { class: classList(${JSON.stringify(className)}, ${JSON.stringify(slugValue)}, attrs.className) },
+    Object.entries(attrs)
+      .filter(([key, value]) => typeof value === 'string' && value && !/url|href|action|method|class/i.test(key))
+      .map(([key, value]) => tag(/heading|title|headline/i.test(key) ? 'h2' : 'p', { class: ${JSON.stringify(`${slugValue}__`)} + key.replace(/[A-Z]/g, (char) => '-' + char.toLowerCase()) }, richText(value)))
+      .join('\\n')
+  );
+}
+`;
 }
 
 function generateBlockCss({ name, slug: slugValue, form }) {

@@ -1,0 +1,25 @@
+{
+  "apiVersion": 3,
+  "name": "wbdc/mission-metrics",
+  "title": "Mission Metrics",
+  "category": "design",
+  "description": "Definition-list metrics for polar mission conditions.",
+  "editorScript": "file:./index.js",
+  "style": "file:./style.css",
+  "attributes": {
+    "items": {
+      "type": "array",
+      "default": [
+        { "label": "Temp", "value": "-48°C" },
+        { "label": "Wind", "value": "61 knots" },
+        { "label": "Payload", "value": "12 cores" }
+      ]
+    }
+  },
+  "supports": {
+    "anchor": true,
+    "className": true,
+    "spacing": { "margin": true, "padding": true, "blockGap": true },
+    "html": false
+  }
+}

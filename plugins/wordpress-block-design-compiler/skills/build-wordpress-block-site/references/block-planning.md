@@ -2,7 +2,7 @@
 
 The block plan translates the source HTML mockup into an editable WordPress block model.
 
-The assembled artifact is `wordpress/block-tree.json`. It must be a WordPress parsed/raw block tree that can be serialized by `@wordpress/blocks`; hand-written block comments are generated output, not source.
+The assembled artifact is `wordpress/block-tree.json`. It must be a data-only block tree. The renderer turns block names, attributes, styles, classes, and inner blocks into preview HTML; hand-written block comments and saved HTML are generated output, not source.
 
 Core-first means:
 
@@ -31,8 +31,9 @@ Invalid assembly examples:
 
 - `core/list` whose saved markup is a `<section>`.
 - `core/paragraph` whose saved markup contains multiple headings, buttons, and forms.
-- Any block comment whose block name does not match the saved HTML contract.
+- Any `htmlLines`, `innerHTML`, `innerContent`, `html`, `markup`, or `sourceHtml` field in `wordpress/block-tree.json`.
 - A custom block whose attributes are a raw HTML blob instead of a useful editor model.
+- Structural HTML hidden inside rich-text content instead of represented as blocks or custom-block attributes.
 
 Plan shape:
 
@@ -71,18 +72,30 @@ Tree shape:
 
 ```json
 {
-  "version": 1,
+  "version": 2,
+  "contract": "data-only",
   "blocks": [
     {
       "blockName": "core/group",
       "attrs": { "tagName": "section", "className": "hero" },
-      "innerHTML": "",
-      "innerContent": ["<section class='hero'>", null, "</section>"],
       "innerBlocks": [
         {
           "blockName": "core/heading",
-          "attrs": { "level": 1 },
-          "htmlLines": ["<h1>Editable headline</h1>"],
+          "attrs": {
+            "level": 1,
+            "content": "Editable headline",
+            "className": "hero-title",
+            "style": { "typography": { "fontSize": "clamp(4rem, 12vw, 12rem)" } }
+          },
+          "innerBlocks": []
+        },
+        {
+          "blockName": "namespace/custom-data-block",
+          "attrs": {
+            "items": [
+              { "label": "Delta height", "value": "8.4m" }
+            ]
+          },
           "innerBlocks": []
         }
       ]
@@ -90,3 +103,9 @@ Tree shape:
   ]
 }
 ```
+
+Custom block preview requirements:
+
+- Each generated custom block must include `render.mjs`.
+- `render.mjs` exports `render(attrs, helpers)` and renders from attributes only.
+- The block tree references custom blocks by `blockName` and `attrs`; it never embeds the custom block's saved HTML.
