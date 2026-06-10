@@ -1,0 +1,100 @@
+{
+  "generatedAt": "2026-06-10T20:36:08.895Z",
+  "blockCount": 81,
+  "coreBlockCount": 76,
+  "customBlockCount": 5,
+  "blocksWithSupportAttrs": 9,
+  "supportStyledPercent": 11.11,
+  "supportAttributeCounts": {
+    "style": 9,
+    "layout": 1,
+    "align": 0,
+    "backgroundColor": 0,
+    "textColor": 0,
+    "gradient": 0,
+    "fontSize": 0,
+    "borderColor": 0
+  },
+  "stylePaths": [
+    {
+      "path": "border.bottom.color",
+      "count": 8
+    },
+    {
+      "path": "border.bottom.style",
+      "count": 8
+    },
+    {
+      "path": "border.bottom.width",
+      "count": 8
+    },
+    {
+      "path": "color.background",
+      "count": 2
+    },
+    {
+      "path": "color.text",
+      "count": 2
+    },
+    {
+      "path": "dimensions.minHeight",
+      "count": 1
+    },
+    {
+      "path": "spacing.blockGap",
+      "count": 1
+    },
+    {
+      "path": "spacing.padding.bottom",
+      "count": 8
+    },
+    {
+      "path": "spacing.padding.left",
+      "count": 8
+    },
+    {
+      "path": "spacing.padding.right",
+      "count": 8
+    },
+    {
+      "path": "spacing.padding.top",
+      "count": 8
+    }
+  ],
+  "css": {
+    "totalBytes": 11228,
+    "totalLines": 515,
+    "totalRules": 82,
+    "pageCssBytes": 8142,
+    "pageCssLines": 390,
+    "pageCssRules": 60,
+    "blockCssBytes": 3086,
+    "blockCssLines": 125,
+    "blockCssRules": 22,
+    "files": [
+      {
+        "path": "wordpress/style.css",
+        "bytes": 8142,
+        "lines": 390,
+        "rules": 60
+      },
+      {
+        "path": "wordpress/blocks/maison-newsletter-form/style.css",
+        "bytes": 1506,
+        "lines": 59,
+        "rules": 8
+      },
+      {
+        "path": "wordpress/blocks/maison-object-card/style.css",
+        "bytes": 1580,
+        "lines": 66,
+        "rules": 14
+      }
+    ]
+  },
+  "guidance": [
+    "Prefer attrs.style, layout, align, color, spacing, typography, border, and dimensions support settings for block-level design.",
+    "Keep wordpress/style.css for tokens, document-level defaults, responsive grid behavior, and selectors that WordPress supports cannot express.",
+    "Keep wordpress/blocks/*/style.css scoped to custom block internals such as pseudo-elements, nested controls, horizontal rails, and ornamental geometry."
+  ]
+}

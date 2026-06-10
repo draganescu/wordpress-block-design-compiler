@@ -14,9 +14,19 @@ Core-first means:
 - Use only real registered core block names and attributes present in WordPress block metadata. Do not invent convenience core blocks.
 - Use `core/group` only for block-level layout containers. Do not use it to emit inline tags, definition-list internals, links, buttons, form fields, or arbitrary HTML.
 
+Core-first hard gate:
+
+- Start each section plan with a core block assembly candidate.
+- Reject "custom block for the whole section" unless the section is itself a semantic widget, real form/search/subscription component, query/data component, navigation component, or reusable component with a typed editing model.
+- Complex asymmetric layout, overlapping visuals, sticky behavior, or precise responsive grids are CSS/support problems first, not automatic custom block reasons.
+- Static prose, headings, button rows, editorial bands, footer copy, and ordinary two-column layouts must use core blocks unless the serializer proves a specific core block cannot represent the structure.
+- The final `wordpress/block-tree.json` should normally have more core blocks than custom blocks. If custom blocks are equal to or more than core blocks, rewrite the plan before implementation unless the user explicitly requested a mostly custom-block site.
+- For every custom block, include a "core rejection" sentence naming the exact core blocks considered and why they fail editability, semantic output, or fidelity.
+
 Do not use custom blocks for:
 
 - An entire section only because its layout is complex.
+- An entire section only because it is easier to make `edit()` match `save()`.
 - Static text that core Heading/Paragraph/List/Button can edit.
 - A disguised HTML blob.
 - Decorative wrappers that could be a core Group with classes.
@@ -27,6 +37,19 @@ Use custom blocks for:
 - Marquees, sliders, accordions, tabs, or repeated widgets that need structured item data.
 - Repeated cards where each item needs a coherent editing model.
 - Components where save markup must be very specific and core block nesting would be brittle.
+
+Custom block examples that are usually valid:
+
+- Product/object/event card with structured metadata and a reusable embed model.
+- Newsletter/contact/search form that must save real form controls.
+- Bespoke navigation when `core/navigation` is dynamic or unsuitable for the static serializer.
+
+Custom block examples that are usually invalid:
+
+- Hero section containing only heading, paragraph, and buttons.
+- Editorial story section containing only text and decorative layout.
+- Footer containing ordinary copy and links.
+- Journal teaser row that can be `core/group`/`core/columns`/`core/heading`/`core/paragraph`.
 
 Use `core/html` only for the smallest non-editable fragment that cannot reasonably become core or custom static blocks. Give a concrete reason each time.
 
@@ -126,6 +149,7 @@ Editor parity requirements:
 - If rendered passes but editor fails, change custom block `edit()` implementations, block-owned editor CSS, or editable markup choices. Do not damage saved frontend parity to improve editor parity.
 - If both rendered and editor fail in the same area, fix the shared block tree, custom block structure, or scoped CSS so both surfaces converge together.
 - Do not accept a custom block whose `save()` is pixel-close but whose `edit()` is a generic inspector panel, raw inputs, simplified placeholder, or visibly different wrapper tree.
+- Do not accept a core-light tree as a shortcut for editor parity. If editor wrappers make core assemblies hard to compare, fix comparison CSS or block-level classes before replacing core assemblies with section custom blocks.
 
 CSS transfer requirements:
 

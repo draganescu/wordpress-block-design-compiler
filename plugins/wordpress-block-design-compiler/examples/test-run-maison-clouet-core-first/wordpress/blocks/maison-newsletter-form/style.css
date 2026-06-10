@@ -1,0 +1,66 @@
+.newsletter form,
+.wp-block-wbdc-maison-newsletter-form {
+  align-self: end;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border: 1px solid var(--ink);
+  background: var(--paper);
+  box-shadow: 0.7rem 0.7rem 0 var(--rouge);
+}
+
+.newsletter form label,
+.wp-block-wbdc-maison-newsletter-form label {
+  display: grid;
+  gap: 0.35rem;
+  padding: 0.8rem;
+  border-bottom: 1px solid var(--ink);
+}
+
+.newsletter form label:first-child,
+.wp-block-wbdc-maison-newsletter-form label:first-child {
+  border-right: 1px solid var(--ink);
+}
+
+.newsletter form label span,
+.wp-block-wbdc-maison-newsletter-form label span {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.newsletter input,
+.wp-block-wbdc-maison-newsletter-form input {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+}
+
+.newsletter button,
+.wp-block-wbdc-maison-newsletter-form button {
+  grid-column: span 2;
+  min-height: 3rem;
+  border: 1px solid var(--ink);
+  background: var(--ink);
+  color: var(--cream);
+  font: 800 0.72rem/1 var(--mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+@media (max-width: 760px) {
+  .newsletter form,
+  .wp-block-wbdc-maison-newsletter-form {
+    grid-template-columns: 1fr;
+  }
+
+  .newsletter form label:first-child,
+  .wp-block-wbdc-maison-newsletter-form label:first-child,
+  .newsletter button,
+  .wp-block-wbdc-maison-newsletter-form button {
+    grid-column: auto;
+    border-right: 0;
+  }
+}

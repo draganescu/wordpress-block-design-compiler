@@ -444,19 +444,32 @@ function editorPreviewHtml({ workspaceRoot, editorPath, treePath, cssSources }) 
         min-height: calc(100vh - 44px);
       }
 
-      .block-editor-block-list__layout {
-        min-height: calc(100vh - 44px);
+      .block-editor-inner-blocks {
+        display: contents;
+      }
+
+      .is-root-container.block-editor-block-list__layout {
         padding: 0;
       }
 
       .block-editor-block-list__block {
-        max-width: none;
         margin-top: 0;
         margin-bottom: 0;
       }
 
+      .is-root-container > .block-editor-block-list__block {
+        max-width: none;
+      }
+
       .block-editor-block-list__layout .block-editor-block-list__block::before {
         outline-color: rgba(215, 255, 56, 0.65);
+      }
+
+      .components-placeholder,
+      .block-editor-block-variation-picker,
+      .block-editor-default-block-appender,
+      .block-editor-block-list__empty-block-inserter {
+        display: none !important;
       }
 
       .wbdc-editor-error {
@@ -1307,9 +1320,11 @@ function editorComparisonCss() {
   return `
     *,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}
     .wbdc-editor-toolbar{display:none!important}
-    .wbdc-editor-shell,.wbdc-editor-canvas,.block-editor-block-list__layout{min-height:0!important}
-    .block-editor-block-list__layout{padding:0!important}
-    .block-editor-block-list__block{max-width:none!important;margin-top:0!important;margin-bottom:0!important}
+    .wbdc-editor-shell,.wbdc-editor-canvas,.is-root-container.block-editor-block-list__layout{min-height:0!important}
+    .block-editor-inner-blocks{display:contents!important}
+    .is-root-container.block-editor-block-list__layout{padding:0!important}
+    .block-editor-block-list__block{margin-top:0!important;margin-bottom:0!important}
+    .is-root-container > .block-editor-block-list__block{max-width:none!important}
     .editor-styles-wrapper{padding:0!important}
     .block-editor-block-list__block::before,
     .block-editor-block-list__block::after,
@@ -1319,6 +1334,10 @@ function editorComparisonCss() {
     .block-editor-block-toolbar,
     .block-editor-inserter,
     .block-editor-warning,
+    .components-placeholder,
+    .block-editor-block-variation-picker,
+    .block-editor-default-block-appender,
+    .block-editor-block-list__empty-block-inserter,
     .components-popover{display:none!important}
     .block-editor-block-list__block,
     .block-editor-block-list__block.is-selected,

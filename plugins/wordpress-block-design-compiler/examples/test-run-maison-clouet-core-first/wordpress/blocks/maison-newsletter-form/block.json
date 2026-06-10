@@ -1,0 +1,27 @@
+{
+  "apiVersion": 3,
+  "name": "wbdc/maison-newsletter-form",
+  "title": "Maison Newsletter Form",
+  "category": "design",
+  "description": "Semantic Friday arrivals signup form.",
+  "editorScript": "file:./index.js",
+  "style": "file:./style.css",
+  "attributes": {
+    "action": { "type": "string", "default": "" },
+    "method": { "type": "string", "default": "post" },
+    "nameLabel": { "type": "string", "default": "Name" },
+    "emailLabel": { "type": "string", "default": "Email" },
+    "namePlaceholder": { "type": "string", "default": "Your name" },
+    "emailPlaceholder": { "type": "string", "default": "you@example.com" },
+    "buttonText": { "type": "string", "default": "join the friday list" },
+    "style": { "type": "object", "default": {} }
+  },
+  "supports": {
+    "anchor": true,
+    "className": true,
+    "spacing": { "padding": true, "margin": true, "blockGap": true },
+    "color": { "text": true, "background": true },
+    "typography": { "fontSize": true, "lineHeight": true },
+    "border": { "color": true, "style": true, "width": true }
+  }
+}

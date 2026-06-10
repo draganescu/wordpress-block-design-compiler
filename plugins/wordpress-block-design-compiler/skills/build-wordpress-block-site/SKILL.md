@@ -13,11 +13,11 @@ Use this skill when the user wants a website that should end as editable WordPre
 2. Generate `mockup/index.html`, `mockup/style.css`, and optional `mockup/script.js` from the user request plus `references/design-prompt.md`.
 3. Run `analyze_mockup` and read `analysis/content-inventory.json`.
 4. Write `plan/block-plan.md` and `plan/block-plan.json`.
-5. Generate custom blocks only where core blocks cannot preserve both fidelity and editability.
+5. Generate custom blocks only where core blocks cannot preserve both fidelity and editability. Before creating any custom section block, complete the Core-First Gate below.
 6. Assemble editable block content in `wordpress/block-tree.json`; put custom block source in `wordpress/blocks/<slug>/`; put styling in block support/style attributes first, custom block scoped CSS second, and tiny page CSS last.
 7. Run `serialize_wordpress_blocks`; it registers official core blocks with `@wordpress/block-library`, registers custom blocks from `wordpress/blocks/*/index.js`, serializes `wordpress/block-tree.json` with `@wordpress/blocks`, writes canonical block markup to `wordpress/content.html`, writes frontend preview HTML to `rendered/rendered-blocks.html`, writes a no-build editable block editor preview to `editor/block-editor.html`, and writes `reports/style-audit.json`. The preview CSS source list comes from `wordpress/style.css` and custom block `style.css` files. `mockup/style.css` is intentionally excluded from rendered block preview by default.
 8. Run `compare_html`.
-9. Inspect rendered frontend screenshots, editable editor screenshots, and diffs. Write `reports/repair-tasks.md`, fix each task as an agent, then repeat preview/compare until both saved frontend and editor-preview thresholds are met.
+9. Inspect rendered frontend screenshots, editable editor screenshots, and diffs. Write `reports/repair-tasks.md`, fix each task as an agent, then repeat preview/compare until both saved frontend and editor-preview thresholds are met. Do not stop at "close", "structurally close", or "good enough".
 
 Default thresholds: `maxMismatchPercent <= 1` and `maxHeightDelta <= 8`.
 
@@ -25,6 +25,25 @@ Completion requires both `reports/comparison.json` aggregates to pass:
 
 - `aggregates.rendered.maxMismatchPercent <= maxMismatchPercent` and `aggregates.rendered.maxHeightDelta <= maxHeightDelta`
 - `aggregates.editor.maxMismatchPercent <= maxMismatchPercent` and `aggregates.editor.maxHeightDelta <= maxHeightDelta`
+
+If these criteria are not met, the skill run is incomplete. Continue repairing. If progress is impossible after concrete repair attempts, report the run as blocked with the current metrics and blocking cause; do not present it as complete.
+
+## Hard Gates
+
+### Core-First Gate
+
+Before generating custom blocks or `wordpress/block-tree.json`, write a core-first audit in `plan/block-plan.md`:
+
+- For every mockup section, list the candidate core block assembly first.
+- Only then list any custom block and the specific reason core blocks fail.
+- A custom block that replaces a whole section is rejected unless the section itself is a semantic widget, form, query/data component, navigation component, or reusable component with a typed editing model.
+- Complex layout is not a sufficient reason for a custom block. Use `core/group`, `core/columns`, `core/column`, `core/heading`, `core/paragraph`, `core/buttons`, `core/button`, `core/list`, `core/details`, `core/image`, `core/media-text`, `core/spacer`, and supports/classes first.
+- The final tree should normally contain more core blocks than custom blocks. If custom blocks are equal to or more than core blocks, treat the plan as failed unless the user explicitly asked for mostly custom blocks.
+- If the editable preview drifts because WordPress editor wrappers, RichText sizing, placeholders, or editor chrome alter layout, fix the editor harness, custom block `edit()`, or editor-scoped CSS. Do not replace core assemblies with custom section blocks to make editor comparison easier.
+
+### Completion Gate
+
+Before final response, read `reports/comparison.json` and state the rendered/editor aggregate metrics. You may only say the run is done when both aggregates pass the configured thresholds. If they do not pass, keep repairing or say the run is blocked; never summarize a failed comparison as a successful skill execution.
 
 ## Design Stage
 
@@ -44,7 +63,7 @@ The plan must answer:
 - How each core assembly or custom block will keep the editable editor canvas visually aligned with the saved frontend.
 - Which parts may use `core/html`, with explicit reasons.
 
-Prefer core blocks, block supports, and style variations before custom blocks. Use custom blocks for reusable data models, real forms/search/booking widgets, nontrivial repeated components, or semantic save contracts.
+Prefer core blocks, block supports, and style variations before custom blocks. Use custom blocks for reusable data models, real forms/search/booking widgets, nontrivial repeated components, or semantic save contracts. Do not create a custom block just to make a section easier to render or repair.
 
 Styling priority is strict:
 

@@ -1,0 +1,403 @@
+{
+  "version": 2,
+  "contract": "data-only",
+  "blocks": [
+    {
+      "blockName": "core/group",
+      "attrs": {
+        "tagName": "header",
+        "anchor": "top",
+        "className": "site-header",
+        "style": {
+          "spacing": {
+            "padding": {
+              "top": "0.8rem",
+              "right": "clamp(1rem, 3vw, 2.25rem)",
+              "bottom": "0.8rem",
+              "left": "clamp(1rem, 3vw, 2.25rem)"
+            }
+          },
+          "border": {
+            "bottom": { "color": "var(--line)", "width": "1px", "style": "solid" }
+          },
+          "color": {
+            "background": "rgba(255, 245, 223, 0.9)",
+            "text": "var(--ink)"
+          }
+        }
+      },
+      "innerBlocks": [
+        {
+          "blockName": "core/group",
+          "attrs": { "className": "brand" },
+          "innerBlocks": [
+            {
+              "blockName": "core/heading",
+              "attrs": { "level": 2, "content": "Maison Clouet", "className": "brand-title" },
+              "innerBlocks": []
+            },
+            {
+              "blockName": "core/paragraph",
+              "attrs": { "content": "L'isle-sur-la-Sorgue", "className": "brand-tagline" },
+              "innerBlocks": []
+            }
+          ]
+        },
+        {
+          "blockName": "core/buttons",
+          "attrs": { "className": "site-nav" },
+          "innerBlocks": [
+            { "blockName": "core/button", "attrs": { "text": "Shop", "url": "#shop" }, "innerBlocks": [] },
+            { "blockName": "core/button", "attrs": { "text": "Scent", "url": "#scent" }, "innerBlocks": [] },
+            { "blockName": "core/button", "attrs": { "text": "Journal", "url": "#journal" }, "innerBlocks": [] },
+            { "blockName": "core/button", "attrs": { "text": "The shop", "url": "#visit" }, "innerBlocks": [] },
+            { "blockName": "core/button", "attrs": { "text": "Contact", "url": "#contact" }, "innerBlocks": [] }
+          ]
+        }
+      ]
+    },
+    {
+      "blockName": "core/group",
+      "attrs": {
+        "tagName": "main",
+        "className": "main",
+        "style": { "spacing": { "blockGap": "0" } },
+        "layout": { "type": "default" }
+      },
+      "innerBlocks": [
+        {
+          "blockName": "core/group",
+          "attrs": {
+            "tagName": "section",
+            "className": "hero",
+            "style": {
+              "dimensions": { "minHeight": "86vh" },
+              "spacing": {
+                "padding": {
+                  "top": "clamp(3rem, 7vw, 7rem)",
+                  "right": "clamp(1rem, 4vw, 4rem)",
+                  "bottom": "clamp(3rem, 7vw, 7rem)",
+                  "left": "clamp(1rem, 4vw, 4rem)"
+                }
+              },
+              "border": {
+                "bottom": { "color": "var(--line)", "width": "1px", "style": "solid" }
+              }
+            }
+          },
+          "innerBlocks": [
+            {
+              "blockName": "core/group",
+              "attrs": { "className": "hero-copy" },
+              "innerBlocks": [
+                { "blockName": "core/paragraph", "attrs": { "content": "objects, scents, stories / friday arrivals", "className": "eyebrow" }, "innerBlocks": [] },
+                { "blockName": "core/heading", "attrs": { "level": 1, "content": "A tiny room of provence, edited with nerve.", "className": "hero-title" }, "innerBlocks": [] },
+                { "blockName": "core/paragraph", "attrs": { "content": "Maison Clouet gathers estate-sale finds, market fragments, and back-room scent blends for people who prefer their objects with a past.", "className": "intro" }, "innerBlocks": [] }
+              ]
+            },
+            {
+              "blockName": "core/group",
+              "attrs": { "className": "flatlay" },
+              "innerBlocks": [
+                { "blockName": "core/paragraph", "attrs": { "content": "this week", "className": "paper-tag" }, "innerBlocks": [] },
+                { "blockName": "core/group", "attrs": { "className": "object plate" }, "innerBlocks": [] },
+                { "blockName": "core/group", "attrs": { "className": "object lamp" }, "innerBlocks": [] },
+                { "blockName": "core/group", "attrs": { "className": "object linen" }, "innerBlocks": [] },
+                { "blockName": "core/group", "attrs": { "className": "object vase" }, "innerBlocks": [] },
+                { "blockName": "core/paragraph", "attrs": { "content": "Opaline, brass, linen, smoke, fig leaf.", "className": "flatlay-caption" }, "innerBlocks": [] }
+              ]
+            }
+          ]
+        },
+        {
+          "blockName": "core/group",
+          "attrs": {
+            "tagName": "section",
+            "anchor": "shop",
+            "className": "arrivals",
+            "style": {
+              "spacing": {
+                "padding": {
+                  "top": "clamp(3.5rem, 7vw, 7rem)",
+                  "right": "clamp(1rem, 4vw, 4rem)",
+                  "bottom": "clamp(3.5rem, 7vw, 7rem)",
+                  "left": "clamp(1rem, 4vw, 4rem)"
+                }
+              },
+              "border": {
+                "bottom": { "color": "var(--line)", "width": "1px", "style": "solid" }
+              }
+            }
+          },
+          "innerBlocks": [
+            {
+              "blockName": "core/group",
+              "attrs": { "className": "section-head" },
+              "innerBlocks": [
+                { "blockName": "core/paragraph", "attrs": { "content": "newest arrivals / synced from objets", "className": "eyebrow" }, "innerBlocks": [] },
+                { "blockName": "core/heading", "attrs": { "level": 2, "content": "Eight pieces that did not want a white background.", "className": "section-title" }, "innerBlocks": [] }
+              ]
+            },
+            {
+              "blockName": "core/buttons",
+              "attrs": { "className": "filter-row" },
+              "innerBlocks": [
+                { "blockName": "core/button", "attrs": { "text": "All", "url": "#shop" }, "innerBlocks": [] },
+                { "blockName": "core/button", "attrs": { "text": "Ceramics", "url": "#shop" }, "innerBlocks": [] },
+                { "blockName": "core/button", "attrs": { "text": "Glass", "url": "#shop" }, "innerBlocks": [] },
+                { "blockName": "core/button", "attrs": { "text": "Textiles", "url": "#shop" }, "innerBlocks": [] },
+                { "blockName": "core/button", "attrs": { "text": "Lighting", "url": "#shop" }, "innerBlocks": [] },
+                { "blockName": "core/button", "attrs": { "text": "Scent", "url": "#shop" }, "innerBlocks": [] }
+              ]
+            },
+            {
+              "blockName": "core/group",
+              "attrs": { "className": "object-grid" },
+              "innerBlocks": [
+                {
+                  "blockName": "wbdc/maison-object-card",
+                  "attrs": { "title": "1960s opaline vase", "price": "€120", "category": "glass", "story": "Found at a house clearance near Apt, still wrapped in a pharmacy calendar from 1971.", "photoVariant": "vase", "layoutVariant": "tall", "buttonText": "tell me more" },
+                  "innerBlocks": []
+                },
+                {
+                  "blockName": "wbdc/maison-object-card",
+                  "attrs": { "title": "Indigo linen napkins", "price": "€68", "category": "textiles", "story": "A stack of six, hand-dyed in Arles, softened by years of lunch tables.", "photoVariant": "linen", "layoutVariant": "", "buttonText": "tell me more" },
+                  "innerBlocks": []
+                },
+                {
+                  "blockName": "wbdc/maison-object-card",
+                  "attrs": { "title": "Brass library lamp", "price": "€240", "category": "lighting", "story": "Heavy shade, green felt base, bought from a retired notaire's desk.", "photoVariant": "lamp", "layoutVariant": "wide", "buttonText": "tell me more" },
+                  "innerBlocks": []
+                },
+                {
+                  "blockName": "wbdc/maison-object-card",
+                  "attrs": { "title": "Fig leaf room spray", "price": "€38", "category": "scent", "story": "Blended in the back room after the market closes, green and slightly dusty.", "photoVariant": "candle", "layoutVariant": "", "buttonText": "tell me more" },
+                  "innerBlocks": []
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "blockName": "core/group",
+          "attrs": {
+            "tagName": "section",
+            "anchor": "scent",
+            "className": "scent",
+            "style": {
+              "spacing": {
+                "padding": {
+                  "top": "clamp(3.5rem, 7vw, 7rem)",
+                  "right": "clamp(1rem, 4vw, 4rem)",
+                  "bottom": "clamp(3.5rem, 7vw, 7rem)",
+                  "left": "clamp(1rem, 4vw, 4rem)"
+                }
+              },
+              "color": { "background": "var(--ink)", "text": "var(--cream)" },
+              "border": {
+                "bottom": { "color": "var(--line)", "width": "1px", "style": "solid" }
+              }
+            }
+          },
+          "innerBlocks": [
+            { "blockName": "core/paragraph", "attrs": { "content": "made to order / behind the counter", "className": "eyebrow" }, "innerBlocks": [] },
+            { "blockName": "core/heading", "attrs": { "level": 2, "content": "Candles and sprays poured slowly, never pretending to be antiques.", "className": "section-title" }, "innerBlocks": [] },
+            { "blockName": "core/paragraph", "attrs": { "content": "Each scent starts with a place note: cold stone at 8 a.m., tomato leaves under a basket, waxed church wood, rain on old paper. I blend in tiny batches so the scent shelf feels alive.", "className": "scent-body" }, "innerBlocks": [] }
+          ]
+        },
+        {
+          "blockName": "core/group",
+          "attrs": {
+            "tagName": "section",
+            "anchor": "visit",
+            "className": "visit",
+            "style": {
+              "spacing": {
+                "padding": {
+                  "top": "clamp(3.5rem, 7vw, 7rem)",
+                  "right": "clamp(1rem, 4vw, 4rem)",
+                  "bottom": "clamp(3.5rem, 7vw, 7rem)",
+                  "left": "clamp(1rem, 4vw, 4rem)"
+                }
+              },
+              "border": {
+                "bottom": { "color": "var(--line)", "width": "1px", "style": "solid" }
+              }
+            }
+          },
+          "innerBlocks": [
+            {
+              "blockName": "core/group",
+              "attrs": { "className": "storefront" },
+              "innerBlocks": [
+                { "blockName": "core/paragraph", "attrs": { "content": "Rue des brocanteurs", "className": "storefront-label" }, "innerBlocks": [] }
+              ]
+            },
+            {
+              "blockName": "core/group",
+              "attrs": { "className": "visit-copy" },
+              "innerBlocks": [
+                { "blockName": "core/paragraph", "attrs": { "content": "the shop / tucked behind a bookshop", "className": "eyebrow" }, "innerBlocks": [] },
+                { "blockName": "core/heading", "attrs": { "level": 2, "content": "Hard to find on purpose.", "className": "section-title" }, "innerBlocks": [] },
+                { "blockName": "core/paragraph", "attrs": { "content": "Maison Clouet sits in a narrow passage off the Sunday market route. If you reach the canal, you have gone too far, which is sometimes useful." }, "innerBlocks": [] },
+                {
+                  "blockName": "core/group",
+                  "attrs": { "className": "meta-row" },
+                  "innerBlocks": [
+                    { "blockName": "core/paragraph", "attrs": { "content": "Address", "className": "meta-label" }, "innerBlocks": [] },
+                    { "blockName": "core/paragraph", "attrs": { "content": "14 passage des Livres, 84800 L'isle-sur-la-Sorgue", "className": "meta-value" }, "innerBlocks": [] }
+                  ]
+                },
+                {
+                  "blockName": "core/group",
+                  "attrs": { "className": "meta-row" },
+                  "innerBlocks": [
+                    { "blockName": "core/paragraph", "attrs": { "content": "Hours", "className": "meta-label" }, "innerBlocks": [] },
+                    { "blockName": "core/paragraph", "attrs": { "content": "Fri 11-18, Sat 10-19, Sun 8-14, or by appointment", "className": "meta-value" }, "innerBlocks": [] }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "blockName": "core/group",
+          "attrs": {
+            "tagName": "section",
+            "anchor": "journal",
+            "className": "journal",
+            "style": {
+              "spacing": {
+                "padding": {
+                  "top": "clamp(3.5rem, 7vw, 7rem)",
+                  "right": "clamp(1rem, 4vw, 4rem)",
+                  "bottom": "clamp(3.5rem, 7vw, 7rem)",
+                  "left": "clamp(1rem, 4vw, 4rem)"
+                }
+              },
+              "border": {
+                "bottom": { "color": "var(--line)", "width": "1px", "style": "solid" }
+              }
+            }
+          },
+          "innerBlocks": [
+            {
+              "blockName": "core/group",
+              "attrs": { "className": "section-head" },
+              "innerBlocks": [
+                { "blockName": "core/paragraph", "attrs": { "content": "journal / market column", "className": "eyebrow" }, "innerBlocks": [] },
+                { "blockName": "core/heading", "attrs": { "level": 2, "content": "Notes from the van before the coffee goes cold.", "className": "section-title" }, "innerBlocks": [] }
+              ]
+            },
+            {
+              "blockName": "core/group",
+              "attrs": { "className": "journal-row" },
+              "innerBlocks": [
+                {
+                  "blockName": "core/group",
+                  "attrs": { "tagName": "article", "className": "journal-card" },
+                  "innerBlocks": [
+                    { "blockName": "core/paragraph", "attrs": { "content": "Object study", "className": "journal-card-label" }, "innerBlocks": [] },
+                    { "blockName": "core/heading", "attrs": { "level": 3, "content": "The lamp that made three dealers sigh", "className": "journal-card-title" }, "innerBlocks": [] }
+                  ]
+                },
+                {
+                  "blockName": "core/group",
+                  "attrs": { "tagName": "article", "className": "journal-card" },
+                  "innerBlocks": [
+                    { "blockName": "core/paragraph", "attrs": { "content": "Recipe", "className": "journal-card-label" }, "innerBlocks": [] },
+                    { "blockName": "core/heading", "attrs": { "level": 3, "content": "Anchovy butter for people who bought too many plates", "className": "journal-card-title" }, "innerBlocks": [] }
+                  ]
+                },
+                {
+                  "blockName": "core/group",
+                  "attrs": { "tagName": "article", "className": "journal-card" },
+                  "innerBlocks": [
+                    { "blockName": "core/paragraph", "attrs": { "content": "Estate sale", "className": "journal-card-label" }, "innerBlocks": [] },
+                    { "blockName": "core/heading", "attrs": { "level": 3, "content": "A blue cupboard outside Gordes", "className": "journal-card-title" }, "innerBlocks": [] }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "blockName": "core/group",
+          "attrs": {
+            "tagName": "section",
+            "anchor": "contact",
+            "className": "newsletter",
+            "style": {
+              "spacing": {
+                "padding": {
+                  "top": "clamp(3.5rem, 7vw, 7rem)",
+                  "right": "clamp(1rem, 4vw, 4rem)",
+                  "bottom": "clamp(3.5rem, 7vw, 7rem)",
+                  "left": "clamp(1rem, 4vw, 4rem)"
+                }
+              },
+              "border": {
+                "bottom": { "color": "var(--line)", "width": "1px", "style": "solid" }
+              }
+            }
+          },
+          "innerBlocks": [
+            {
+              "blockName": "core/group",
+              "attrs": { "className": "newsletter-copy" },
+              "innerBlocks": [
+                { "blockName": "core/paragraph", "attrs": { "content": "friday email / what just landed", "className": "eyebrow" }, "innerBlocks": [] },
+                { "blockName": "core/heading", "attrs": { "level": 2, "content": "A soft knock before the weekend market.", "className": "section-title" }, "innerBlocks": [] },
+                { "blockName": "core/paragraph", "attrs": { "content": "New objects, first scent pours, sourcing requests, and the occasional dinner address." }, "innerBlocks": [] }
+              ]
+            },
+            {
+              "blockName": "wbdc/maison-newsletter-form",
+              "attrs": {
+                "nameLabel": "Name",
+                "emailLabel": "Email",
+                "namePlaceholder": "Your name",
+                "emailPlaceholder": "you@example.com",
+                "buttonText": "join the friday list",
+                "method": "post",
+                "action": ""
+              },
+              "innerBlocks": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "blockName": "core/group",
+      "attrs": {
+        "tagName": "footer",
+        "className": "site-footer",
+        "style": {
+          "spacing": {
+            "padding": {
+              "top": "clamp(3.5rem, 7vw, 7rem)",
+              "right": "clamp(1rem, 4vw, 4rem)",
+              "bottom": "clamp(3.5rem, 7vw, 7rem)",
+              "left": "clamp(1rem, 4vw, 4rem)"
+            }
+          },
+          "border": {
+            "bottom": { "color": "var(--line)", "width": "1px", "style": "solid" }
+          }
+        }
+      },
+      "innerBlocks": [
+        { "blockName": "core/paragraph", "attrs": { "content": "Maison Clouet / objects + scents / L'isle-sur-la-Sorgue" }, "innerBlocks": [] },
+        { "blockName": "core/paragraph", "attrs": { "content": "14 passage des Livres / Fri-Sun / @maisonclouet" }, "innerBlocks": [] },
+        {
+          "blockName": "core/buttons",
+          "attrs": { "className": "footer-link" },
+          "innerBlocks": [
+            { "blockName": "core/button", "attrs": { "text": "back to the blue door", "url": "#top" }, "innerBlocks": [] }
+          ]
+        }
+      ]
+    }
+  ]
+}

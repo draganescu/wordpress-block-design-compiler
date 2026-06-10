@@ -11,6 +11,13 @@ Loop:
 5. Fix tasks as code changes.
 6. Repeat until both rendered and editor thresholds pass.
 
+Stopping rule:
+
+- Passing thresholds is the only successful end state.
+- Do not stop because the result is visually close, structurally close, or because further CSS tweaks feel like overfitting.
+- If a repair improves one surface and regresses another, revert that repair and choose another task.
+- If repeated concrete repairs cannot reduce the metrics, mark the run blocked and name the blocker. Do not call it done.
+
 Default thresholds:
 
 - `maxMismatchPercent <= 1`
@@ -50,9 +57,13 @@ Surface-specific repair decisions:
 - If rendered passes but editor fails, fix custom block `edit()` output, editor-only classes, or block-owned editor CSS. Do not change `save()` or frontend CSS unless the shared structure is actually wrong.
 - If editor passes but rendered fails, fix `save()` output, support attributes, or frontend scoped CSS without adding editor-only differences.
 - If core block editor output adds unavoidable editor wrappers, ignore those wrappers only through comparison CSS; do not use that as permission for block-owned markup to diverge.
+- If WordPress editor wrappers, RichText intrinsic sizing, placeholders, inserters, selection UI, or block chrome change the layout, normalize the editor preview or add editor-scoped CSS that restores the saved block geometry while keeping fields editable.
+- Do not convert a core section to a custom section block solely to improve editor screenshot parity.
 
 Rules:
 
+- Before final response, read `reports/comparison.json`; quote `aggregates.rendered` and `aggregates.editor`.
+- If either aggregate exceeds threshold, continue the repair loop or explicitly report blocked.
 - Do not accept a lower pixel score if obvious source elements are missing.
 - Do not hide a source-visible element to improve the diff.
 - If a repair causes regression, revert that repair and choose a different strategy.
