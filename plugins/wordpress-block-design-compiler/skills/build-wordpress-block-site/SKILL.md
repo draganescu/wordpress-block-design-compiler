@@ -10,7 +10,7 @@ Use this skill when the user wants a website that should end as editable WordPre
 ## Required Workflow
 
 1. Create an artifact workspace with `create_workspace`.
-2. Generate `mockup/index.html`, `mockup/style.css`, and optional `mockup/script.js` from the user request plus `references/design-prompt.md`.
+2. If the user provided existing markup, run `import_provided_markup` and treat that imported HTML/CSS as the source mockup. Otherwise generate `mockup/index.html`, `mockup/style.css`, and optional `mockup/script.js` from the user request plus `references/design-prompt.md`.
 3. Run `analyze_mockup` and read `analysis/content-inventory.json`.
 4. Write `plan/block-plan.md` and `plan/block-plan.json`.
 5. Generate custom blocks only where core blocks cannot preserve both fidelity and editability. Before creating any custom section block, complete the Core-First Gate below.
@@ -50,6 +50,8 @@ Before final response, read `reports/comparison.json` and state the rendered/edi
 ## Design Stage
 
 Read `references/design-prompt.md` before generating the mockup. Make one strong visual direction, not a generic template. The mockup can use expressive HTML/CSS/JS, but it must be inspectable and deterministic: no network assets, no remote fonts, no runtime build tools.
+
+If the markup is provided, skip mockup generation. Use `import_provided_markup` to copy the existing site export into `mockup/`, bundle local linked stylesheets into `mockup/style.css` for analysis, and preserve the provided HTML as the visual source of truth. Do not redesign or simplify provided markup before analysis.
 
 ## Block Planning
 

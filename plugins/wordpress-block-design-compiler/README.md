@@ -48,6 +48,7 @@ Use `claude/CLAUDE.md` as the Claude project instruction file when running this 
 ## MCP Tools
 
 - `create_workspace`: creates `mockup`, `analysis`, `plan`, `wordpress`, `rendered`, `reports`, and `visual` folders.
+- `import_provided_markup`: imports an existing HTML/CSS site export into `mockup/` instead of generating a new mockup. It copies local assets and bundles linked local stylesheets into `mockup/style.css` for analysis.
 - `analyze_mockup`: extracts a content inventory, sections, forms, links, cards, headings, CSS custom properties, and selectors.
 - `scaffold_custom_block`: writes `block.json`, `index.js`, and `style.css` for a vanilla JavaScript static block.
 - `serialize_wordpress_blocks`: boots a jsdom environment, registers official core blocks with `@wordpress/block-library`, registers custom blocks from `wordpress/blocks/*/index.js`, serializes `wordpress/block-tree.json` with `@wordpress/blocks`, writes canonical block markup to `wordpress/content.html`, writes frontend preview HTML to `rendered/rendered-blocks.html`, writes a no-build editable block editor preview to `editor/block-editor.html`, and writes `reports/style-audit.json`. Preview CSS is concatenated from `wordpress/style.css` and `wordpress/blocks/*/style.css`; the tool returns that source list. `mockup/style.css` is not included unless `includeMockupCss: true` is explicitly passed for debugging. It rejects source trees that contain `htmlLines`, `innerHTML`, `innerContent`, `html`, `markup`, or `sourceHtml`; unregistered core block names; attributes absent from WordPress block metadata; or `core/group` tag names outside block-level layout containers.
@@ -58,6 +59,8 @@ Use `claude/CLAUDE.md` as the Claude project instruction file when running this 
 ## Workflow
 
 Ask the agent for a website that should become WordPress blocks. The `build-wordpress-block-site` skill drives the steps and the agent remains responsible for design, implementation, and repair judgment.
+
+When converting provided markup, call `import_provided_markup` after `create_workspace` and skip HTML mockup generation. The imported HTML/CSS is the source of truth.
 
 For multi-file generations, keep each generated page/tree inspectable:
 

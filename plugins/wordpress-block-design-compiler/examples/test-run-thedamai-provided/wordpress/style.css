@@ -1,0 +1,684 @@
+@font-face {
+  font-family: "ABC Whyte";
+  src: url("../mockup/assets/fonts/ABCWhyte-Light.woff2") format("woff2");
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "ABC Whyte";
+  src: url("../mockup/assets/fonts/ABCWhyte-Regular.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Kaftan Serif";
+  src: url("../mockup/assets/fonts/KaftanSerif-Regular.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  --damai-dark-rgb: 50, 32, 24;
+  --damai-dark: rgb(var(--damai-dark-rgb));
+  --damai-light: #eae5df;
+  --damai-white: #f8f6f4;
+  --damai-black: #030303;
+  --damai-primary: #903c02;
+  --damai-secondary: #0a6365;
+  --damai-teal: #2ca09e;
+  --damai-muted: rgba(var(--damai-dark-rgb), 0.62);
+  --damai-border: rgba(var(--damai-dark-rgb), 0.15);
+  --damai-border-light: rgba(248, 246, 244, 0.2);
+  --damai-serif: "Kaftan Serif", Georgia, "Times New Roman", serif;
+  --damai-sans: "ABC Whyte", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body,
+.editor-styles-wrapper {
+  margin: 0;
+  background: var(--damai-light);
+  color: var(--damai-dark);
+  font-family: var(--damai-sans);
+  font-weight: 300;
+  letter-spacing: 0;
+}
+
+body {
+  overflow-x: hidden;
+}
+
+.editor-styles-wrapper {
+  padding: 0;
+}
+
+.editor-styles-wrapper .is-root-container {
+  background: var(--damai-light);
+}
+
+a {
+  color: inherit;
+}
+
+h1,
+h2,
+h3,
+p,
+figure {
+  margin-top: 0;
+}
+
+img {
+  display: block;
+  max-width: 100%;
+}
+
+.damai-main,
+.damai-main > .wp-block-group {
+  margin: 0;
+}
+
+.damai-site-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 20;
+  display: grid;
+  grid-template-columns: minmax(9rem, 0.65fr) minmax(0, 1fr) auto;
+  gap: clamp(1rem, 3vw, 3rem);
+  align-items: center;
+  min-height: 5rem;
+  backdrop-filter: blur(18px);
+}
+
+.damai-brand {
+  display: grid;
+  gap: 0.18rem;
+}
+
+.damai-brand-title {
+  margin: 0;
+  color: var(--damai-dark);
+  font-family: var(--damai-serif);
+  font-size: clamp(1.2rem, 2vw, 2rem);
+  font-weight: 400;
+  line-height: 0.88;
+}
+
+.damai-brand-kicker,
+.damai-eyebrow,
+.damai-slide-count,
+.damai-footer-line,
+.damai-review,
+.damai-social,
+.damai-copyright {
+  font-size: 0.68rem;
+  line-height: 1.3;
+}
+
+.damai-brand-kicker,
+.damai-eyebrow,
+.damai-slide-count {
+  color: rgba(var(--damai-dark-rgb), 0.48);
+  font-weight: 400;
+  text-transform: uppercase;
+}
+
+.damai-eyebrow-light {
+  color: rgba(248, 246, 244, 0.7);
+}
+
+.damai-nav-links,
+.damai-book-top,
+.damai-centered-button,
+.damai-button-row,
+.damai-card-button,
+.damai-book-bottom,
+.damai-footer-links {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.damai-nav-links {
+  justify-content: center;
+  gap: clamp(1rem, 3vw, 3rem);
+}
+
+.damai-nav-links .wp-block-button__link,
+.damai-footer-links .wp-block-button__link {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--damai-dark);
+  font-size: 0.8rem;
+  font-weight: 300;
+  line-height: 1;
+  text-decoration: none;
+}
+
+.damai-footer-links {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.35rem;
+}
+
+.damai-footer-links .wp-block-button__link {
+  font-family: var(--damai-serif);
+  font-size: clamp(1.8rem, 4vw, 3.25rem);
+}
+
+.damai-button .wp-block-button__link,
+.damai-book-top .wp-block-button__link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.35rem;
+  padding: 0.72rem 1.2rem;
+  border-radius: 999px;
+  border: 0;
+  background: var(--damai-primary);
+  color: var(--damai-white);
+  font-size: 0.72rem;
+  line-height: 1;
+  text-decoration: none;
+  transition: transform 240ms ease, background-color 240ms ease;
+}
+
+.damai-book-top .wp-block-button__link,
+.damai-button.secondary .wp-block-button__link {
+  background: var(--damai-secondary);
+}
+
+.damai-button.blur .wp-block-button__link {
+  min-height: 2rem;
+  padding: 0.55rem 1rem;
+  background: rgba(248, 246, 244, 0.2);
+  color: var(--damai-white);
+  backdrop-filter: blur(12px);
+}
+
+.damai-button .wp-block-button__link:hover,
+.damai-book-top .wp-block-button__link:hover {
+  transform: translateY(-2px);
+}
+
+.damai-hero {
+  position: relative;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  text-align: center;
+  background:
+    linear-gradient(rgba(0, 0, 0, 0.24), rgba(0, 0, 0, 0.56)),
+    radial-gradient(circle at 50% 35%, rgba(255, 255, 255, 0.08), transparent 38%),
+    var(--damai-dark);
+}
+
+.damai-hero::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgba(234, 229, 223, 0.88) 0 38%, rgba(0, 0, 0, 0.14) 38% 100%),
+    url("../mockup/media/pages/home/e188895bb3-1703172463/header-video-edit_v4.mp4");
+  opacity: 0.45;
+}
+
+.damai-hero::after,
+.damai-intro-copy::before,
+.damai-packages-intro::before {
+  content: "";
+  display: block;
+  width: 0.65rem;
+  height: 0.65rem;
+  border: 1px solid currentColor;
+  transform: rotate(45deg);
+  opacity: 0.24;
+}
+
+.damai-hero-copy {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  justify-items: center;
+  gap: 1.25rem;
+  width: min(58rem, 100%);
+}
+
+.damai-hero-title {
+  max-width: 8.5ch;
+  margin: 0;
+  color: var(--damai-white);
+  font-weight: 400;
+}
+
+.damai-centered-button {
+  justify-content: center;
+}
+
+.damai-intro {
+  position: relative;
+}
+
+.damai-intro-collage {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(8rem, 0.85fr) minmax(16rem, 1.2fr) minmax(8rem, 0.85fr);
+  grid-template-rows: auto auto;
+  gap: clamp(1.5rem, 5vw, 5rem);
+  align-items: center;
+  max-width: 70rem;
+  margin-inline: auto;
+}
+
+.damai-intro-copy {
+  display: grid;
+  justify-items: center;
+  gap: 1.1rem;
+  text-align: center;
+}
+
+.damai-intro-copy::before,
+.damai-packages-intro::before {
+  margin-bottom: 1.5rem;
+}
+
+.damai-section-title {
+  margin: 0;
+  color: var(--damai-dark);
+  font-family: var(--damai-serif);
+  font-size: clamp(2.35rem, 5vw, 5.2rem);
+  font-weight: 400;
+  line-height: 0.92;
+}
+
+.damai-copy {
+  max-width: 33rem;
+  margin: 0;
+  color: var(--damai-muted);
+  font-size: clamp(0.92rem, 1.1vw, 1.12rem);
+  line-height: 1.55;
+}
+
+.damai-collage-image {
+  margin: 0;
+}
+
+.damai-collage-image img,
+.damai-split-image img,
+.damai-villa-thumb img,
+.damai-package-image img,
+.damai-book-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.damai-collage-image img {
+  aspect-ratio: 3 / 4;
+}
+
+.image-fire {
+  align-self: start;
+  width: min(10rem, 36vw);
+  justify-self: end;
+}
+
+.image-wood {
+  grid-row: 2;
+  width: min(13rem, 42vw);
+}
+
+.image-leaves {
+  grid-column: 3;
+  grid-row: 1 / span 2;
+  width: min(15rem, 48vw);
+  justify-self: start;
+}
+
+.damai-welcome {
+  display: grid;
+  justify-items: center;
+  gap: 1rem;
+  text-align: center;
+}
+
+.damai-welcome-copy {
+  max-width: 48rem;
+  margin: 0;
+  color: var(--damai-muted);
+  font-size: clamp(1rem, 1.45vw, 1.35rem);
+  line-height: 1.45;
+}
+
+.damai-villas {
+  overflow: hidden;
+}
+
+.damai-slide-count {
+  margin: 0 auto 4rem;
+  width: fit-content;
+  color: rgba(248, 246, 244, 0.46);
+}
+
+.damai-villa-stage {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(6rem, 11rem) minmax(0, 1fr);
+  align-items: center;
+  gap: clamp(1.5rem, 4vw, 4rem);
+  max-width: 70rem;
+  margin-inline: auto;
+}
+
+.damai-villa-titles {
+  grid-column: 1 / -1;
+  display: grid;
+  justify-items: center;
+  gap: clamp(1.2rem, 3vw, 2.4rem);
+}
+
+.damai-villa-title {
+  margin: 0;
+  color: var(--damai-white);
+  font-family: var(--damai-serif);
+  font-size: clamp(2.6rem, 8vw, 7.8rem);
+  font-weight: 400;
+  line-height: 0.9;
+  text-align: center;
+}
+
+.damai-villa-thumbs {
+  grid-column: 2;
+  display: grid;
+  gap: 0;
+  width: min(8rem, 24vw);
+  margin: clamp(2rem, 5vw, 4rem) auto 0;
+}
+
+.damai-villa-thumb {
+  margin: 0;
+}
+
+.damai-villa-thumb img {
+  aspect-ratio: 3 / 4;
+}
+
+.damai-split {
+  display: grid;
+  grid-template-columns: minmax(15rem, 0.85fr) minmax(18rem, 1fr);
+  gap: clamp(2rem, 8vw, 10rem);
+  align-items: center;
+}
+
+.damai-spa {
+  grid-template-columns: minmax(18rem, 1fr) minmax(15rem, 0.85fr);
+}
+
+.damai-split-image {
+  margin: 0;
+  justify-self: center;
+  width: min(27rem, 100%);
+}
+
+.damai-split-image img {
+  aspect-ratio: 3 / 4;
+}
+
+.damai-split-copy {
+  display: grid;
+  align-content: center;
+  gap: 1.15rem;
+  max-width: 30rem;
+}
+
+.damai-packages-intro {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 1rem;
+  text-align: center;
+}
+
+.damai-package-cards {
+  margin-top: 0;
+}
+
+.damai-card-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: clamp(1rem, 2vw, 2rem);
+  max-width: 72rem;
+  margin-inline: auto;
+}
+
+.damai-package-card {
+  position: relative;
+  min-height: clamp(24rem, 42vw, 34rem);
+  display: grid;
+  align-content: end;
+  gap: 0.6rem;
+  padding: clamp(1rem, 2.5vw, 2rem);
+  overflow: hidden;
+  color: var(--damai-white);
+}
+
+.damai-package-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.08), rgba(0, 0, 0, 0.68));
+  z-index: 1;
+}
+
+.damai-package-card > :not(.damai-package-image) {
+  position: relative;
+  z-index: 2;
+}
+
+.damai-package-image {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  margin: 0;
+}
+
+.damai-card-title {
+  margin: 0;
+  color: var(--damai-white);
+  font-family: var(--damai-serif);
+  font-size: clamp(1.75rem, 3.5vw, 3.2rem);
+  font-weight: 400;
+  line-height: 0.98;
+}
+
+.damai-card-copy {
+  margin: 0;
+  color: rgba(248, 246, 244, 0.78);
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.damai-footer {
+  padding-bottom: 0 !important;
+}
+
+.damai-footer-grid {
+  display: grid;
+  grid-template-columns: 1.3fr 1fr 1fr 1.4fr;
+  gap: clamp(1.5rem, 4vw, 5rem);
+  padding-bottom: clamp(2.5rem, 6vw, 5rem);
+}
+
+.damai-footer-menu {
+  align-self: start;
+}
+
+.damai-footer-line {
+  margin: 0;
+  color: rgba(var(--damai-dark-rgb), 0.64);
+}
+
+.damai-footer-line.strong {
+  color: var(--damai-dark);
+}
+
+.damai-footer-meta {
+  display: grid;
+  grid-template-columns: minmax(10rem, 1fr) minmax(10rem, 1fr) minmax(10rem, 1fr);
+  gap: 1rem;
+  padding: 1.2rem 0;
+  border-top: 1px solid var(--damai-border);
+  color: rgba(var(--damai-dark-rgb), 0.55);
+}
+
+.damai-footer-meta p {
+  margin: 0;
+}
+
+.damai-book-band {
+  position: relative;
+  min-height: clamp(9rem, 20vw, 16rem);
+  margin-inline: calc(clamp(1.5rem, 5vw, 6rem) * -1);
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+
+.damai-book-image {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+}
+
+.damai-book-image::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.25);
+}
+
+.damai-book-bottom {
+  position: relative;
+  z-index: 2;
+}
+
+.editor-styles-wrapper .damai-site-header {
+  position: sticky;
+}
+
+.editor-styles-wrapper .damai-package-card > .block-editor-inner-blocks,
+.editor-styles-wrapper .damai-book-band > .block-editor-inner-blocks {
+  display: contents;
+}
+
+.editor-styles-wrapper .damai-package-image,
+.editor-styles-wrapper .damai-book-image {
+  pointer-events: none;
+}
+
+@media (max-width: 960px) {
+  .damai-site-header {
+    position: sticky;
+    grid-template-columns: 1fr auto;
+  }
+
+  .damai-nav-links {
+    grid-column: 1 / -1;
+    order: 3;
+    justify-content: flex-start;
+    overflow-x: auto;
+    padding-bottom: 0.2rem;
+  }
+
+  .damai-book-top {
+    justify-self: end;
+  }
+
+  .damai-intro-collage {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .damai-intro-copy {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+
+  .image-wood {
+    grid-row: 1;
+    justify-self: end;
+  }
+
+  .image-leaves {
+    grid-column: 2;
+    grid-row: 3;
+  }
+
+  .damai-split,
+  .damai-spa,
+  .damai-card-grid,
+  .damai-footer-grid,
+  .damai-footer-meta {
+    grid-template-columns: 1fr;
+  }
+
+  .damai-spa .damai-split-image {
+    order: -1;
+  }
+
+  .damai-split-copy {
+    max-width: none;
+  }
+}
+
+@media (max-width: 560px) {
+  .damai-site-header {
+    gap: 0.8rem;
+  }
+
+  .damai-brand-title {
+    font-size: 1.25rem;
+  }
+
+  .damai-brand-kicker {
+    display: none;
+  }
+
+  .damai-book-top .wp-block-button__link {
+    min-height: 2rem;
+    padding: 0.58rem 0.9rem;
+  }
+
+  .damai-hero {
+    min-height: 88vh !important;
+  }
+
+  .damai-intro-collage {
+    gap: 1rem;
+  }
+
+  .damai-villa-title {
+    font-size: clamp(2.3rem, 13vw, 4.5rem);
+  }
+
+  .damai-card-grid {
+    gap: 1rem;
+  }
+
+  .damai-package-card {
+    min-height: 26rem;
+  }
+}

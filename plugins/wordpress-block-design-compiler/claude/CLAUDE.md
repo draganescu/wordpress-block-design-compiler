@@ -4,7 +4,7 @@ Use this plugin when the user asks for a website that should become editable Wor
 
 Workflow:
 
-1. Generate a polished standalone HTML/CSS/JS mockup from the user request plus the design prompt in `skills/build-wordpress-block-site/references/design-prompt.md`.
+1. Generate a polished standalone HTML/CSS/JS mockup from the user request plus the design prompt in `skills/build-wordpress-block-site/references/design-prompt.md`, or call `import_provided_markup` when the user supplied existing markup.
 2. Analyze the mockup with the `analyze_mockup` tool.
 3. Plan core blocks, custom blocks, and style responsibilities. Use block support/style attributes first; CSS needs a support-limitation reason.
 4. Generate vanilla JavaScript custom blocks with real editor affordances: in-canvas RichText for visible copy, InspectorControls for behavior/settings, block supports for style controls, and semantic save markup.
@@ -15,6 +15,8 @@ Workflow:
 9. Turn the screenshots/diffs into explicit repair tasks, fix them, and repeat until both `aggregates.rendered` and `aggregates.editor` are under threshold.
 
 Keep the HTML mockup as the source of truth. Prefer core blocks and block supports before custom blocks. Use custom blocks only when they provide a better editable content model or semantic frontend contract.
+
+When the user supplied markup, do not redesign it before analysis. Import it into `mockup/`, preserve it as the source of truth, and transform that markup into blocks.
 
 For multi-file generations, do not make one-off editor pages by hand. Keep the setup reusable: store each page's block tree in a stable JSON file, call `create_block_editor_preview` for that tree, then use `screenshot_html` or `compare_html` against that page's mockup/rendered/editor files.
 

@@ -1,0 +1,83 @@
+{
+  "source": {
+    "mode": "provided-markup",
+    "htmlPath": "/Users/andreidraganescu/Sites/thedamai/thedamai.codebydennis.com/index.html",
+    "workspaceMockup": "mockup/index.html",
+    "bundledCss": "mockup/style.css"
+  },
+  "principles": [
+    "Use core blocks extensively before custom blocks.",
+    "Keep the block tree data-only.",
+    "Do not import the mockup stylesheet into the rendered WordPress output.",
+    "Use custom blocks only for reusable behavior or markup that core blocks cannot express."
+  ],
+  "coreBlocks": [
+    "core/group",
+    "core/heading",
+    "core/paragraph",
+    "core/buttons",
+    "core/button",
+    "core/image",
+    "core/separator"
+  ],
+  "customBlocks": [],
+  "sections": [
+    {
+      "id": "site-header",
+      "sourceSelector": ".main-nav-bar",
+      "blocks": ["core/group", "core/heading", "core/paragraph", "core/buttons", "core/button"]
+    },
+    {
+      "id": "home-header",
+      "sourceSelector": ".section-home-header",
+      "blocks": ["core/group", "core/paragraph", "core/heading", "core/buttons", "core/button"]
+    },
+    {
+      "id": "home-intro",
+      "sourceSelector": ".section-home-intro",
+      "blocks": ["core/group", "core/image", "core/paragraph", "core/heading", "core/buttons", "core/button"]
+    },
+    {
+      "id": "welcome",
+      "sourceSelector": ".section-home-intro-after",
+      "blocks": ["core/group", "core/paragraph"]
+    },
+    {
+      "id": "stay-slider",
+      "sourceSelector": ".section-stay-slider",
+      "blocks": ["core/group", "core/heading", "core/image"]
+    },
+    {
+      "id": "restaurant",
+      "sourceSelector": ".section-image-split:nth-of-type(restaurant)",
+      "blocks": ["core/group", "core/image", "core/paragraph", "core/heading", "core/buttons", "core/button"]
+    },
+    {
+      "id": "spa",
+      "sourceSelector": ".section-image-split:nth-of-type(spa)",
+      "blocks": ["core/group", "core/image", "core/paragraph", "core/heading", "core/buttons", "core/button"]
+    },
+    {
+      "id": "packages",
+      "sourceSelector": ".section-packages-intro, .section-packages-cards",
+      "blocks": ["core/group", "core/image", "core/paragraph", "core/heading", "core/buttons", "core/button"]
+    },
+    {
+      "id": "footer",
+      "sourceSelector": ".section-footer",
+      "blocks": ["core/group", "core/paragraph", "core/buttons", "core/button", "core/image"]
+    }
+  ],
+  "customBlockCandidates": [
+    {
+      "name": "damai-villa-slider",
+      "decision": "defer",
+      "reason": "A real carousel with slide controls and autoplay would justify a custom block, but the current static conversion can preserve the visible editorial layout with core groups and images."
+    },
+    {
+      "name": "damai-package-card",
+      "decision": "defer",
+      "reason": "Package card content is editable as core image/heading/paragraph/button groups. Custom or query-backed behavior should wait for dynamic package data."
+    }
+  ]
+}

@@ -34,6 +34,27 @@ const TOOLS = [
     },
   },
   {
+    name: 'import_provided_markup',
+    description: 'Import an existing HTML/CSS site export into a workspace mockup path instead of generating a new mockup.',
+    inputSchema: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['workspaceRoot', 'sourceHtmlPath'],
+      properties: {
+        workspaceRoot: { type: 'string' },
+        sourceHtmlPath: { type: 'string' },
+        sourceRoot: { type: 'string' },
+        mockupPath: { type: 'string', default: 'mockup/index.html' },
+        cssOutPath: { type: 'string', default: 'mockup/style.css' },
+        cssPaths: {
+          type: 'array',
+          items: { type: 'string' },
+        },
+        copyAssets: { type: 'boolean', default: true },
+      },
+    },
+  },
+  {
     name: 'analyze_mockup',
     description: 'Analyze mockup/index.html and mockup/style.css into content inventory and CSS selector summaries.',
     inputSchema: {
@@ -187,6 +208,7 @@ const TOOLS = [
 
 const handlers = {
   create_workspace: createWorkspace,
+  import_provided_markup: importProvidedMarkup,
   analyze_mockup: analyzeMockup,
   scaffold_custom_block: scaffoldCustomBlock,
   serialize_wordpress_blocks: serializeWordPressBlocks,
@@ -315,6 +337,97 @@ async function createWorkspace(args) {
     },
     next: 'Replace the starter mockup with the designed HTML/CSS/JS, then call analyze_mockup. Assemble blocks in wordpress/block-tree.json.',
   };
+}
+
+async function importProvidedMarkup(args) {
+  const workspaceRoot = resolvePath(args.workspaceRoot);
+  const sourceHtmlPath = resolvePath(args.sourceHtmlPath);
+  if (!fs.existsSync(sourceHtmlPath)) {
+    throw new Error(`sourceHtmlPath does not exist: ${sourceHtmlPath}`);
+  }
+
+  const sourceRoot = args.sourceRoot ? resolvePath(args.sourceRoot) : path.dirname(sourceHtmlPath);
+  if (!fs.existsSync(sourceRoot) || !fs.statSync(sourceRoot).isDirectory()) {
+    throw new Error(`sourceRoot is not a directory: ${sourceRoot}`);
+  }
+  if (!isPathInside(sourceRoot, sourceHtmlPath)) {
+    throw new Error(`sourceHtmlPath must be inside sourceRoot: ${sourceHtmlPath}`);
+  }
+
+  const mockupPath = resolveWorkspacePath(workspaceRoot, args.mockupPath || 'mockup/index.html');
+  const cssOutPath = resolveWorkspacePath(workspaceRoot, args.cssOutPath || 'mockup/style.css');
+  fs.mkdirSync(path.dirname(mockupPath), { recursive: true });
+  fs.mkdirSync(path.dirname(cssOutPath), { recursive: true });
+
+  if (args.copyAssets !== false) {
+    copyProvidedSourceRoot(sourceRoot, path.dirname(mockupPath));
+  } else {
+    fs.copyFileSync(sourceHtmlPath, mockupPath);
+  }
+
+  const copiedHtmlPath = path.join(path.dirname(mockupPath), path.relative(sourceRoot, sourceHtmlPath));
+  if (path.resolve(copiedHtmlPath) !== path.resolve(mockupPath)) {
+    fs.copyFileSync(sourceHtmlPath, mockupPath);
+  }
+
+  const importedHtml = fs.readFileSync(mockupPath, 'utf8');
+  const stylesheetPaths = providedStylesheetPaths({ sourceRoot, sourceHtmlPath, html: importedHtml, cssPaths: args.cssPaths });
+  const cssBundle = stylesheetPaths
+    .map((file) => `/* ${path.relative(sourceRoot, file)} */\n${fs.readFileSync(file, 'utf8').trim()}\n`)
+    .join('\n');
+  writeFile(cssOutPath, cssBundle || '/* No local stylesheets discovered from provided markup. */\n');
+
+  return {
+    workspaceRoot,
+    sourceHtmlPath,
+    sourceRoot,
+    mockupPath,
+    cssOutPath,
+    copiedAssets: args.copyAssets !== false,
+    stylesheets: stylesheetPaths.map((file) => path.relative(sourceRoot, file)),
+    next: 'Call analyze_mockup on the imported mockup, then plan and assemble the block tree without generating a replacement HTML mockup.',
+  };
+}
+
+function copyProvidedSourceRoot(sourceRoot, mockupRoot) {
+  fs.mkdirSync(mockupRoot, { recursive: true });
+  for (const entry of fs.readdirSync(sourceRoot, { withFileTypes: true })) {
+    const sourcePath = path.join(sourceRoot, entry.name);
+    const targetPath = path.join(mockupRoot, entry.name);
+    if (entry.isDirectory()) {
+      fs.cpSync(sourcePath, targetPath, { recursive: true });
+    } else if (entry.isFile()) {
+      fs.copyFileSync(sourcePath, targetPath);
+    }
+  }
+}
+
+function providedStylesheetPaths({ sourceRoot, sourceHtmlPath, html, cssPaths = [] }) {
+  const explicit = Array.isArray(cssPaths) ? cssPaths : [];
+  const hrefs = [...html.matchAll(/<link\b[^>]*rel=["'][^"']*stylesheet[^"']*["'][^>]*>/gi)]
+    .map((match) => firstMatch(match[0], /\bhref=["']([^"']+)["']/i))
+    .filter(Boolean);
+  const candidates = [...explicit, ...hrefs];
+  const baseDir = path.dirname(sourceHtmlPath);
+  const seen = new Set();
+  const files = [];
+
+  for (const candidate of candidates) {
+    if (isRemoteUrl(candidate) || candidate.startsWith('#')) continue;
+    const withoutQuery = candidate.split(/[?#]/)[0];
+    const resolved = path.resolve(baseDir, withoutQuery);
+    if (!isPathInside(sourceRoot, resolved)) continue;
+    if (!fs.existsSync(resolved) || !fs.statSync(resolved).isFile()) continue;
+    if (seen.has(resolved)) continue;
+    seen.add(resolved);
+    files.push(resolved);
+  }
+
+  return files;
+}
+
+function isRemoteUrl(value) {
+  return /^(?:[a-z][a-z0-9+.-]*:)?\/\//i.test(String(value || '')) || /^(?:data|mailto|tel):/i.test(String(value || ''));
 }
 
 async function analyzeMockup(args) {
@@ -476,14 +589,15 @@ function cssSource(workspaceRoot, filePath) {
 
 function editorPreviewHtml({ workspaceRoot, editorPath, treePath, cssSources }) {
   const editorDir = path.dirname(editorPath);
-  const treeUrl = relativeUrl(editorDir, treePath);
+  const tree = readJson(treePath);
   const cssLinks = cssSources
     .map((source) => `<link rel="stylesheet" href="${escapeAttr(relativeUrl(editorDir, source.path))}">`)
     .join('\n    ');
   const customBlockAssets = findFiles(path.join(workspaceRoot, 'wordpress/blocks'), 'index.js')
     .map((file) => ({
       script: relativeUrl(editorDir, file),
-      metadata: relativeUrl(editorDir, path.join(path.dirname(file), 'block.json')),
+      source: readIfExists(file),
+      metadata: readJsonIfExists(path.join(path.dirname(file), 'block.json')),
     }));
   const scriptTags = wordpressBrowserScripts()
     .map((src) => `<script src="${src}"></script>`)
@@ -617,17 +731,11 @@ function editorPreviewHtml({ workspaceRoot, editorPath, treePath, cssSources }) 
             .join(' ');
         }
 
-        async function fetchJson(url) {
-          const response = await fetch(url);
-          if (!response.ok) return {};
-          return response.json();
-        }
-
         async function registerCustomBlocks() {
           const originalBlocks = window.wp.blocks;
           const originalRegisterBlockType = originalBlocks.registerBlockType;
           for (const asset of customBlockAssets) {
-            const metadata = await fetchJson(asset.metadata);
+            const metadata = asset.metadata || {};
             const wrappedBlocks = Object.assign({}, originalBlocks, {
               registerBlockType: function (name, settings) {
                 const blockName = name || metadata.name;
@@ -650,9 +758,8 @@ function editorPreviewHtml({ workspaceRoot, editorPath, treePath, cssSources }) 
                 return originalRegisterBlockType.call(originalBlocks, blockName, normalized);
               }
             });
-            const response = await fetch(asset.script);
-            if (!response.ok) throw new Error('Could not load custom block script: ' + asset.script);
-            const source = await response.text();
+            const source = asset.source || '';
+            if (!source) throw new Error('Could not load custom block script: ' + asset.script);
             try {
               window.wp.blocks = wrappedBlocks;
               Function(source + '\\n//# sourceURL=' + asset.script)();
@@ -718,9 +825,7 @@ function editorPreviewHtml({ workspaceRoot, editorPath, treePath, cssSources }) 
             wp.blockLibrary.registerCoreBlocks();
           }
           await registerCustomBlocks();
-          const response = await fetch(${JSON.stringify(treeUrl)});
-          if (!response.ok) throw new Error('Could not load block tree: ' + response.status + ' ' + response.statusText);
-          const tree = await response.json();
+          const tree = ${JSON.stringify(tree)};
           window.__wbdcInitialBlocks = (Array.isArray(tree) ? tree : tree.blocks || []).map(toWpBlock);
           wp.element.createRoot(rootEl).render(el(EditorApp));
         } catch (error) {
@@ -2053,6 +2158,10 @@ function readIfExists(filePath) {
 
 function readJson(filePath) {
   return JSON.parse(fs.readFileSync(filePath, 'utf8'));
+}
+
+function readJsonIfExists(filePath) {
+  return fs.existsSync(filePath) ? readJson(filePath) : {};
 }
 
 function writeFile(filePath, content) {

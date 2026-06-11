@@ -1,0 +1,655 @@
+{
+  "version": 2,
+  "contract": "data-only",
+  "blocks": [
+    {
+      "blockName": "core/group",
+      "attrs": {
+        "tagName": "header",
+        "anchor": "top",
+        "className": "damai-site-header",
+        "style": {
+          "spacing": {
+            "padding": {
+              "top": "1.1rem",
+              "right": "clamp(1rem, 3vw, 3.5rem)",
+              "bottom": "1.1rem",
+              "left": "clamp(1rem, 3vw, 3.5rem)"
+            }
+          },
+          "color": {
+            "text": "var(--damai-dark)",
+            "background": "rgba(234, 229, 223, 0.9)"
+          },
+          "border": {
+            "bottom": {
+              "color": "var(--damai-border)",
+              "width": "1px",
+              "style": "solid"
+            }
+          }
+        }
+      },
+      "innerBlocks": [
+        {
+          "blockName": "core/group",
+          "attrs": { "className": "damai-brand" },
+          "innerBlocks": [
+            {
+              "blockName": "core/heading",
+              "attrs": {
+                "level": 2,
+                "content": "The Damai",
+                "className": "damai-brand-title"
+              },
+              "innerBlocks": []
+            },
+            {
+              "blockName": "core/paragraph",
+              "attrs": {
+                "content": "Hotel Resort - Lovina, Bali",
+                "className": "damai-brand-kicker"
+              },
+              "innerBlocks": []
+            }
+          ]
+        },
+        {
+          "blockName": "core/buttons",
+          "attrs": { "className": "damai-nav-links" },
+          "innerBlocks": [
+            { "blockName": "core/button", "attrs": { "text": "Stay", "url": "#stay" }, "innerBlocks": [] },
+            { "blockName": "core/button", "attrs": { "text": "Dining", "url": "#dining" }, "innerBlocks": [] },
+            { "blockName": "core/button", "attrs": { "text": "Relax", "url": "#relax" }, "innerBlocks": [] },
+            { "blockName": "core/button", "attrs": { "text": "Discover", "url": "#discover" }, "innerBlocks": [] }
+          ]
+        },
+        {
+          "blockName": "core/buttons",
+          "attrs": { "className": "damai-book-top" },
+          "innerBlocks": [
+            { "blockName": "core/button", "attrs": { "text": "Book your stay", "url": "#book" }, "innerBlocks": [] }
+          ]
+        }
+      ]
+    },
+    {
+      "blockName": "core/group",
+      "attrs": {
+        "tagName": "main",
+        "className": "damai-main",
+        "layout": { "type": "default" },
+        "style": { "spacing": { "blockGap": "0" } }
+      },
+      "innerBlocks": [
+        {
+          "blockName": "core/group",
+          "attrs": {
+            "tagName": "section",
+            "anchor": "hero",
+            "className": "damai-hero",
+            "style": {
+              "dimensions": { "minHeight": "100vh" },
+              "spacing": {
+                "padding": {
+                  "top": "clamp(7rem, 14vh, 13rem)",
+                  "right": "clamp(1.5rem, 5vw, 6rem)",
+                  "bottom": "clamp(3rem, 8vh, 6rem)",
+                  "left": "clamp(1.5rem, 5vw, 6rem)"
+                }
+              },
+              "color": {
+                "text": "var(--damai-white)",
+                "background": "var(--damai-dark)"
+              }
+            }
+          },
+          "innerBlocks": [
+            {
+              "blockName": "core/group",
+              "attrs": { "className": "damai-hero-copy" },
+              "innerBlocks": [
+                {
+                  "blockName": "core/paragraph",
+                  "attrs": {
+                    "content": "Hotel Resort - Lovina, Bali",
+                    "className": "damai-eyebrow damai-eyebrow-light"
+                  },
+                  "innerBlocks": []
+                },
+                {
+                  "blockName": "core/heading",
+                  "attrs": {
+                    "level": 1,
+                    "content": "Find the spirit of Bali at the Damai",
+                    "className": "damai-hero-title",
+                    "style": {
+                      "typography": {
+                        "fontSize": "clamp(3.8rem, 10vw, 11rem)",
+                        "lineHeight": "0.88",
+                        "fontFamily": "var(--damai-serif)"
+                      }
+                    }
+                  },
+                  "innerBlocks": []
+                },
+                {
+                  "blockName": "core/buttons",
+                  "attrs": { "className": "damai-centered-button" },
+                  "innerBlocks": [
+                    { "blockName": "core/button", "attrs": { "text": "Explore our villas", "url": "#stay", "className": "damai-button secondary" }, "innerBlocks": [] }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "blockName": "core/group",
+          "attrs": {
+            "tagName": "section",
+            "anchor": "intro",
+            "className": "damai-intro",
+            "style": {
+              "spacing": {
+                "padding": {
+                  "top": "clamp(4rem, 9vw, 8rem)",
+                  "right": "clamp(1.5rem, 5vw, 6rem)",
+                  "bottom": "clamp(4rem, 9vw, 8rem)",
+                  "left": "clamp(1.5rem, 5vw, 6rem)"
+                }
+              },
+              "color": {
+                "background": "var(--damai-light)",
+                "text": "var(--damai-dark)"
+              },
+              "border": {
+                "bottom": {
+                  "color": "var(--damai-border)",
+                  "width": "1px",
+                  "style": "solid"
+                }
+              }
+            }
+          },
+          "innerBlocks": [
+            {
+              "blockName": "core/group",
+              "attrs": { "className": "damai-intro-collage" },
+              "innerBlocks": [
+                {
+                  "blockName": "core/image",
+                  "attrs": {
+                    "url": "../mockup/media/pages/home/a8bdf3c9a8-1703172456/fire-zoomed-54x72-crop-q72.jpg",
+                    "alt": "Campfire at sunset",
+                    "className": "damai-collage-image image-fire"
+                  },
+                  "innerBlocks": []
+                },
+                {
+                  "blockName": "core/image",
+                  "attrs": {
+                    "url": "../mockup/media/pages/home/798d7876d9-1703172459/kien-the-damai-90-54x72-crop-q72.jpg",
+                    "alt": "Wall pattern made of wood",
+                    "className": "damai-collage-image image-wood"
+                  },
+                  "innerBlocks": []
+                },
+                {
+                  "blockName": "core/group",
+                  "attrs": { "className": "damai-intro-copy" },
+                  "innerBlocks": [
+                    {
+                      "blockName": "core/heading",
+                      "attrs": {
+                        "level": 2,
+                        "content": "Hard to find, hard to leave",
+                        "className": "damai-section-title"
+                      },
+                      "innerBlocks": []
+                    },
+                    {
+                      "blockName": "core/paragraph",
+                      "attrs": {
+                        "content": "Just a few hours from the airport, on a green hill overlooking the sea. A small resort with a big view and a great restaurant. Here you find the real Bali.",
+                        "className": "damai-copy"
+                      },
+                      "innerBlocks": []
+                    },
+                    {
+                      "blockName": "core/buttons",
+                      "attrs": { "className": "damai-centered-button" },
+                      "innerBlocks": [
+                        { "blockName": "core/button", "attrs": { "text": "Explore our villas", "url": "#stay", "className": "damai-button primary" }, "innerBlocks": [] }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "blockName": "core/image",
+                  "attrs": {
+                    "url": "../mockup/media/pages/home/0cc51997c9-1703172459/kien-the-damai-72-54x72-crop-q72.jpg",
+                    "alt": "Leaves fern",
+                    "className": "damai-collage-image image-leaves"
+                  },
+                  "innerBlocks": []
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "blockName": "core/group",
+          "attrs": {
+            "tagName": "section",
+            "className": "damai-welcome",
+            "style": {
+              "spacing": {
+                "padding": {
+                  "top": "clamp(2rem, 6vw, 5rem)",
+                  "right": "clamp(1.5rem, 5vw, 6rem)",
+                  "bottom": "clamp(2rem, 6vw, 5rem)",
+                  "left": "clamp(1.5rem, 5vw, 6rem)"
+                }
+              },
+              "color": {
+                "background": "var(--damai-light)",
+                "text": "var(--damai-dark)"
+              }
+            }
+          },
+          "innerBlocks": [
+            {
+              "blockName": "core/paragraph",
+              "attrs": {
+                "content": "Welcome to The Damai",
+                "className": "damai-eyebrow"
+              },
+              "innerBlocks": []
+            },
+            {
+              "blockName": "core/paragraph",
+              "attrs": {
+                "content": "A dozen villas, blessed by breezes from nearby spice farms. A prize winning cuisine, served under the stars. A spa with the spirit of Bali and a view of distant volcanoes.",
+                "className": "damai-welcome-copy"
+              },
+              "innerBlocks": []
+            }
+          ]
+        },
+        {
+          "blockName": "core/group",
+          "attrs": {
+            "tagName": "section",
+            "anchor": "stay",
+            "className": "damai-villas",
+            "style": {
+              "spacing": {
+                "padding": {
+                  "top": "clamp(4rem, 9vw, 8rem)",
+                  "right": "clamp(1.5rem, 5vw, 6rem)",
+                  "bottom": "clamp(5rem, 10vw, 10rem)",
+                  "left": "clamp(1.5rem, 5vw, 6rem)"
+                }
+              },
+              "color": {
+                "background": "var(--damai-black)",
+                "text": "var(--damai-white)"
+              }
+            }
+          },
+          "innerBlocks": [
+            {
+              "blockName": "core/paragraph",
+              "attrs": {
+                "content": "1 - 4",
+                "className": "damai-slide-count"
+              },
+              "innerBlocks": []
+            },
+            {
+              "blockName": "core/group",
+              "attrs": { "className": "damai-villa-stage" },
+              "innerBlocks": [
+                {
+                  "blockName": "core/group",
+                  "attrs": { "className": "damai-villa-titles" },
+                  "innerBlocks": [
+                    { "blockName": "core/heading", "attrs": { "level": 2, "content": "Garden Villa", "className": "damai-villa-title" }, "innerBlocks": [] },
+                    { "blockName": "core/heading", "attrs": { "level": 2, "content": "Pool Studio", "className": "damai-villa-title" }, "innerBlocks": [] },
+                    { "blockName": "core/heading", "attrs": { "level": 2, "content": "Pool Villa", "className": "damai-villa-title" }, "innerBlocks": [] },
+                    { "blockName": "core/heading", "attrs": { "level": 2, "content": "Master Pool Villa", "className": "damai-villa-title" }, "innerBlocks": [] }
+                  ]
+                },
+                {
+                  "blockName": "core/group",
+                  "attrs": { "className": "damai-villa-thumbs" },
+                  "innerBlocks": [
+                    { "blockName": "core/image", "attrs": { "url": "../mockup/media/pages/stay/garden-villa/b2fe44fbcf-1703172470/thumb-garden-villa-540x720-crop-q72.jpg", "alt": "Garden Villa", "className": "damai-villa-thumb" }, "innerBlocks": [] },
+                    { "blockName": "core/image", "attrs": { "url": "../mockup/media/pages/stay/pool-studio/85f24180d6-1703172471/thumb-pool-studio-540x720-crop-q72.jpg", "alt": "Pool Studio", "className": "damai-villa-thumb" }, "innerBlocks": [] },
+                    { "blockName": "core/image", "attrs": { "url": "../mockup/media/pages/stay/pool-villa/3bf8799c9e-1703172472/thumb-pool-villa-540x720-crop-q72.jpg", "alt": "Pool Villa", "className": "damai-villa-thumb" }, "innerBlocks": [] },
+                    { "blockName": "core/image", "attrs": { "url": "../mockup/media/pages/stay/master-pool-villa/215ee5a6d0-1703172473/thumb-master-pool-villa-540x720-crop-q72.jpg", "alt": "Master Pool Villa", "className": "damai-villa-thumb" }, "innerBlocks": [] }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "blockName": "core/group",
+          "attrs": {
+            "tagName": "section",
+            "anchor": "dining",
+            "className": "damai-split damai-restaurant",
+            "style": {
+              "spacing": {
+                "padding": {
+                  "top": "clamp(5rem, 10vw, 10rem)",
+                  "right": "clamp(1.5rem, 5vw, 6rem)",
+                  "bottom": "clamp(5rem, 10vw, 10rem)",
+                  "left": "clamp(1.5rem, 5vw, 6rem)"
+                }
+              },
+              "color": {
+                "background": "var(--damai-light)",
+                "text": "var(--damai-dark)"
+              }
+            }
+          },
+          "innerBlocks": [
+            {
+              "blockName": "core/image",
+              "attrs": {
+                "url": "../mockup/media/pages/home/d61afc3487-1703172459/kien-the-damai-308-108x144-crop-q72.jpg",
+                "alt": "Langoustine and green curry dish",
+                "className": "damai-split-image"
+              },
+              "innerBlocks": []
+            },
+            {
+              "blockName": "core/group",
+              "attrs": { "className": "damai-split-copy" },
+              "innerBlocks": [
+                { "blockName": "core/paragraph", "attrs": { "content": "Our restaurant", "className": "damai-eyebrow" }, "innerBlocks": [] },
+                { "blockName": "core/heading", "attrs": { "level": 2, "content": "Prize winning Balinese bistro", "className": "damai-section-title" }, "innerBlocks": [] },
+                { "blockName": "core/paragraph", "attrs": { "content": "The food at Damai is easy to enjoy. Simple honest dishes. Balinese classics. Tropical fruits and spices.", "className": "damai-copy" }, "innerBlocks": [] },
+                { "blockName": "core/paragraph", "attrs": { "content": "Our kitchen has won international awards and been known as North Bali's best beach restaurant.", "className": "damai-copy" }, "innerBlocks": [] },
+                {
+                  "blockName": "core/buttons",
+                  "attrs": { "className": "damai-button-row" },
+                  "innerBlocks": [
+                    { "blockName": "core/button", "attrs": { "text": "Explore our restaurant", "url": "#dining", "className": "damai-button primary" }, "innerBlocks": [] }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "blockName": "core/group",
+          "attrs": {
+            "tagName": "section",
+            "anchor": "relax",
+            "className": "damai-split damai-spa",
+            "style": {
+              "spacing": {
+                "padding": {
+                  "top": "clamp(5rem, 10vw, 10rem)",
+                  "right": "clamp(1.5rem, 5vw, 6rem)",
+                  "bottom": "clamp(5rem, 10vw, 10rem)",
+                  "left": "clamp(1.5rem, 5vw, 6rem)"
+                }
+              },
+              "color": {
+                "background": "var(--damai-white)",
+                "text": "var(--damai-dark)"
+              },
+              "border": {
+                "top": {
+                  "color": "var(--damai-border)",
+                  "width": "1px",
+                  "style": "solid"
+                }
+              }
+            }
+          },
+          "innerBlocks": [
+            {
+              "blockName": "core/group",
+              "attrs": { "className": "damai-split-copy" },
+              "innerBlocks": [
+                { "blockName": "core/paragraph", "attrs": { "content": "Our spa", "className": "damai-eyebrow" }, "innerBlocks": [] },
+                { "blockName": "core/heading", "attrs": { "level": 2, "content": "Be pampered in paradise", "className": "damai-section-title" }, "innerBlocks": [] },
+                { "blockName": "core/paragraph", "attrs": { "content": "The Spa at Damai offers a wide range of pampering and therapeutic massage treatments based on traditional Balinese techniques.", "className": "damai-copy" }, "innerBlocks": [] },
+                {
+                  "blockName": "core/buttons",
+                  "attrs": { "className": "damai-button-row" },
+                  "innerBlocks": [
+                    { "blockName": "core/button", "attrs": { "text": "Discover our spa", "url": "#relax", "className": "damai-button primary" }, "innerBlocks": [] }
+                  ]
+                }
+              ]
+            },
+            {
+              "blockName": "core/image",
+              "attrs": {
+                "url": "../mockup/media/pages/home/bee04a9ebc-1703172459/kien-the-damai-228-108x144-crop-q72.jpg",
+                "alt": "Balinese masseuse in the spa",
+                "className": "damai-split-image"
+              },
+              "innerBlocks": []
+            }
+          ]
+        },
+        {
+          "blockName": "core/group",
+          "attrs": {
+            "tagName": "section",
+            "anchor": "packages",
+            "className": "damai-packages-intro",
+            "style": {
+              "spacing": {
+                "padding": {
+                  "top": "clamp(4rem, 8vw, 7rem)",
+                  "right": "clamp(1.5rem, 5vw, 6rem)",
+                  "bottom": "2rem",
+                  "left": "clamp(1.5rem, 5vw, 6rem)"
+                }
+              },
+              "color": {
+                "background": "var(--damai-light)",
+                "text": "var(--damai-dark)"
+              },
+              "border": {
+                "top": {
+                  "color": "var(--damai-border)",
+                  "width": "1px",
+                  "style": "solid"
+                }
+              }
+            }
+          },
+          "innerBlocks": [
+            { "blockName": "core/heading", "attrs": { "level": 2, "content": "Damai packages", "className": "damai-section-title" }, "innerBlocks": [] },
+            { "blockName": "core/paragraph", "attrs": { "content": "Upgrade your stay with one of our package offers to let you enjoy more of The Damai at a special promotional rate.", "className": "damai-copy" }, "innerBlocks": [] }
+          ]
+        },
+        {
+          "blockName": "core/group",
+          "attrs": {
+            "tagName": "section",
+            "className": "damai-package-cards",
+            "style": {
+              "spacing": {
+                "padding": {
+                  "top": "1rem",
+                  "right": "clamp(1.5rem, 5vw, 6rem)",
+                  "bottom": "clamp(5rem, 10vw, 9rem)",
+                  "left": "clamp(1.5rem, 5vw, 6rem)"
+                }
+              },
+              "color": {
+                "background": "var(--damai-light)",
+                "text": "var(--damai-white)"
+              }
+            }
+          },
+          "innerBlocks": [
+            {
+              "blockName": "core/group",
+              "attrs": { "className": "damai-card-grid" },
+              "innerBlocks": [
+                {
+                  "blockName": "core/group",
+                  "attrs": { "tagName": "article", "className": "damai-package-card" },
+                  "innerBlocks": [
+                    { "blockName": "core/image", "attrs": { "url": "../mockup/media/pages/packages/damai-dolphins/157a492838-1703172487/package-thumb-dolphins-81x108-crop-q72.jpg", "alt": "Damai and dolphins overview", "className": "damai-package-image" }, "innerBlocks": [] },
+                    { "blockName": "core/paragraph", "attrs": { "content": "Save over 15%", "className": "damai-eyebrow damai-eyebrow-light" }, "innerBlocks": [] },
+                    { "blockName": "core/heading", "attrs": { "level": 3, "content": "Damai & dolphins", "className": "damai-card-title" }, "innerBlocks": [] },
+                    { "blockName": "core/paragraph", "attrs": { "content": "A dawn dolphin safari in Lovina Bay", "className": "damai-card-copy" }, "innerBlocks": [] },
+                    { "blockName": "core/buttons", "attrs": { "className": "damai-card-button" }, "innerBlocks": [{ "blockName": "core/button", "attrs": { "text": "More info", "url": "#packages", "className": "damai-button blur" }, "innerBlocks": [] }] }
+                  ]
+                },
+                {
+                  "blockName": "core/group",
+                  "attrs": { "tagName": "article", "className": "damai-package-card" },
+                  "innerBlocks": [
+                    { "blockName": "core/image", "attrs": { "url": "../mockup/media/pages/packages/damai-romance/cee1fbae7e-1703172488/package-thumb-romance-81x108-crop-q72.jpg", "alt": "Damai romance overview", "className": "damai-package-image" }, "innerBlocks": [] },
+                    { "blockName": "core/paragraph", "attrs": { "content": "Save over 15%", "className": "damai-eyebrow damai-eyebrow-light" }, "innerBlocks": [] },
+                    { "blockName": "core/heading", "attrs": { "level": 3, "content": "Damai Romance", "className": "damai-card-title" }, "innerBlocks": [] },
+                    { "blockName": "core/paragraph", "attrs": { "content": "Romantic couple package", "className": "damai-card-copy" }, "innerBlocks": [] },
+                    { "blockName": "core/buttons", "attrs": { "className": "damai-card-button" }, "innerBlocks": [{ "blockName": "core/button", "attrs": { "text": "More info", "url": "#packages", "className": "damai-button blur" }, "innerBlocks": [] }] }
+                  ]
+                },
+                {
+                  "blockName": "core/group",
+                  "attrs": { "tagName": "article", "className": "damai-package-card" },
+                  "innerBlocks": [
+                    { "blockName": "core/image", "attrs": { "url": "../mockup/media/pages/packages/damai-spa-bliss/09e4cbaf03-1703172490/kien-the-damai-402-81x108-crop-q72.jpg", "alt": "Damai spa bliss overview", "className": "damai-package-image" }, "innerBlocks": [] },
+                    { "blockName": "core/paragraph", "attrs": { "content": "Save over 15%", "className": "damai-eyebrow damai-eyebrow-light" }, "innerBlocks": [] },
+                    { "blockName": "core/heading", "attrs": { "level": 3, "content": "Damai Spa Bliss", "className": "damai-card-title" }, "innerBlocks": [] },
+                    { "blockName": "core/paragraph", "attrs": { "content": "Experience the best of the Damai spa", "className": "damai-card-copy" }, "innerBlocks": [] },
+                    { "blockName": "core/buttons", "attrs": { "className": "damai-card-button" }, "innerBlocks": [{ "blockName": "core/button", "attrs": { "text": "More info", "url": "#packages", "className": "damai-button blur" }, "innerBlocks": [] }] }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "blockName": "core/group",
+          "attrs": {
+            "tagName": "footer",
+            "anchor": "book",
+            "className": "damai-footer",
+            "style": {
+              "spacing": {
+                "padding": {
+                  "top": "clamp(3rem, 7vw, 6rem)",
+                  "right": "clamp(1.5rem, 5vw, 6rem)",
+                  "bottom": "0",
+                  "left": "clamp(1.5rem, 5vw, 6rem)"
+                }
+              },
+              "color": {
+                "background": "var(--damai-light)",
+                "text": "var(--damai-dark)"
+              },
+              "border": {
+                "top": {
+                  "color": "var(--damai-border)",
+                  "width": "1px",
+                  "style": "solid"
+                }
+              }
+            }
+          },
+          "innerBlocks": [
+            {
+              "blockName": "core/group",
+              "attrs": { "className": "damai-footer-grid" },
+              "innerBlocks": [
+                {
+                  "blockName": "core/group",
+                  "attrs": { "className": "damai-footer-menu" },
+                  "innerBlocks": [
+                    { "blockName": "core/paragraph", "attrs": { "content": "Menu", "className": "damai-eyebrow" }, "innerBlocks": [] },
+                    { "blockName": "core/buttons", "attrs": { "className": "damai-footer-links" }, "innerBlocks": [
+                      { "blockName": "core/button", "attrs": { "text": "Stay", "url": "#stay" }, "innerBlocks": [] },
+                      { "blockName": "core/button", "attrs": { "text": "Dining", "url": "#dining" }, "innerBlocks": [] },
+                      { "blockName": "core/button", "attrs": { "text": "Relax", "url": "#relax" }, "innerBlocks": [] },
+                      { "blockName": "core/button", "attrs": { "text": "Discover", "url": "#discover" }, "innerBlocks": [] }
+                    ] }
+                  ]
+                },
+                {
+                  "blockName": "core/group",
+                  "attrs": { "className": "damai-footer-stay" },
+                  "innerBlocks": [
+                    { "blockName": "core/paragraph", "attrs": { "content": "Stay", "className": "damai-eyebrow" }, "innerBlocks": [] },
+                    { "blockName": "core/paragraph", "attrs": { "content": "Garden Villa", "className": "damai-footer-line" }, "innerBlocks": [] },
+                    { "blockName": "core/paragraph", "attrs": { "content": "Pool Studio", "className": "damai-footer-line" }, "innerBlocks": [] },
+                    { "blockName": "core/paragraph", "attrs": { "content": "Pool Villa", "className": "damai-footer-line" }, "innerBlocks": [] },
+                    { "blockName": "core/paragraph", "attrs": { "content": "Master Pool Villa", "className": "damai-footer-line" }, "innerBlocks": [] }
+                  ]
+                },
+                {
+                  "blockName": "core/group",
+                  "attrs": { "className": "damai-footer-discover" },
+                  "innerBlocks": [
+                    { "blockName": "core/paragraph", "attrs": { "content": "Discover", "className": "damai-eyebrow" }, "innerBlocks": [] },
+                    { "blockName": "core/paragraph", "attrs": { "content": "Secret Waterfalls", "className": "damai-footer-line" }, "innerBlocks": [] },
+                    { "blockName": "core/paragraph", "attrs": { "content": "Dolphins of Lovina", "className": "damai-footer-line" }, "innerBlocks": [] },
+                    { "blockName": "core/paragraph", "attrs": { "content": "Ceremonies", "className": "damai-footer-line" }, "innerBlocks": [] }
+                  ]
+                },
+                {
+                  "blockName": "core/group",
+                  "attrs": { "className": "damai-footer-contact" },
+                  "innerBlocks": [
+                    { "blockName": "core/paragraph", "attrs": { "content": "Contact", "className": "damai-eyebrow" }, "innerBlocks": [] },
+                    { "blockName": "core/paragraph", "attrs": { "content": "Jl. Damai, Kayu Putih", "className": "damai-footer-line strong" }, "innerBlocks": [] },
+                    { "blockName": "core/paragraph", "attrs": { "content": "Kayu Putih, Lovina, Buleleng, Bali, Indonesia", "className": "damai-footer-line" }, "innerBlocks": [] },
+                    { "blockName": "core/paragraph", "attrs": { "content": "T: +62 877 888 41008", "className": "damai-footer-line" }, "innerBlocks": [] },
+                    { "blockName": "core/paragraph", "attrs": { "content": "E: resort@thedamai.com", "className": "damai-footer-line" }, "innerBlocks": [] }
+                  ]
+                }
+              ]
+            },
+            {
+              "blockName": "core/group",
+              "attrs": { "className": "damai-footer-meta" },
+              "innerBlocks": [
+                { "blockName": "core/paragraph", "attrs": { "content": "***** 5.0 / 0 reviews", "className": "damai-review" }, "innerBlocks": [] },
+                { "blockName": "core/paragraph", "attrs": { "content": "Instagram / Tripadvisor", "className": "damai-social" }, "innerBlocks": [] },
+                { "blockName": "core/paragraph", "attrs": { "content": "2026 The Damai", "className": "damai-copyright" }, "innerBlocks": [] }
+              ]
+            },
+            {
+              "blockName": "core/group",
+              "attrs": { "className": "damai-book-band" },
+              "innerBlocks": [
+                {
+                  "blockName": "core/image",
+                  "attrs": {
+                    "url": "../mockup/media/pages/home/bf91141e4c-1703172456/footer-leaves-2-192x48-crop-q72.jpg",
+                    "alt": "Leaves zoomed in",
+                    "className": "damai-book-image"
+                  },
+                  "innerBlocks": []
+                },
+                {
+                  "blockName": "core/buttons",
+                  "attrs": { "className": "damai-book-bottom" },
+                  "innerBlocks": [
+                    { "blockName": "core/button", "attrs": { "text": "Book your stay", "url": "#book", "className": "damai-button secondary" }, "innerBlocks": [] }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
