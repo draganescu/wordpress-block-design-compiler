@@ -1,37 +1,22 @@
 {
-  "name": "wp-block-design-compiler",
-  "version": "0.0.0",
+  "name": "html-to-wordpress-blocks",
+  "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "A staged toolchain for compiling prompt-driven HTML/CSS designs into WordPress block artifacts.",
+  "description": "Codex/Claude plugin tools for transforming designed HTML into editable WordPress blocks.",
   "bin": {
-    "wp-block-compiler": "./dist/src/cli.js"
+    "html-to-blocks-mcp": "./tools/mcp-server.mjs"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json",
-    "analyze-fixture": "npm run build && node dist/src/cli.js analyze artifacts/simple-landing/mockup --out artifacts/simple-landing/analysis",
-    "doctor": "npm run build && node dist/src/cli.js doctor",
-    "poc:transform": "node poc/transform-poc/transform.cjs",
-    "poc:transform:deterministic": "node poc/transform-poc/transform.cjs --llm-provider=deterministic",
-    "poc:transform:html": "node poc/transform-poc/run.cjs --llm-provider=openai",
-    "poc:transform:html:deterministic": "node poc/transform-poc/run.cjs --llm-provider=deterministic",
-    "poc:vision": "node poc/transform-poc/vision.cjs --provider=openai",
-    "poc:vision:deterministic": "node poc/transform-poc/vision.cjs --provider=deterministic",
-    "run-fixture": "npm run build && node dist/src/cli.js run-fixture fixtures/simple-landing --out artifacts/simple-landing",
-    "test": "npm run build && node --test dist/tests/*.test.js"
+    "check": "node --check tools/mcp-server.mjs"
   },
   "dependencies": {
+    "@wordpress/block-library": "^9.48.0",
     "@wordpress/blocks": "^15.21.0",
     "@wordpress/element": "^8.0.0",
-    "css-tree": "^3.2.1",
-    "parse5": "^8.0.1"
-  },
-  "devDependencies": {
-    "@types/css-tree": "^2.3.11",
-    "@types/node": "^24.0.0",
-    "pixelmatch": "^7.2.0",
-    "playwright": "^1.60.0",
-    "pngjs": "^7.0.0",
-    "typescript": "^5.8.3"
+    "jsdom": "^27.0.1",
+    "pixelmatch": "^7.1.0",
+    "playwright": "^1.54.0",
+    "pngjs": "^7.0.0"
   }
 }

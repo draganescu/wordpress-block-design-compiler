@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "html-to-blocks": {
+      "command": "node",
+      "args": [
+        "./tools/mcp-server.mjs"
+      ]
+    }
+  }
+}

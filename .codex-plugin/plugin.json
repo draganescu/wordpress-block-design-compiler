@@ -1,0 +1,24 @@
+{
+  "name": "html-to-blocks",
+  "version": "0.1.0",
+  "description": "Agent workflow and MCP tools for transforming designed or provided HTML/CSS/JS into editable WordPress blocks.",
+  "author": {
+    "name": "Andrei Draganescu"
+  },
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "HTML to WordPress Blocks",
+    "shortDescription": "Transform designed HTML into editable WordPress blocks.",
+    "longDescription": "A staged html-to-blocks workflow for importing or generating high-quality HTML/CSS/JS mockups, planning core/custom WordPress blocks, generating vanilla JS custom blocks only when needed, assembling data-only block trees, and iterating with rendered/editor screenshot diffs until visual fidelity is high.",
+    "developerName": "Andrei Draganescu",
+    "category": "Developer",
+    "capabilities": [
+      "HTML to WordPress block conversion",
+      "Core-first block planning",
+      "Rendered and editor visual diff loops",
+      "MCP tools"
+    ],
+    "defaultPrompt": "Transform this designed or provided HTML into editable WordPress blocks with the html-to-blocks workflow."
+  },
+  "mcpServers": "./.mcp.json"
+}

@@ -1,55 +1,95 @@
-# WordPress Block Design Compiler
+# HTML to WordPress Blocks
 
-A staged toolchain for turning a user prompt into a polished HTML/CSS/JS design, then transforming that design into WordPress block markup.
+This repository is a local agent plugin plus MCP server for transforming designed or provided HTML/CSS/JS into editable WordPress block content.
 
-## Why This Exists
+The workflow is intentionally staged. The HTML mockup stays the visual source of truth, while the WordPress output is built as a data-only block tree, rendered through WordPress block packages, inspected in a no-build block editor preview, and repaired from screenshot diffs.
 
-Prior attempts in Telex and WordPress Studio generate WordPress blocks directly. Even with sample HTML and screenshots, the final block result often loses too much visual quality. LLMs are already strong at creating expressive HTML/CSS/JS mockups from weak prompts; the hard problem is transferring that design into WordPress blocks without flattening the layout, losing the visual language, or making the result uneditable.
+## What Is Included
 
-This project breaks the problem apart:
+- `skills/html-to-blocks/SKILL.md` - the orchestrator skill an agent should follow.
+- `skills/html-to-blocks/references/` - design, planning, core-block, custom-block, and repair-loop guidance.
+- `tools/mcp-server.mjs` - deterministic workspace, analysis, serialization, editor preview, screenshot, and comparison tools.
+- `.codex-plugin/plugin.json` - Codex plugin manifest.
+- `.mcp.json` - MCP server config for agents that can load MCP servers.
+- `claude/` - Claude-oriented instructions and config example.
+- `spec.md` - historical grounding/specification for the approach.
 
-1. Let the LLM design freely in HTML/CSS/JS first.
-2. Analyze the mockup deterministically.
-3. Ask the LLM to plan and author the WordPress block implementation.
-4. Validate, preview, diff, and repair until the block result preserves the design and remains editor-friendly.
+Generated runs should live outside the repository, or under ignored local folders such as `examples/`.
 
-The block strategy is core-first, not core-only. The LLM should extensively style and assemble core blocks before escalating to custom blocks. Custom blocks are for sections where core blocks plus CSS cannot preserve the design or editor model cleanly, such as editable marquees, carousels, structured forms, unusual interactive elements, or repeated card systems that need constrained controls.
+## Workflow
 
-The validation loop should render the generated static blocks through WordPress packages into a new HTML artifact, then compare that rendered output against the original mockup and feed any validation or visual drift back into targeted LLM repairs.
+1. Create a workspace with `create_workspace`.
+2. Generate `mockup/index.html` and `mockup/style.css` from the user brief, or import existing markup with `import_provided_markup`.
+3. Analyze the mockup with `analyze_mockup`.
+4. Write a core-first block plan in `plan/block-plan.md` and `plan/block-plan.json`.
+5. Generate custom blocks only when core blocks and block supports cannot preserve both fidelity and editability.
+6. Assemble `wordpress/block-tree.json` as data only: block names, attributes, supports/style attrs, classes, and inner blocks.
+7. Run `serialize_wordpress_blocks` to produce canonical block markup, rendered preview HTML, editor preview HTML, and a style audit.
+8. Run `compare_html` against both the saved frontend render and the editable editor preview.
+9. Repair from explicit visual-diff tasks until rendered and editor mismatch thresholds pass.
 
-## Goal
+The block tree must not contain raw markup escape hatches such as `htmlLines`, `innerHTML`, `innerContent`, `markup`, or `sourceHtml`.
 
-Build a pipeline that can:
+## Core-First Rule
 
-1. Accept a natural-language design prompt.
-2. Generate a high-quality responsive HTML/CSS/JS concept.
-3. Parse and normalize the generated markup.
-4. Convert the design into valid WordPress block structure.
-5. Return reusable block markup that can be pasted into, imported into, or programmatically inserted by WordPress.
+Use WordPress core blocks and design supports before custom blocks:
 
-## Current Commands
+- Use `core/group`, `core/columns`, `core/cover`, `core/image`, `core/heading`, `core/paragraph`, `core/buttons`, `core/list`, and related core blocks when they express the structure.
+- Put color, spacing, typography, dimensions, border, layout, alignment, media, and overlay styling into block attributes/supports wherever possible.
+- Keep `wordpress/style.css` small and explainable.
+- Create custom blocks for real forms, search/booking/subscription widgets, reusable typed components, semantic data structures, or UI that core blocks cannot model editably.
+
+Custom block `edit()` output should visually mirror `save()` and use inline `RichText` for visible copy, with InspectorControls or BlockControls for non-inline settings.
+
+## MCP Tools
+
+The server exposes these tools:
+
+- `create_workspace`
+- `import_provided_markup`
+- `analyze_mockup`
+- `scaffold_custom_block`
+- `serialize_wordpress_blocks`
+- `create_block_editor_preview`
+- `screenshot_html`
+- `compare_html`
+
+Run the syntax check with:
 
 ```bash
-npm test
-npm run doctor
-npm run run-fixture
-npm run analyze-fixture
+npm run check
 ```
 
-The current vertical slice is fixture-driven. It copies a known mockup into an artifact directory, then analyzes the mockup into DOM, CSS, content, section, and interaction JSON files.
+## Codex
 
-## Early Architecture
+Use the repository as a Codex plugin. The manifest is at:
 
-- `prompt -> design`: generate the HTML/CSS/JS prototype.
-- `design -> normalized DOM`: clean, validate, and prepare the design tree.
-- `normalized DOM -> blocks`: map elements and styles into WordPress core blocks or custom block wrappers.
-- `blocks -> output`: produce block markup, assets, and metadata.
+```text
+.codex-plugin/plugin.json
+```
 
-## Notes
+The skill name is `html-to-blocks`.
 
-This repo starts as a workspace for the compiler core. The implementation choices are still open, but likely areas to evaluate are:
+## Claude / MCP
 
-- Node.js for DOM parsing and transformation.
-- WordPress-compatible block validation and serialization for emitted output.
-- A validation layer for unsafe scripts, unsupported CSS, and block fidelity.
-- Optional browser rendering for screenshot-based design QA.
+Install dependencies, then point Claude or another MCP-capable agent at the server:
+
+```bash
+npm install
+node tools/mcp-server.mjs
+```
+
+Example Claude Desktop server entry:
+
+```json
+{
+  "mcpServers": {
+    "html-to-blocks": {
+      "command": "node",
+      "args": ["/absolute/path/to/html-to-blocks/tools/mcp-server.mjs"]
+    }
+  }
+}
+```
+
+Agents should read `claude/CLAUDE.md` or `skills/html-to-blocks/SKILL.md` before calling the tools.
