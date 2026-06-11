@@ -1,11 +1,11 @@
 ---
-name: build-wordpress-block-site
-description: Use when a user asks to create a website, landing page, homepage, microsite, or theme page that should become editable WordPress block content. Runs a staged workflow: generate a beautiful HTML/CSS/JS mockup, plan core and custom blocks, generate vanilla JS custom blocks, assemble a data-only block tree, compare screenshots, and iterate from explicit repair tasks until visual drift is low.
+name: html-to-blocks
+description: Use when a user asks to transform designed or provided HTML/CSS/JS into editable WordPress block content. Runs a staged workflow: generate or import an HTML mockup, plan core and custom blocks, generate vanilla JS custom blocks when needed, assemble a data-only block tree, compare screenshots, and iterate from explicit repair tasks until visual drift is low.
 ---
 
-# Build WordPress Block Site
+# HTML To Blocks
 
-Use this skill when the user wants a website that should end as editable WordPress blocks. The agent remains responsible for design judgment and code edits. The tools provide workspace setup, mockup analysis, custom-block scaffolding, preview wrapping, and screenshot comparison.
+Use this skill when the user wants an HTML/CSS/JS design or provided markup transformed into editable WordPress blocks. The agent remains responsible for design judgment and code edits. The tools provide workspace setup, mockup analysis, custom-block scaffolding, preview wrapping, and screenshot comparison.
 
 ## Required Workflow
 

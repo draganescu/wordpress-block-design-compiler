@@ -2160,7 +2160,7 @@ ${body}
 }
 
 function copyReference(name, target) {
-  const source = path.join(PLUGIN_ROOT, 'skills/build-wordpress-block-site/references', name);
+  const source = path.join(PLUGIN_ROOT, 'skills/html-to-blocks/references', name);
   if (fs.existsSync(source)) writeFile(target, fs.readFileSync(source, 'utf8'));
 }
 

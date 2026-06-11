@@ -18,7 +18,7 @@
       "Visual diff repair loop",
       "MCP tools"
     ],
-    "defaultPrompt": "Create a WordPress block version of this website request with the WordPress Block Design Compiler workflow."
+    "defaultPrompt": "Transform this HTML/site request into editable WordPress blocks with the HTML-to-blocks workflow."
   },
   "mcpServers": "./.mcp.json"
 }

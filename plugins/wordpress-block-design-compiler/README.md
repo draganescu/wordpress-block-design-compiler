@@ -58,7 +58,7 @@ Use `claude/CLAUDE.md` as the Claude project instruction file when running this 
 
 ## Workflow
 
-Ask the agent for a website that should become WordPress blocks. The `build-wordpress-block-site` skill drives the steps and the agent remains responsible for design, implementation, and repair judgment.
+Ask the agent to convert designed or provided HTML into WordPress blocks. The `html-to-blocks` skill drives the steps and the agent remains responsible for design, implementation, and repair judgment.
 
 When converting provided markup, call `import_provided_markup` after `create_workspace` and skip HTML mockup generation. The imported HTML/CSS is the source of truth.
 
