@@ -168,6 +168,7 @@ const TOOLS = [
               name: { type: 'string' },
               width: { type: 'number' },
               height: { type: 'number' },
+              fullPage: { type: 'boolean', default: true },
             },
           },
         },
@@ -198,6 +199,7 @@ const TOOLS = [
               name: { type: 'string' },
               width: { type: 'number' },
               height: { type: 'number' },
+              fullPage: { type: 'boolean', default: true },
             },
           },
         },
@@ -1571,9 +1573,13 @@ async function capture(browser, htmlPath, screenshotPath, viewport) {
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await page.goto(pathToFileURL(htmlPath).href, { waitUntil: 'networkidle' });
     await page.addStyleTag({
-      content: '*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}',
+      content: `${motionFreezeCss()}\n${transientOverlayCaptureCss()}`,
     });
-    await page.screenshot({ path: screenshotPath, fullPage: true, animations: 'disabled' });
+    await page.screenshot({
+      path: screenshotPath,
+      fullPage: viewport.fullPage !== false,
+      animations: 'disabled',
+    });
   } finally {
     await page.close();
   }
@@ -1593,7 +1599,11 @@ async function captureEditor(browser, editorUrl, screenshotPath, viewport) {
       throw new Error(`Editor preview failed before screenshot: ${errorText}`);
     }
     await page.addStyleTag({ content: editorComparisonCss() });
-    await page.screenshot({ path: screenshotPath, fullPage: true, animations: 'disabled' });
+    await page.screenshot({
+      path: screenshotPath,
+      fullPage: viewport.fullPage !== false,
+      animations: 'disabled',
+    });
   } finally {
     await page.close();
   }
@@ -1601,7 +1611,8 @@ async function captureEditor(browser, editorUrl, screenshotPath, viewport) {
 
 function editorComparisonCss() {
   return `
-    *,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}
+    ${motionFreezeCss()}
+    ${transientOverlayCaptureCss()}
     .wbdc-editor-toolbar{display:none!important}
     .wbdc-editor-shell,.wbdc-editor-canvas,.is-root-container.block-editor-block-list__layout{min-height:0!important}
     .block-editor-inner-blocks{display:contents!important}
@@ -1625,6 +1636,32 @@ function editorComparisonCss() {
     .block-editor-block-list__block,
     .block-editor-block-list__block.is-selected,
     .block-editor-block-list__block.has-child-selected{outline:0!important;box-shadow:none!important}
+  `;
+}
+
+function motionFreezeCss() {
+  return '*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}';
+}
+
+function transientOverlayCaptureCss() {
+  return `
+    .loading-screen,
+    .loading-fade,
+    .preloader,
+    .loader,
+    .cookie-jar,
+    [data-role="cookie-jar-pop-up"],
+    [aria-label="Cookie"],
+    [aria-label="Cookies"] {
+      display: none !important;
+      opacity: 0 !important;
+      visibility: hidden !important;
+      pointer-events: none !important;
+    }
+
+    .c-scrollbar {
+      display: none !important;
+    }
   `;
 }
 

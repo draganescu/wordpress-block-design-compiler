@@ -1,0 +1,575 @@
+{
+  "version": 2,
+  "contract": "data-only",
+  "blocks": [
+    {
+      "blockName": "core/group",
+      "attrs": {
+        "tagName": "main",
+        "className": "avvr-page",
+        "layout": { "type": "default" },
+        "style": {
+          "spacing": { "blockGap": "0" },
+          "color": { "background": "var(--avvr-light)", "text": "var(--avvr-dark)" }
+        }
+      },
+      "innerBlocks": [
+        {
+          "blockName": "core/group",
+          "attrs": {
+            "tagName": "section",
+            "anchor": "hero",
+            "className": "avvr-hero-shell",
+            "layout": { "type": "constrained" },
+            "style": {
+              "color": { "background": "var(--avvr-dark)", "text": "var(--avvr-light)" },
+              "spacing": {
+                "padding": {
+                  "top": "clamp(1.25rem, 2vw, 2.5rem)",
+                  "right": "clamp(1.1rem, 3vw, 2.75rem)",
+                  "bottom": "clamp(2rem, 4vw, 3.6rem)",
+                  "left": "clamp(1.1rem, 3vw, 2.75rem)"
+                }
+              }
+            }
+          },
+          "innerBlocks": [
+            {
+              "blockName": "core/group",
+              "attrs": {
+                "tagName": "header",
+                "className": "avvr-topbar",
+                "layout": { "type": "default" }
+              },
+              "innerBlocks": [
+                {
+                  "blockName": "core/group",
+                  "attrs": { "className": "avvr-brand", "layout": { "type": "default" } },
+                  "innerBlocks": [
+                    {
+                      "blockName": "core/paragraph",
+                      "attrs": { "content": "AVVR", "className": "avvr-logo" },
+                      "innerBlocks": []
+                    },
+                    {
+                      "blockName": "core/paragraph",
+                      "attrs": { "content": "ADVOCAATEN NOTARIAAT", "className": "avvr-logo-sub" },
+                      "innerBlocks": []
+                    }
+                  ]
+                },
+                {
+                  "blockName": "core/buttons",
+                  "attrs": { "className": "avvr-meta-links" },
+                  "innerBlocks": [
+                    { "blockName": "core/button", "attrs": { "text": "info@avvr.nl", "url": "mailto:info@avvr.nl" }, "innerBlocks": [] },
+                    { "blockName": "core/button", "attrs": { "text": "+31 30 263 50 50", "url": "tel:+31302635050" }, "innerBlocks": [] },
+                    { "blockName": "core/button", "attrs": { "text": "Werken bij", "url": "https://avvr.nl/werken-bij" }, "innerBlocks": [] },
+                    { "blockName": "core/button", "attrs": { "text": "Contact", "url": "https://avvr.nl/contact" }, "innerBlocks": [] },
+                    { "blockName": "core/button", "attrs": { "text": "NL", "url": "index.html" }, "innerBlocks": [] }
+                  ]
+                },
+                {
+                  "blockName": "core/buttons",
+                  "attrs": { "className": "avvr-main-nav" },
+                  "innerBlocks": [
+                    { "blockName": "core/button", "attrs": { "text": "Expertises", "url": "https://avvr.nl/expertises" }, "innerBlocks": [] },
+                    { "blockName": "core/button", "attrs": { "text": "Team", "url": "https://avvr.nl/team" }, "innerBlocks": [] },
+                    { "blockName": "core/button", "attrs": { "text": "Actueel", "url": "https://avvr.nl/actueel" }, "innerBlocks": [] },
+                    { "blockName": "core/button", "attrs": { "text": "Over ons", "url": "https://avvr.nl/over-ons" }, "innerBlocks": [] },
+                    { "blockName": "core/button", "attrs": { "text": "⌕", "url": "https://avvr.nl/search", "className": "avvr-search-button" }, "innerBlocks": [] }
+                  ]
+                }
+              ]
+            },
+            {
+              "blockName": "core/group",
+              "attrs": { "className": "avvr-hero-layout", "layout": { "type": "default" } },
+              "innerBlocks": [
+                {
+                  "blockName": "core/group",
+                  "attrs": { "className": "avvr-hero-copy", "layout": { "type": "default" } },
+                  "innerBlocks": [
+                    {
+                      "blockName": "core/heading",
+                      "attrs": {
+                        "level": 1,
+                        "content": "Bereikbare <em>specialisten</em><br>voor als het erop aankomt",
+                        "className": "avvr-hero-title",
+                        "style": {
+                          "typography": {
+                            "fontSize": "clamp(3.35rem, 5.2vw, 5.35rem)",
+                            "lineHeight": "1.08",
+                            "fontWeight": "400"
+                          }
+                        }
+                      },
+                      "innerBlocks": []
+                    },
+                    {
+                      "blockName": "core/paragraph",
+                      "attrs": { "content": "Kennis van zaken, ervaring in uw sector", "className": "avvr-hero-subtitle" },
+                      "innerBlocks": []
+                    },
+                    {
+                      "blockName": "core/buttons",
+                      "attrs": { "className": "avvr-button-row" },
+                      "innerBlocks": [
+                        { "blockName": "core/button", "attrs": { "text": "Leer ons kennen", "url": "https://avvr.nl/over-ons", "className": "avvr-button" }, "innerBlocks": [] }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "blockName": "core/group",
+                  "attrs": { "className": "avvr-line-mark", "layout": { "type": "default" } },
+                  "innerBlocks": []
+                }
+              ]
+            },
+            {
+              "blockName": "core/cover",
+              "attrs": {
+                "url": "../mockup/media/pages/home/8a74e26adf-1774986039/home-avvr-192x-q72.jpg",
+                "alt": "AVVR kantoorinterieur",
+                "dimRatio": 0,
+                "minHeight": 430,
+                "minHeightUnit": "px",
+                "contentPosition": "top right",
+                "isDark": false,
+                "className": "avvr-hero-image"
+              },
+              "innerBlocks": [
+                {
+                  "blockName": "core/buttons",
+                  "attrs": { "className": "avvr-scroll-button" },
+                  "innerBlocks": [
+                    { "blockName": "core/button", "attrs": { "text": "Scroll verder", "url": "#target-intro", "className": "avvr-button-light" }, "innerBlocks": [] }
+                  ]
+                }
+              ]
+            },
+            {
+              "blockName": "core/columns",
+              "attrs": {
+                "className": "avvr-usp-columns",
+                "style": { "spacing": { "blockGap": { "left": "clamp(2rem, 8vw, 8rem)" } } }
+              },
+              "innerBlocks": [
+                {
+                  "blockName": "core/column",
+                  "attrs": { "className": "avvr-usp" },
+                  "innerBlocks": [
+                    { "blockName": "core/paragraph", "attrs": { "content": "△", "className": "avvr-usp-icon" }, "innerBlocks": [] },
+                    { "blockName": "core/heading", "attrs": { "level": 3, "content": "Specialisten" }, "innerBlocks": [] },
+                    { "blockName": "core/paragraph", "attrs": { "content": "Onze bewuste focus maakt dat wij de branche en de markt goed kennen en altijd op de hoogte zijn van ontwikkelingen." }, "innerBlocks": [] }
+                  ]
+                },
+                {
+                  "blockName": "core/column",
+                  "attrs": { "className": "avvr-usp" },
+                  "innerBlocks": [
+                    { "blockName": "core/paragraph", "attrs": { "content": "▣", "className": "avvr-usp-icon" }, "innerBlocks": [] },
+                    { "blockName": "core/heading", "attrs": { "level": 3, "content": "Toegankelijk" }, "innerBlocks": [] },
+                    { "blockName": "core/paragraph", "attrs": { "content": "Snel en adequaat handelen is cruciaal, daarom schakelt u bij ons direct met één van onze specialisten." }, "innerBlocks": [] }
+                  ]
+                },
+                {
+                  "blockName": "core/column",
+                  "attrs": { "className": "avvr-usp" },
+                  "innerBlocks": [
+                    { "blockName": "core/paragraph", "attrs": { "content": "◌", "className": "avvr-usp-icon" }, "innerBlocks": [] },
+                    { "blockName": "core/heading", "attrs": { "level": 3, "content": "Ondernemend" }, "innerBlocks": [] },
+                    { "blockName": "core/paragraph", "attrs": { "content": "Wij durven mee te denken buiten de juridische kaders. Wij zijn besluitvaardig en nemen verantwoordelijkheid." }, "innerBlocks": [] }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "blockName": "core/group",
+          "attrs": {
+            "tagName": "section",
+            "className": "avvr-light-splits",
+            "layout": { "type": "constrained" },
+            "style": {
+              "color": { "background": "var(--avvr-light)", "text": "var(--avvr-dark)" },
+              "spacing": {
+                "padding": {
+                  "top": "clamp(3rem, 7vw, 7rem)",
+                  "right": "clamp(1rem, 3vw, 2.75rem)",
+                  "bottom": "clamp(3rem, 7vw, 7rem)",
+                  "left": "clamp(1rem, 3vw, 2.75rem)"
+                }
+              }
+            }
+          },
+          "innerBlocks": [
+            {
+              "blockName": "core/media-text",
+              "attrs": {
+                "mediaUrl": "../mockup/media/pages/home/ddba797408-1774979417/illustration-vastgoed.svg",
+                "mediaAlt": "Illustratie vastgoed advocaten",
+                "mediaType": "image",
+                "mediaWidth": 50,
+                "isStackedOnMobile": true,
+                "verticalAlignment": "center",
+                "className": "avvr-media-split"
+              },
+              "innerBlocks": [
+                { "blockName": "core/heading", "attrs": { "level": 2, "content": "Thuis in alle <em>vastgoed</em> specialismen" }, "innerBlocks": [] },
+                { "blockName": "core/paragraph", "attrs": { "content": "We zetten onze specialismen in onroerend goed integraal in door verschillende onderdelen van een project op elkaar af te stemmen. Wij adviseren en procederen over alle fases waarin een vastgoedobject zich kan bevinden: van idee tot initiatief, ontwikkeling naar realisatie en van exploitatie naar herontwikkeling." }, "innerBlocks": [] },
+                {
+                  "blockName": "core/buttons",
+                  "attrs": { "className": "avvr-button-row avvr-button-row-light" },
+                  "innerBlocks": [
+                    { "blockName": "core/button", "attrs": { "text": "Vastgoed Advocaten", "url": "https://avvr.nl/expertises/vastgoed", "className": "avvr-button" }, "innerBlocks": [] },
+                    { "blockName": "core/button", "attrs": { "text": "Vastgoed Notariaat", "url": "https://avvr.nl/expertises/vastgoed-notariaat", "className": "avvr-button" }, "innerBlocks": [] }
+                  ]
+                }
+              ]
+            },
+            {
+              "blockName": "core/media-text",
+              "attrs": {
+                "mediaUrl": "../mockup/media/pages/home/056b14806e-1774979417/illustration-ondernemingen-updated-v2.svg",
+                "mediaAlt": "Illustratie ondernemingen",
+                "mediaType": "image",
+                "mediaWidth": 50,
+                "isStackedOnMobile": true,
+                "verticalAlignment": "center",
+                "className": "avvr-media-split avvr-media-split-second"
+              },
+              "innerBlocks": [
+                { "blockName": "core/heading", "attrs": { "level": 2, "content": "Verstand van <em>ondernemingen</em>" }, "innerBlocks": [] },
+                { "blockName": "core/paragraph", "attrs": { "content": "Maar nog belangrijker, onze advocaten hebben een sectorspecialisatie. We spreken vaktaal en weten wat er binnen een organisatie speelt. Wij kennen de ins en outs en dat geeft een voorsprong. Een kennisvoorsprong die we graag inzetten in uw belang." }, "innerBlocks": [] },
+                {
+                  "blockName": "core/buttons",
+                  "attrs": { "className": "avvr-button-row avvr-button-row-light" },
+                  "innerBlocks": [
+                    { "blockName": "core/button", "attrs": { "text": "Expertise ondernemingen", "url": "https://avvr.nl/expertises/ondernemingen", "className": "avvr-button" }, "innerBlocks": [] }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "blockName": "core/group",
+          "attrs": {
+            "tagName": "section",
+            "className": "avvr-expertise-section",
+            "layout": { "type": "constrained" },
+            "style": {
+              "color": { "background": "var(--avvr-dark)", "text": "var(--avvr-light)" },
+              "spacing": {
+                "padding": {
+                  "top": "clamp(3.5rem, 8vw, 8rem)",
+                  "right": "clamp(1rem, 3vw, 2.75rem)",
+                  "bottom": "clamp(3.5rem, 8vw, 8rem)",
+                  "left": "clamp(1rem, 3vw, 2.75rem)"
+                }
+              }
+            }
+          },
+          "innerBlocks": [
+            {
+              "blockName": "core/group",
+              "attrs": { "className": "avvr-section-heading", "layout": { "type": "default" } },
+              "innerBlocks": [
+                { "blockName": "core/heading", "attrs": { "level": 2, "content": "Overzicht expertises" }, "innerBlocks": [] },
+                { "blockName": "core/paragraph", "attrs": { "content": "23", "className": "avvr-count" }, "innerBlocks": [] }
+              ]
+            },
+            {
+              "blockName": "core/columns",
+              "attrs": { "className": "avvr-expertise-columns" },
+              "innerBlocks": [
+                {
+                  "blockName": "core/column",
+                  "attrs": { "className": "avvr-expertise-group" },
+                  "innerBlocks": [
+                    { "blockName": "core/heading", "attrs": { "level": 3, "content": "Vastgoed Advocaten" }, "innerBlocks": [] },
+                    {
+                      "blockName": "core/list",
+                      "attrs": { "className": "avvr-expertise-list" },
+                      "innerBlocks": [
+                        { "blockName": "core/list-item", "attrs": { "content": "<a href=\"https://avvr.nl/expertises/vastgoed/appartementsrecht\">Appartementsrecht</a>" }, "innerBlocks": [] },
+                        { "blockName": "core/list-item", "attrs": { "content": "<a href=\"https://avvr.nl/expertises/vastgoed/bestuursrecht\">Bestuursrecht</a>" }, "innerBlocks": [] },
+                        { "blockName": "core/list-item", "attrs": { "content": "<a href=\"https://avvr.nl/expertises/vastgoed/bouw-en-aanbesteding\">Bouw en aanbesteding</a>" }, "innerBlocks": [] },
+                        { "blockName": "core/list-item", "attrs": { "content": "<a href=\"https://avvr.nl/expertises/vastgoed/huurrecht\">Huurrecht</a>" }, "innerBlocks": [] },
+                        { "blockName": "core/list-item", "attrs": { "content": "<a href=\"https://avvr.nl/expertises/vastgoed/koop-en-verkoop\">Koop en verkoop</a>" }, "innerBlocks": [] },
+                        { "blockName": "core/list-item", "attrs": { "content": "<a href=\"https://avvr.nl/expertises/vastgoed/omgevingsrecht\">Omgevingsrecht</a>" }, "innerBlocks": [] },
+                        { "blockName": "core/list-item", "attrs": { "content": "<a href=\"https://avvr.nl/expertises/vastgoed/onteigeningsrecht\">Onteigeningsrecht</a>" }, "innerBlocks": [] },
+                        { "blockName": "core/list-item", "attrs": { "content": "<a href=\"https://avvr.nl/expertises/vastgoed/overheid-en-schade\">Overheid en schade</a>" }, "innerBlocks": [] },
+                        { "blockName": "core/list-item", "attrs": { "content": "<a href=\"https://avvr.nl/expertises/vastgoed/projectontwikkeling\">Projectontwikkeling</a>" }, "innerBlocks": [] },
+                        { "blockName": "core/list-item", "attrs": { "content": "<a href=\"https://avvr.nl/expertises/vastgoed/zorgvastgoed\">Zorgvastgoed</a>" }, "innerBlocks": [] }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "blockName": "core/column",
+                  "attrs": { "className": "avvr-expertise-group" },
+                  "innerBlocks": [
+                    { "blockName": "core/heading", "attrs": { "level": 3, "content": "Vastgoed Notariaat" }, "innerBlocks": [] },
+                    {
+                      "blockName": "core/list",
+                      "attrs": { "className": "avvr-expertise-list" },
+                      "innerBlocks": [
+                        { "blockName": "core/list-item", "attrs": { "content": "<a href=\"https://avvr.nl/expertises/vastgoed-notariaat/begeleiding-transacties\">Begeleiding transacties</a>" }, "innerBlocks": [] },
+                        { "blockName": "core/list-item", "attrs": { "content": "<a href=\"https://avvr.nl/expertises/vastgoed-notariaat/commercieel-vastgoed\">Commercieel vastgoed</a>" }, "innerBlocks": [] },
+                        { "blockName": "core/list-item", "attrs": { "content": "<a href=\"https://avvr.nl/expertises/vastgoed-notariaat/herfinanciering-vastgoed\">Herfinanciering vastgoed</a>" }, "innerBlocks": [] },
+                        { "blockName": "core/list-item", "attrs": { "content": "<a href=\"https://avvr.nl/expertises/vastgoed-notariaat/herontwikkeling-vastgoed\">Herontwikkeling vastgoed</a>" }, "innerBlocks": [] }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "blockName": "core/column",
+                  "attrs": { "className": "avvr-expertise-group" },
+                  "innerBlocks": [
+                    { "blockName": "core/heading", "attrs": { "level": 3, "content": "Ondernemingen" }, "innerBlocks": [] },
+                    {
+                      "blockName": "core/list",
+                      "attrs": { "className": "avvr-expertise-list" },
+                      "innerBlocks": [
+                        { "blockName": "core/list-item", "attrs": { "content": "<a href=\"https://avvr.nl/expertises/ondernemingen/accountants-en-aansprakelijkheid\">Accountants en aansprakelijkheid</a>" }, "innerBlocks": [] },
+                        { "blockName": "core/list-item", "attrs": { "content": "<a href=\"https://avvr.nl/expertises/ondernemingen/automotive\">Automotive</a>" }, "innerBlocks": [] },
+                        { "blockName": "core/list-item", "attrs": { "content": "<a href=\"https://avvr.nl/expertises/ondernemingen/corporate-litigation\">Corporate litigation</a>" }, "innerBlocks": [] },
+                        { "blockName": "core/list-item", "attrs": { "content": "<a href=\"https://avvr.nl/expertises/ondernemingen/faillissementen-en-surseances\">Faillissementen en surséances</a>" }, "innerBlocks": [] },
+                        { "blockName": "core/list-item", "attrs": { "content": "<a href=\"https://avvr.nl/expertises/ondernemingen/financiering-en-zekerheden\">Financiering en zekerheden</a>" }, "innerBlocks": [] },
+                        { "blockName": "core/list-item", "attrs": { "content": "<a href=\"https://avvr.nl/expertises/ondernemingen/fusies-en-overnames\">Fusies en overnames</a>" }, "innerBlocks": [] },
+                        { "blockName": "core/list-item", "attrs": { "content": "<a href=\"https://avvr.nl/expertises/ondernemingen/herstructurering\">Herstructurering</a>" }, "innerBlocks": [] },
+                        { "blockName": "core/list-item", "attrs": { "content": "<a href=\"https://avvr.nl/expertises/ondernemingen/ondernemingsrecht\">Ondernemingsrecht</a>" }, "innerBlocks": [] },
+                        { "blockName": "core/list-item", "attrs": { "content": "<a href=\"https://avvr.nl/expertises/ondernemingen/structure-en-governance\">Structure en governance</a>" }, "innerBlocks": [] }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "blockName": "core/cover",
+          "attrs": {
+            "url": "../mockup/media/pages/home/3036cfa3c7-1774979418/ontwerp-zonder-titel-1-192x-q72.jpg",
+            "alt": "AVVR teamruimte",
+            "dimRatio": 45,
+            "minHeight": 640,
+            "minHeightUnit": "px",
+            "contentPosition": "center center",
+            "isDark": true,
+            "className": "avvr-about-cover"
+          },
+          "innerBlocks": [
+            {
+              "blockName": "core/group",
+              "attrs": { "className": "avvr-about-card", "layout": { "type": "default" } },
+              "innerBlocks": [
+                { "blockName": "core/paragraph", "attrs": { "content": "♧", "className": "avvr-about-icon" }, "innerBlocks": [] },
+                { "blockName": "core/heading", "attrs": { "level": 2, "content": "Over ons" }, "innerBlocks": [] },
+                { "blockName": "core/paragraph", "attrs": { "content": "Vooruit helpen door te luisteren, eerlijk en transparant te zijn. Dat mag u van ons verwachten. Als u bij ons de deur uit stapt, weet u hoe het zit." }, "innerBlocks": [] },
+                {
+                  "blockName": "core/buttons",
+                  "attrs": { "className": "avvr-button-row avvr-button-row-center" },
+                  "innerBlocks": [
+                    { "blockName": "core/button", "attrs": { "text": "Maak kennis", "url": "https://avvr.nl/over-ons", "className": "avvr-button-light" }, "innerBlocks": [] }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "blockName": "core/group",
+          "attrs": {
+            "tagName": "section",
+            "className": "avvr-articles-section",
+            "layout": { "type": "constrained" },
+            "style": {
+              "color": { "background": "var(--avvr-light)", "text": "var(--avvr-dark)" },
+              "spacing": {
+                "padding": {
+                  "top": "clamp(2rem, 6vw, 6rem)",
+                  "right": "clamp(1rem, 3vw, 2.75rem)",
+                  "bottom": "clamp(3rem, 7vw, 7rem)",
+                  "left": "clamp(1rem, 3vw, 2.75rem)"
+                }
+              }
+            }
+          },
+          "innerBlocks": [
+            {
+              "blockName": "core/group",
+              "attrs": { "className": "avvr-articles-heading", "layout": { "type": "default" } },
+              "innerBlocks": [
+                { "blockName": "core/heading", "attrs": { "level": 2, "content": "Recente artikelen" }, "innerBlocks": [] },
+                {
+                  "blockName": "core/buttons",
+                  "attrs": { "className": "avvr-small-link" },
+                  "innerBlocks": [
+                    { "blockName": "core/button", "attrs": { "text": "Actueel", "url": "https://avvr.nl/actueel", "className": "avvr-button-outline" }, "innerBlocks": [] }
+                  ]
+                }
+              ]
+            },
+            {
+              "blockName": "core/columns",
+              "attrs": { "className": "avvr-article-grid" },
+              "innerBlocks": [
+                {
+                  "blockName": "core/column",
+                  "attrs": { "className": "avvr-article-card" },
+                  "innerBlocks": [
+                    { "blockName": "core/image", "attrs": { "url": "../mockup/media/pages/actueel/artikelen/toestemming-van-juiste-vve-binnen-hoofd-en-ondersplitsing/2964ee0c1c-1780303185/connie-de-vries-zgni2l3k0pk-unsplash-72x48-crop-q72.jpg", "alt": "Artikelbeeld" }, "innerBlocks": [] },
+                    { "blockName": "core/paragraph", "attrs": { "content": "Dennis Reijnders", "className": "avvr-author" }, "innerBlocks": [] },
+                    { "blockName": "core/heading", "attrs": { "level": 4, "content": "Toestemming van juiste VvE binnen hoofd- en ondersplitsing" }, "innerBlocks": [] },
+                    { "blockName": "core/paragraph", "attrs": { "content": "Artikel · Appartementsrecht · 01 Jun ‘26", "className": "avvr-tags" }, "innerBlocks": [] }
+                  ]
+                },
+                {
+                  "blockName": "core/column",
+                  "attrs": { "className": "avvr-article-card" },
+                  "innerBlocks": [
+                    { "blockName": "core/image", "attrs": { "url": "../mockup/media/pages/actueel/artikelen/opheffing-bevel-tot-inbewaringstelling-art-87-fw-sanctioneert-niet-het-uitblijven-van-het-gewenste-resultaat/eca2ee02e8-1777553475/fer-troulik-fzkzrp7gtu4-unsplash-72x48-crop-q72.jpg", "alt": "Artikelbeeld" }, "innerBlocks": [] },
+                    { "blockName": "core/paragraph", "attrs": { "content": "Ken Boschman", "className": "avvr-author" }, "innerBlocks": [] },
+                    { "blockName": "core/heading", "attrs": { "level": 4, "content": "Opheffing bevel tot inbewaringstelling; art. 87 Fw sanctioneert niet het uitblijven van het gewenste resultaat" }, "innerBlocks": [] },
+                    { "blockName": "core/paragraph", "attrs": { "content": "Artikel · Faillissementen en surséances · 30 Apr ‘26", "className": "avvr-tags" }, "innerBlocks": [] }
+                  ]
+                },
+                {
+                  "blockName": "core/column",
+                  "attrs": { "className": "avvr-article-card" },
+                  "innerBlocks": [
+                    { "blockName": "core/image", "attrs": { "url": "../mockup/media/pages/actueel/artikelen/accountantsaansprakelijkheid-zorgplicht-grenzen-en-risico-s/18dd8205c8-1776345331/taylor-nicole-qh7nlsk-ije-unsplash-72x48-crop-q72.jpg", "alt": "Artikelbeeld" }, "innerBlocks": [] },
+                    { "blockName": "core/paragraph", "attrs": { "content": "Diederick van Dalen", "className": "avvr-author" }, "innerBlocks": [] },
+                    { "blockName": "core/heading", "attrs": { "level": 4, "content": "Accountantsaansprakelijkheid: zorgplicht, grenzen en risico’s" }, "innerBlocks": [] },
+                    { "blockName": "core/paragraph", "attrs": { "content": "Artikel · Accountants en aansprakelijkheid · 16 Apr ‘26", "className": "avvr-tags" }, "innerBlocks": [] }
+                  ]
+                },
+                {
+                  "blockName": "core/column",
+                  "attrs": { "className": "avvr-article-card" },
+                  "innerBlocks": [
+                    { "blockName": "core/image", "attrs": { "url": "../mockup/media/pages/actueel/artikelen/terug-naar-de-basis-wat-is-eigenlijk-een-appartementsrecht/87ca785f06-1776090548/bingqi-huang-ficgbcagjm-unsplash-72x48-crop-q72.jpg", "alt": "Artikelbeeld" }, "innerBlocks": [] },
+                    { "blockName": "core/paragraph", "attrs": { "content": "Richard de Laat", "className": "avvr-author" }, "innerBlocks": [] },
+                    { "blockName": "core/heading", "attrs": { "level": 4, "content": "Terug naar de basis: wat is eigenlijk een appartementsrecht?" }, "innerBlocks": [] },
+                    { "blockName": "core/paragraph", "attrs": { "content": "Artikel · Appartementsrecht · 13 Apr ‘26", "className": "avvr-tags" }, "innerBlocks": [] }
+                  ]
+                },
+                {
+                  "blockName": "core/column",
+                  "attrs": { "className": "avvr-article-card" },
+                  "innerBlocks": [
+                    { "blockName": "core/image", "attrs": { "url": "../mockup/media/pages/actueel/artikelen/nationaal-beleidsprogramma-ruimte-en-energie-nbrp-in-consultatie/5beb6a8992-1775218253/tianlei-wu-pf1zqbadhz8-unsplash-72x48-crop-q72.jpg", "alt": "Artikelbeeld" }, "innerBlocks": [] },
+                    { "blockName": "core/paragraph", "attrs": { "content": "Dennis Reijnders", "className": "avvr-author" }, "innerBlocks": [] },
+                    { "blockName": "core/heading", "attrs": { "level": 4, "content": "Nationaal Beleidsprogramma Ruimte en Energie (NBRP) in consultatie" }, "innerBlocks": [] },
+                    { "blockName": "core/paragraph", "attrs": { "content": "Artikel · Appartementsrecht +3 · 03 Apr ‘26", "className": "avvr-tags" }, "innerBlocks": [] }
+                  ]
+                },
+                {
+                  "blockName": "core/column",
+                  "attrs": { "className": "avvr-article-card" },
+                  "innerBlocks": [
+                    { "blockName": "core/image", "attrs": { "url": "../mockup/media/pages/actueel/nieuws/avvr-van-start/c49a619cdf-1774979553/avvr-per-1-april-2026-1-72x48-crop-q72.jpg", "alt": "Artikelbeeld" }, "innerBlocks": [] },
+                    { "blockName": "core/paragraph", "attrs": { "content": "De Advocaten van Van Riet", "className": "avvr-author" }, "innerBlocks": [] },
+                    { "blockName": "core/heading", "attrs": { "level": 4, "content": "AVVR Advocaten Notariaat per 1 april a.s. van start" }, "innerBlocks": [] },
+                    { "blockName": "core/paragraph", "attrs": { "content": "Nieuws · Ondernemingen · Vastgoed Advocaten · 05 Mar ‘26", "className": "avvr-tags" }, "innerBlocks": [] }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "blockName": "core/group",
+          "attrs": {
+            "tagName": "footer",
+            "className": "avvr-footer",
+            "layout": { "type": "constrained" },
+            "style": {
+              "color": { "background": "var(--avvr-dark-medium)", "text": "var(--avvr-light)" },
+              "spacing": {
+                "padding": {
+                  "top": "clamp(3rem, 7vw, 7rem)",
+                  "right": "clamp(1rem, 3vw, 2.75rem)",
+                  "bottom": "2rem",
+                  "left": "clamp(1rem, 3vw, 2.75rem)"
+                }
+              }
+            }
+          },
+          "innerBlocks": [
+            { "blockName": "core/paragraph", "attrs": { "content": "AVVR", "className": "avvr-footer-logo" }, "innerBlocks": [] },
+            {
+              "blockName": "core/columns",
+              "attrs": { "className": "avvr-footer-columns" },
+              "innerBlocks": [
+                {
+                  "blockName": "core/column",
+                  "attrs": { "className": "avvr-footer-col" },
+                  "innerBlocks": [
+                    { "blockName": "core/paragraph", "attrs": { "content": "Sitemap", "className": "avvr-footer-title" }, "innerBlocks": [] },
+                    {
+                      "blockName": "core/buttons",
+                      "attrs": { "className": "avvr-footer-links" },
+                      "innerBlocks": [
+                        { "blockName": "core/button", "attrs": { "text": "Home", "url": "index.html" }, "innerBlocks": [] },
+                        { "blockName": "core/button", "attrs": { "text": "Expertises", "url": "https://avvr.nl/expertises" }, "innerBlocks": [] },
+                        { "blockName": "core/button", "attrs": { "text": "Team", "url": "https://avvr.nl/team" }, "innerBlocks": [] },
+                        { "blockName": "core/button", "attrs": { "text": "Actueel", "url": "https://avvr.nl/actueel" }, "innerBlocks": [] },
+                        { "blockName": "core/button", "attrs": { "text": "Over ons", "url": "https://avvr.nl/over-ons" }, "innerBlocks": [] },
+                        { "blockName": "core/button", "attrs": { "text": "Werken bij", "url": "https://avvr.nl/werken-bij" }, "innerBlocks": [] },
+                        { "blockName": "core/button", "attrs": { "text": "Contact", "url": "https://avvr.nl/contact" }, "innerBlocks": [] }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "blockName": "core/column",
+                  "attrs": { "className": "avvr-footer-col" },
+                  "innerBlocks": [
+                    { "blockName": "core/paragraph", "attrs": { "content": "Actueel", "className": "avvr-footer-title" }, "innerBlocks": [] },
+                    {
+                      "blockName": "core/buttons",
+                      "attrs": { "className": "avvr-footer-links" },
+                      "innerBlocks": [
+                        { "blockName": "core/button", "attrs": { "text": "Artikelen", "url": "https://avvr.nl/actueel/artikelen" }, "innerBlocks": [] },
+                        { "blockName": "core/button", "attrs": { "text": "Nieuws", "url": "https://avvr.nl/actueel/nieuws" }, "innerBlocks": [] },
+                        { "blockName": "core/button", "attrs": { "text": "Bijeenkomsten", "url": "https://avvr.nl/actueel/bijeenkomsten" }, "innerBlocks": [] }
+                      ]
+                    },
+                    { "blockName": "core/paragraph", "attrs": { "content": "Expertises", "className": "avvr-footer-title avvr-footer-title-spaced" }, "innerBlocks": [] },
+                    {
+                      "blockName": "core/buttons",
+                      "attrs": { "className": "avvr-footer-links" },
+                      "innerBlocks": [
+                        { "blockName": "core/button", "attrs": { "text": "Vastgoed Advocaten", "url": "https://avvr.nl/expertises/vastgoed" }, "innerBlocks": [] },
+                        { "blockName": "core/button", "attrs": { "text": "Ondernemingen", "url": "https://avvr.nl/expertises/ondernemingen" }, "innerBlocks": [] },
+                        { "blockName": "core/button", "attrs": { "text": "Vastgoed Notariaat", "url": "https://avvr.nl/expertises/vastgoed-notariaat" }, "innerBlocks": [] }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "blockName": "core/column",
+                  "attrs": { "className": "avvr-footer-col" },
+                  "innerBlocks": [
+                    { "blockName": "core/paragraph", "attrs": { "content": "Newtonlaan 201<br>3584 BH Utrecht", "className": "avvr-footer-line" }, "innerBlocks": [] },
+                    { "blockName": "core/paragraph", "attrs": { "content": "Postbus 85207<br>3508 AE Utrecht", "className": "avvr-footer-line" }, "innerBlocks": [] },
+                    { "blockName": "core/paragraph", "attrs": { "content": "<a href=\"mailto:info@avvr.nl\">info@avvr.nl</a><br><a href=\"tel:+31302635050\">+31 30 263 50 50</a>", "className": "avvr-footer-line" }, "innerBlocks": [] },
+                    { "blockName": "core/paragraph", "attrs": { "content": "<a href=\"https://www.linkedin.com/company/de-advocaten-van-van-riet\">LinkedIn</a><br><a href=\"https://www.instagram.com/werkenbijavvr/\">Instagram</a>", "className": "avvr-footer-line" }, "innerBlocks": [] }
+                  ]
+                }
+              ]
+            },
+            { "blockName": "core/paragraph", "attrs": { "content": "Algemene Voorwaarden · Privacy beleid · Klachtenregeling · Rechtsgebiedenregister · Disclaimer · nl", "className": "avvr-legal" }, "innerBlocks": [] }
+          ]
+        }
+      ]
+    }
+  ]
+}

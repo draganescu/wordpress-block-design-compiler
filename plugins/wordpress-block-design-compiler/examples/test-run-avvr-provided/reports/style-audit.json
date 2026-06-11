@@ -1,0 +1,88 @@
+{
+  "generatedAt": "2026-06-11T14:36:59.188Z",
+  "blockCount": 163,
+  "coreBlockCount": 163,
+  "customBlockCount": 0,
+  "blocksWithSupportAttrs": 16,
+  "supportStyledPercent": 9.82,
+  "supportAttributeCounts": {
+    "style": 8,
+    "layout": 14,
+    "align": 0,
+    "backgroundColor": 0,
+    "textColor": 0,
+    "gradient": 0,
+    "fontSize": 0,
+    "borderColor": 0
+  },
+  "stylePaths": [
+    {
+      "path": "color.background",
+      "count": 6
+    },
+    {
+      "path": "color.text",
+      "count": 6
+    },
+    {
+      "path": "spacing.blockGap",
+      "count": 1
+    },
+    {
+      "path": "spacing.blockGap.left",
+      "count": 1
+    },
+    {
+      "path": "spacing.padding.bottom",
+      "count": 5
+    },
+    {
+      "path": "spacing.padding.left",
+      "count": 5
+    },
+    {
+      "path": "spacing.padding.right",
+      "count": 5
+    },
+    {
+      "path": "spacing.padding.top",
+      "count": 5
+    },
+    {
+      "path": "typography.fontSize",
+      "count": 1
+    },
+    {
+      "path": "typography.fontWeight",
+      "count": 1
+    },
+    {
+      "path": "typography.lineHeight",
+      "count": 1
+    }
+  ],
+  "css": {
+    "totalBytes": 16735,
+    "totalLines": 745,
+    "totalRules": 133,
+    "pageCssBytes": 16735,
+    "pageCssLines": 745,
+    "pageCssRules": 133,
+    "blockCssBytes": 0,
+    "blockCssLines": 0,
+    "blockCssRules": 0,
+    "files": [
+      {
+        "path": "wordpress/style.css",
+        "bytes": 16735,
+        "lines": 745,
+        "rules": 133
+      }
+    ]
+  },
+  "guidance": [
+    "Prefer attrs.style, layout, align, color, spacing, typography, border, and dimensions support settings for block-level design.",
+    "Keep wordpress/style.css for tokens, document-level defaults, responsive grid behavior, and selectors that WordPress supports cannot express.",
+    "Keep wordpress/blocks/*/style.css scoped to custom block internals such as pseudo-elements, nested controls, horizontal rails, and ornamental geometry."
+  ]
+}
