@@ -19,6 +19,33 @@ Prefer the most specific static core block that expresses the source structure:
 - Use `core/navigation` only when its dynamic/static behavior is acceptable in the target preview and editor setup. For static link rows in this compiler, `core/buttons` or a focused custom navigation block may be more predictable.
 - Use dynamic core blocks such as query/post blocks only when the final WordPress context will provide the data. They may not produce useful local static preview output.
 
+## Native Props First
+
+After selecting a core block, use its native attributes and support-backed props before writing CSS. CSS should finish the visual translation; it should not replace core-owned controls that WordPress already exposes in the editor.
+
+Check the registered block metadata before assembly. Useful props include:
+
+- `core/group`: `backgroundColor`, `textColor`, `gradient`, `style.background`, `style.color`, `style.spacing`, `style.dimensions`, `style.border`, `style.typography`, `layout`, `align`, `anchor`, `ariaLabel`, and `allowedBlocks`.
+- `core/cover`: `url`, `alt`, `backgroundType`, `poster`, `dimRatio`, `overlayColor`, `customOverlayColor`, `gradient`, `customGradient`, `focalPoint`, `minHeight`, `minHeightUnit`, `contentPosition`, `isDark`, spacing, border, typography, and layout props.
+- `core/media-text`: `mediaUrl`, `mediaAlt`, `mediaType`, `mediaPosition`, `mediaWidth`, `imageFill`, `focalPoint`, `isStackedOnMobile`, `verticalAlignment`, spacing, color, border, and typography props.
+- `core/image`: `url`, `alt`, `caption`, `title`, `width`, `height`, `aspectRatio`, `scale`, `focalPoint`, `sizeSlug`, `linkDestination`, `href`, border, shadow, duotone, and margin props.
+- `core/button`: `text`, `url`, `type`, `linkTarget`, `rel`, `backgroundColor`, `textColor`, `gradient`, `borderColor`, width, spacing, border, typography, and shadow props.
+- `core/columns` / `core/column`: widths, vertical alignment, stacking behavior, spacing, colors, borders, and typography props.
+
+Examples:
+
+- If a section needs a background color, use `core/group` `backgroundColor` or `style.color.background` before a CSS `background-color` rule.
+- If a block needs background image plus overlay content, prefer `core/cover` and set `url`, `dimRatio`, focal point, min height, and nested blocks before using a `core/group` with CSS background image.
+- If the source is a leaf/photo band with one CTA over the image, `core/cover` should usually replace `core/group` plus a child `core/image`.
+- If the source is a text/image split, use `core/media-text` `isStackedOnMobile`, `mediaPosition`, and `mediaWidth` before writing custom grid CSS.
+- If a button needs color, padding, radius, width, or typography, use button support attributes before targeting `.wp-block-button__link` in CSS.
+
+Static preview caveat:
+
+- Some WordPress support props are serialized through the WordPress style engine rather than directly into saved HTML. If a prop is present in the block comment but does not affect `rendered/rendered-blocks.html` or the editor screenshot, do not silently fall back to ad hoc CSS.
+- First check whether a more specific core block serializes the visual behavior better. For example, use `core/cover` for media backgrounds with overlay content instead of relying on `core/group` background-image support in this static preview.
+- If the chosen prop is still the correct WordPress model, document the preview limitation and add one focused renderer/editor-preview support fix rather than spreading equivalent CSS across page selectors.
+
 ## Common Mappings
 
 Hero with background media:
@@ -72,6 +99,7 @@ Decorative-only elements:
 For every major section, include a short "core block choice" note in `plan/block-plan.md`:
 
 - chosen core block assembly;
+- native attributes/support props used before CSS;
 - nearby core alternatives rejected;
 - why the chosen block improves saved markup and editor parity;
 - any CSS/support responsibility left over after choosing the block.

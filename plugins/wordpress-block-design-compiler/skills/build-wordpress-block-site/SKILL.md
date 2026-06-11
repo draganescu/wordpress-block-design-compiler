@@ -37,6 +37,7 @@ If these criteria are not met, the skill run is incomplete. Continue repairing. 
 Before generating custom blocks or `wordpress/block-tree.json`, write a core-first audit in `plan/block-plan.md`:
 
 - For every mockup section, list the candidate core block assembly first.
+- For every chosen core block, list the native attributes/support props that will carry the visual styling before writing CSS.
 - Only then list any custom block and the specific reason core blocks fail.
 - A custom block that replaces a whole section is rejected unless the section itself is a semantic widget, form, query/data component, navigation component, or reusable component with a typed editing model.
 - Complex layout is not a sufficient reason for a custom block. Use `core/group`, `core/columns`, `core/column`, `core/heading`, `core/paragraph`, `core/buttons`, `core/button`, `core/list`, `core/details`, `core/image`, `core/media-text`, `core/spacer`, and supports/classes first.
@@ -72,7 +73,7 @@ Prefer core blocks, block supports, and style variations before custom blocks. U
 
 Styling priority is strict:
 
-1. Use block support attributes in `wordpress/block-tree.json`: `style.spacing`, `style.color`, `style.typography`, `style.border`, `style.dimensions`, `layout`, `align`, `className`, preset color/spacing/font attributes, and native block attributes.
+1. Use native block attributes and block support attributes in `wordpress/block-tree.json`: media URLs, overlay settings, focal points, min heights, `backgroundColor`, `textColor`, `gradient`, `style.background`, `style.spacing`, `style.color`, `style.typography`, `style.border`, `style.dimensions`, `layout`, `align`, `className`, and preset color/spacing/font attributes.
 2. Use custom block attributes and style variations/classes when an editor-facing design choice needs a named setting.
 3. Use `wordpress/blocks/<slug>/style.css` only for scoped internals that supports cannot express: pseudo-elements, nested form controls, sticky behavior, horizontal rails, overlapping children, responsive grid templates, ornaments, and interaction states.
 4. Use `wordpress/style.css` only for design tokens, document-level defaults, shared responsive rules, and page-specific glue that cannot be attached to a block.
