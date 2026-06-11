@@ -5,11 +5,15 @@ The comparison tool measures screenshots. The agent decides what to fix.
 Loop:
 
 1. Run `serialize_wordpress_blocks`.
-2. Run `compare_html`.
-3. Inspect mockup screenshot, rendered screenshot, editor screenshot, and diff for each viewport.
-4. Write `reports/repair-tasks.md`.
-5. Fix tasks as code changes.
-6. Repeat until both rendered and editor thresholds pass.
+2. Run `create_block_editor_preview` when a block tree or page-specific tree needs a refreshed editor instance.
+3. Run `screenshot_html` when inspection screenshots are needed without a measured diff.
+4. Run `compare_html`.
+5. Inspect mockup screenshot, rendered screenshot, editor screenshot, and diff for each viewport.
+6. Write `reports/repair-tasks.md`.
+7. Fix tasks as code changes.
+8. Repeat until both rendered and editor thresholds pass.
+
+For multi-file generations, keep editor inspection reusable. Each page tree should have a stable JSON path and a generated editor preview path. Do not hand-code one-off editor shells for each page.
 
 Stopping rule:
 

@@ -16,8 +16,10 @@ Use this skill when the user wants a website that should end as editable WordPre
 5. Generate custom blocks only where core blocks cannot preserve both fidelity and editability. Before creating any custom section block, complete the Core-First Gate below.
 6. Assemble editable block content in `wordpress/block-tree.json`; put custom block source in `wordpress/blocks/<slug>/`; put styling in block support/style attributes first, custom block scoped CSS second, and tiny page CSS last.
 7. Run `serialize_wordpress_blocks`; it registers official core blocks with `@wordpress/block-library`, registers custom blocks from `wordpress/blocks/*/index.js`, serializes `wordpress/block-tree.json` with `@wordpress/blocks`, writes canonical block markup to `wordpress/content.html`, writes frontend preview HTML to `rendered/rendered-blocks.html`, writes a no-build editable block editor preview to `editor/block-editor.html`, and writes `reports/style-audit.json`. The preview CSS source list comes from `wordpress/style.css` and custom block `style.css` files. `mockup/style.css` is intentionally excluded from rendered block preview by default.
-8. Run `compare_html`.
-9. Inspect rendered frontend screenshots, editable editor screenshots, and diffs. Write `reports/repair-tasks.md`, fix each task as an agent, then repeat preview/compare until both saved frontend and editor-preview thresholds are met. Do not stop at "close", "structurally close", or "good enough".
+8. Use `create_block_editor_preview` whenever you need to refresh or inspect a block editor instance from a generated tree without reserializing all outputs. For multi-file generations, call it per tree/page.
+9. Use `screenshot_html` for inspection screenshots of mockup, rendered, editor, or arbitrary workspace HTML files. For multi-file generations, pass explicit targets for the page under inspection.
+10. Run `compare_html`.
+11. Inspect rendered frontend screenshots, editable editor screenshots, and diffs. Write `reports/repair-tasks.md`, fix each task as an agent, then repeat preview/compare until both saved frontend and editor-preview thresholds are met. Do not stop at "close", "structurally close", or "good enough".
 
 Default thresholds: `maxMismatchPercent <= 1` and `maxHeightDelta <= 8`.
 
@@ -101,6 +103,16 @@ The tree should match the mockup, not merely contain the same text. Preserve sou
 Do not hide structure inside rich-text attributes. Inline rich text is acceptable for emphasis or spans inside a heading; repeated items, forms, metrics, timelines, maps, and data blocks should be represented as custom block attributes and saved by the custom block's `save()` implementation.
 
 Do not use `mockup/style.css` as the rendered block stylesheet. Generate separate WordPress CSS in `wordpress/style.css` and custom block `style.css` files so comparison measures the transform, not shared source CSS.
+
+## Reusable Editor Inspection
+
+The editor setup is reusable and must not be recreated by hand for each generated page.
+
+- Use `create_block_editor_preview` to write a no-build editor page that loads a specific block tree JSON file, CSS sources, and workspace custom blocks.
+- For a single page, the default paths are `wordpress/block-tree.json` and `editor/block-editor.html`.
+- For multi-file generations, store each page tree under a stable path such as `wordpress/pages/home.block-tree.json` or `wordpress/pages/shop.block-tree.json`, then call `create_block_editor_preview` with `treePath` and `editorPath` for that page.
+- Use `screenshot_html` with `kind: "editor"` to capture editor screenshots for inspection without running a diff.
+- Keep the block tree as the source of truth. The editor preview is an inspection surface, not a separate implementation.
 
 ## Repair Loop
 

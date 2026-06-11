@@ -96,6 +96,64 @@ const TOOLS = [
     },
   },
   {
+    name: 'create_block_editor_preview',
+    description: 'Create a reusable no-build WordPress block editor preview that loads a generated data-only block tree, custom blocks, and CSS sources.',
+    inputSchema: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['workspaceRoot'],
+      properties: {
+        workspaceRoot: { type: 'string' },
+        treePath: { type: 'string', default: 'wordpress/block-tree.json' },
+        editorPath: { type: 'string', default: 'editor/block-editor.html' },
+        cssPaths: {
+          type: 'array',
+          items: { type: 'string' },
+        },
+        includeMockupCss: { type: 'boolean', default: false },
+        validateTree: { type: 'boolean', default: true },
+      },
+    },
+  },
+  {
+    name: 'screenshot_html',
+    description: 'Capture screenshots for mockup, rendered, editor, or arbitrary workspace HTML files without running a pixel diff.',
+    inputSchema: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['workspaceRoot'],
+      properties: {
+        workspaceRoot: { type: 'string' },
+        outDir: { type: 'string', default: 'visual' },
+        targets: {
+          type: 'array',
+          items: {
+            type: 'object',
+            additionalProperties: false,
+            required: ['name', 'path'],
+            properties: {
+              name: { type: 'string' },
+              path: { type: 'string' },
+              kind: { type: 'string', enum: ['html', 'editor'], default: 'html' },
+            },
+          },
+        },
+        viewports: {
+          type: 'array',
+          items: {
+            type: 'object',
+            required: ['name', 'width', 'height'],
+            properties: {
+              name: { type: 'string' },
+              width: { type: 'number' },
+              height: { type: 'number' },
+            },
+          },
+        },
+      },
+    },
+  },
+  {
     name: 'compare_html',
     description: 'Capture mockup/rendered/editor screenshots, generate pixel diffs, and write reports/comparison.json plus reports/repair-tasks.md.',
     inputSchema: {
@@ -132,6 +190,8 @@ const handlers = {
   analyze_mockup: analyzeMockup,
   scaffold_custom_block: scaffoldCustomBlock,
   serialize_wordpress_blocks: serializeWordPressBlocks,
+  create_block_editor_preview: createBlockEditorPreview,
+  screenshot_html: screenshotHtml,
   compare_html: compareHtml,
 };
 
@@ -345,11 +405,7 @@ async function serializeWordPressBlocks(args) {
   const blockMarkup = treeExists
     ? serializeBlockTreeWithWordPress(tree, { workspaceRoot })
     : fs.readFileSync(contentPath, 'utf8');
-  const cssSources = [
-    ...(args.includeMockupCss ? [cssSource(workspaceRoot, path.join(workspaceRoot, 'mockup/style.css'))] : []),
-    cssSource(workspaceRoot, path.join(workspaceRoot, 'wordpress/style.css')),
-    ...findFiles(path.join(workspaceRoot, 'wordpress/blocks'), 'style.css').map((file) => cssSource(workspaceRoot, file)),
-  ].filter((source) => source.css);
+  const cssSources = workspaceCssSources(workspaceRoot, args);
   const previewCss = cssSources.map((source) => `/* ${source.relativePath} */\n${source.css}`).join('\n\n');
   const styleAudit = auditStyleUsage(tree, cssSources);
 
@@ -367,6 +423,46 @@ async function serializeWordPressBlocks(args) {
     styleAudit,
     next: 'Call compare_html, inspect rendered and editor screenshots/diffs, then write repair tasks against wordpress/block-tree.json, custom block edit/save code, or CSS.',
   };
+}
+
+async function createBlockEditorPreview(args) {
+  const workspaceRoot = resolvePath(args.workspaceRoot);
+  const treePath = resolveWorkspacePath(workspaceRoot, args.treePath || 'wordpress/block-tree.json');
+  const editorPath = resolveWorkspacePath(workspaceRoot, args.editorPath || 'editor/block-editor.html');
+  if (!fs.existsSync(treePath)) {
+    throw new Error(`Block tree does not exist: ${treePath}`);
+  }
+
+  const tree = readJson(treePath);
+  if (args.validateTree !== false) {
+    serializeBlockTreeWithWordPress(tree, { workspaceRoot });
+  }
+
+  const cssSources = workspaceCssSources(workspaceRoot, args);
+  writeFile(editorPath, editorPreviewHtml({ workspaceRoot, editorPath, treePath, cssSources }));
+
+  return {
+    treePath,
+    editorPath,
+    cssSources: cssSources.map((source) => source.relativePath),
+    customBlocks: findFiles(path.join(workspaceRoot, 'wordpress/blocks'), 'index.js')
+      .map((file) => path.relative(workspaceRoot, path.dirname(file))),
+    next: 'Open the editor preview in a local static server or call screenshot_html with kind="editor" to inspect the editable block tree.',
+  };
+}
+
+function workspaceCssSources(workspaceRoot, args = {}) {
+  const cssPaths = Array.isArray(args.cssPaths) && args.cssPaths.length
+    ? args.cssPaths.map((cssPath) => resolveWorkspacePath(workspaceRoot, cssPath))
+    : [
+        ...(args.includeMockupCss ? [path.join(workspaceRoot, 'mockup/style.css')] : []),
+        path.join(workspaceRoot, 'wordpress/style.css'),
+        ...findFiles(path.join(workspaceRoot, 'wordpress/blocks'), 'style.css'),
+      ];
+
+  return cssPaths
+    .map((file) => cssSource(workspaceRoot, file))
+    .filter((source) => source.css);
 }
 
 function cssSource(workspaceRoot, filePath) {
@@ -1196,6 +1292,88 @@ async function compareHtml(args) {
   };
 }
 
+async function screenshotHtml(args) {
+  const workspaceRoot = resolvePath(args.workspaceRoot);
+  let chromium;
+  try {
+    chromium = (await import('playwright')).chromium;
+  } catch (error) {
+    throw new Error(`screenshot_html needs optional packages. Run npm install in ${PLUGIN_ROOT}. Missing dependency: ${error.message}`);
+  }
+
+  const outDir = resolveWorkspacePath(workspaceRoot, args.outDir || 'visual');
+  fs.mkdirSync(outDir, { recursive: true });
+  const viewports = Array.isArray(args.viewports) && args.viewports.length ? args.viewports : DEFAULT_VIEWPORTS;
+  const targets = normalizeScreenshotTargets(workspaceRoot, args.targets);
+  const needsServer = targets.some((target) => target.kind === 'editor');
+  const browser = await chromium.launch({ headless: true });
+  const server = needsServer ? await startStaticServer(workspaceRoot) : null;
+  const screenshots = [];
+
+  try {
+    for (const target of targets) {
+      for (const viewport of viewports) {
+        const screenshotPath = path.join(outDir, `${safeFileSegment(target.name)}-${safeFileSegment(viewport.name)}.png`);
+        if (target.kind === 'editor') {
+          await captureEditor(browser, server.urlFor(target.path), screenshotPath, viewport);
+        } else {
+          await capture(browser, target.path, screenshotPath, viewport);
+        }
+        screenshots.push({
+          target: target.name,
+          kind: target.kind,
+          sourcePath: target.path,
+          viewport: viewport.name,
+          size: `${viewport.width}x${viewport.height}`,
+          screenshotPath,
+        });
+      }
+    }
+  } finally {
+    await browser.close();
+    if (server) await server.close();
+  }
+
+  return {
+    outDir,
+    screenshots,
+    next: 'Inspect the screenshots directly, or use compare_html when you need measured diffs against the mockup.',
+  };
+}
+
+function normalizeScreenshotTargets(workspaceRoot, targets) {
+  const normalized = Array.isArray(targets) && targets.length
+    ? targets.map((target) => ({
+        name: String(target.name || '').trim(),
+        path: resolveWorkspacePath(workspaceRoot, target.path || ''),
+        kind: target.kind === 'editor' ? 'editor' : 'html',
+      }))
+    : [
+        { name: 'mockup', path: path.join(workspaceRoot, 'mockup/index.html'), kind: 'html' },
+        { name: 'rendered', path: path.join(workspaceRoot, 'rendered/rendered-blocks.html'), kind: 'html' },
+        { name: 'editor', path: path.join(workspaceRoot, 'editor/block-editor.html'), kind: 'editor' },
+      ].filter((target) => fs.existsSync(target.path));
+
+  if (!normalized.length) {
+    throw new Error('No screenshot targets found. Pass targets or create mockup/rendered/editor files first.');
+  }
+
+  for (const target of normalized) {
+    if (!target.name) throw new Error('Every screenshot target needs a non-empty name.');
+    if (!fs.existsSync(target.path)) throw new Error(`Screenshot target does not exist: ${target.path}`);
+    if (!isPathInside(workspaceRoot, target.path)) {
+      throw new Error(`Screenshot target must be inside workspaceRoot: ${target.path}`);
+    }
+  }
+
+  return normalized;
+}
+
+function safeFileSegment(value) {
+  const safe = String(value || '').toLowerCase().replace(/[^a-z0-9._-]+/g, '-').replace(/^-+|-+$/g, '');
+  return safe || 'target';
+}
+
 function aggregateComparisonResults(results) {
   if (!results.length) return { maxMismatchPercent: 0, maxHeightDelta: 0 };
   return {
@@ -1858,6 +2036,15 @@ function findFiles(root, basename) {
 function resolvePath(value) {
   if (!value) throw new Error('Path is required.');
   return path.resolve(String(value));
+}
+
+function resolveWorkspacePath(workspaceRoot, value) {
+  if (!value) throw new Error('Workspace-relative path is required.');
+  const resolved = path.resolve(workspaceRoot, String(value));
+  if (!isPathInside(workspaceRoot, resolved)) {
+    throw new Error(`Path must stay inside workspaceRoot: ${value}`);
+  }
+  return resolved;
 }
 
 function readIfExists(filePath) {

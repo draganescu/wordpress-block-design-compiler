@@ -51,11 +51,19 @@ Use `claude/CLAUDE.md` as the Claude project instruction file when running this 
 - `analyze_mockup`: extracts a content inventory, sections, forms, links, cards, headings, CSS custom properties, and selectors.
 - `scaffold_custom_block`: writes `block.json`, `index.js`, and `style.css` for a vanilla JavaScript static block.
 - `serialize_wordpress_blocks`: boots a jsdom environment, registers official core blocks with `@wordpress/block-library`, registers custom blocks from `wordpress/blocks/*/index.js`, serializes `wordpress/block-tree.json` with `@wordpress/blocks`, writes canonical block markup to `wordpress/content.html`, writes frontend preview HTML to `rendered/rendered-blocks.html`, writes a no-build editable block editor preview to `editor/block-editor.html`, and writes `reports/style-audit.json`. Preview CSS is concatenated from `wordpress/style.css` and `wordpress/blocks/*/style.css`; the tool returns that source list. `mockup/style.css` is not included unless `includeMockupCss: true` is explicitly passed for debugging. It rejects source trees that contain `htmlLines`, `innerHTML`, `innerContent`, `html`, `markup`, or `sourceHtml`; unregistered core block names; attributes absent from WordPress block metadata; or `core/group` tag names outside block-level layout containers.
+- `create_block_editor_preview`: writes or refreshes a reusable no-build block editor preview for any generated data-only block tree. Use it when iterating on `wordpress/block-tree.json`, loading alternate page trees, or inspecting multi-file generations without reserializing every file.
+- `screenshot_html`: captures screenshots for mockup, rendered, editor, or arbitrary workspace HTML files without running a pixel diff. Pass explicit `targets` for multi-page generations.
 - `compare_html`: captures mockup/rendered screenshots plus mockup/editor screenshots when `editor/block-editor.html` exists, generates diffs, and writes `reports/comparison.json` plus `reports/repair-tasks.md`.
 
 ## Workflow
 
 Ask the agent for a website that should become WordPress blocks. The `build-wordpress-block-site` skill drives the steps and the agent remains responsible for design, implementation, and repair judgment.
+
+For multi-file generations, keep each generated page/tree inspectable:
+
+- Put each block tree in a stable JSON file, for example `wordpress/pages/home.block-tree.json` and `wordpress/pages/shop.block-tree.json`.
+- Call `create_block_editor_preview` with the relevant `treePath` and `editorPath`, for example `editor/home.html` or `editor/shop.html`.
+- Call `screenshot_html` with explicit mockup/rendered/editor targets for the page being inspected.
 
 Default comparison thresholds:
 
