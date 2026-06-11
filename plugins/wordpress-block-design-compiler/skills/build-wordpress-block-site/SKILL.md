@@ -55,11 +55,12 @@ If the markup is provided, skip mockup generation. Use `import_provided_markup` 
 
 ## Block Planning
 
-Read `references/block-planning.md` before writing the plan.
+Read `references/block-planning.md` and `references/core-block-selection.md` before writing the plan.
 
 The plan must answer:
 
 - Which sections are core block assemblies.
+- Which specific core blocks are chosen and why they are a better fit than nearby alternatives.
 - Which sections require custom blocks and why.
 - Which styling belongs in block support attributes, block style variations/classes, custom block scoped CSS, or page CSS.
 - Which content remains inline editable.
