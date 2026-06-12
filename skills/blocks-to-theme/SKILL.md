@@ -1,0 +1,53 @@
+---
+name: blocks-to-theme
+description: Use when a user asks to turn the output of an html-to-blocks run (single or multi page) into an installable WordPress block theme. Extracts theme.json from style evidence, infers template parts from cross-page repetition (no header/footer assumptions), plans templates with index plus generic archive/single/404 defaults, bundles fonts and media, generates a blocks plugin and a content import/remove plugin, and verifies the theme in WordPress Playground against the mockups.
+---
+
+# Blocks To Theme
+
+Run this skill on a COMPLETED html-to-blocks workspace (its comparison gates
+passed). The tools gather evidence and verify; you make the design decisions.
+
+## Required Workflow
+
+1. Run `analyze_theme_evidence`; read `reports/theme-evidence.json`.
+2. Run `infer_template_parts`; read `reports/template-parts.json`.
+3. Read `references/theme-json-mapping.md`, `references/template-part-inference.md`,
+   and `references/template-planning.md`. Write `plan/theme-plan.md` containing:
+   the token map (value → preset slug), the lift ledger, the parts decision for
+   every evidence group (unify / variant parts / leave in content, with the cited
+   group), the template plan, the page manifest (slugs, titles, front page), and
+   the media map.
+4. Run `fetch_theme_fonts` (read `references/fonts-and-media.md` first).
+5. Run `scaffold_block_theme` with the plan's decisions as data.
+6. Run `validate_block_theme`; fix and re-scaffold until `errors` is empty.
+7. Run `playground_render` (read `references/playground-gate.md` first); repair
+   until every page passes both viewports. Expect block-library and global-styles
+   CSS interference the preview never had — fix it in theme.json or theme
+   style.css, never by editing content payloads to dodge the diff.
+8. Final response: quote `reports/theme-validation.json` (`passed`) and
+   `reports/theme-comparison.json` aggregates.
+
+## Hard Gates
+
+### Evidence Gate
+No template part without a cited occurrence group from
+`reports/template-parts.json`. The standing template set is `index.html` plus
+the generic defaults `archive.html`, `single.html`, `404.html` (no evidence
+needed — composed from inferred chrome + global styles). Any template beyond
+that set needs a cited difference in chrome variants or the front-page
+designation. Single-page runs normally produce zero parts.
+
+### Lift-First Gate
+Every rule remaining in theme `style.css` or any `styles.blocks[...].css`
+carries a reason category in the plan's lift ledger: `media-query`, `pseudo`,
+`position`, `blend`, `grid`, or `interaction`. A rule with no category must be
+lifted into theme.json (presets, root styles, elements, block styles). Do not
+solve fidelity by dumping the workspace stylesheet into the theme.
+
+### Completion Gate
+The run is complete only when `validate_block_theme` reports zero errors AND
+`reports/theme-comparison.json` shows every page within thresholds
+(`maxMismatchPercent <= 1`, `maxHeightDelta <= 8`) at both viewports. Quote
+both in the final response. Otherwise keep repairing or report the run blocked
+with the metrics and the blocking cause.

@@ -1,21 +1,22 @@
 {
   "name": "html-to-blocks",
   "version": "0.1.0",
-  "description": "Agent workflow and MCP tools for transforming designed or provided HTML/CSS/JS into editable WordPress blocks.",
+  "description": "Agent workflow and MCP tools for transforming designed or provided HTML/CSS/JS into editable WordPress blocks, then extracting an installable WordPress block theme from the result.",
   "author": {
     "name": "Andrei Draganescu"
   },
   "skills": "./skills/",
   "interface": {
     "displayName": "HTML to WordPress Blocks",
-    "shortDescription": "Transform designed HTML into editable WordPress blocks.",
-    "longDescription": "A staged html-to-blocks workflow for importing or generating high-quality HTML/CSS/JS mockups, planning core/custom WordPress blocks, generating vanilla JS custom blocks only when needed, assembling data-only block trees, and iterating with rendered/editor screenshot diffs until visual fidelity is high.",
+    "shortDescription": "Transform designed HTML into editable WordPress blocks and an installable block theme.",
+    "longDescription": "A staged html-to-blocks workflow for importing or generating high-quality HTML/CSS/JS mockups, planning core/custom WordPress blocks, generating vanilla JS custom blocks only when needed, assembling data-only block trees, and iterating with rendered/editor screenshot diffs until visual fidelity is high. A second skill, blocks-to-theme, turns a completed run into an installable WordPress block theme: theme.json extracted from style evidence, template parts inferred from cross-page repetition, bundled fonts and media, a blocks plugin and a content import/remove plugin, verified in WordPress Playground against the mockups.",
     "developerName": "Andrei Draganescu",
     "category": "Developer",
     "capabilities": [
       "HTML to WordPress block conversion",
       "Core-first block planning",
       "Rendered and editor visual diff loops",
+      "Block theme extraction with Playground verification",
       "MCP tools"
     ],
     "defaultPrompt": "Transform this designed or provided HTML into editable WordPress blocks with the html-to-blocks workflow."

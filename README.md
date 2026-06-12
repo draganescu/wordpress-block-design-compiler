@@ -8,6 +8,8 @@ The workflow is intentionally staged. The HTML mockup stays the visual source of
 
 - `skills/html-to-blocks/SKILL.md` - the orchestrator skill an agent should follow.
 - `skills/html-to-blocks/references/` - design, planning, core-block, custom-block, and repair-loop guidance.
+- `skills/blocks-to-theme/SKILL.md` - the stage-2 skill that turns a completed run into an installable block theme.
+- `skills/blocks-to-theme/references/` - theme.json mapping, part inference, template planning, fonts/media, and Playground-gate guidance.
 - `tools/mcp-server.mjs` - deterministic workspace, analysis, serialization, editor preview, screenshot, and comparison tools.
 - `.codex-plugin/plugin.json` - Codex plugin manifest.
 - `.mcp.json` - MCP server config for agents that can load MCP servers.
@@ -51,6 +53,30 @@ Use WordPress core blocks and design supports before custom blocks:
 
 Custom block `edit()` output should visually mirror `save()` and use inline `RichText` for visible copy, with InspectorControls or BlockControls for non-inline settings.
 
+## Stage 2: blocks-to-theme
+
+Once an html-to-blocks run has passed its comparison gates, the `blocks-to-theme` skill (`skills/blocks-to-theme/SKILL.md`) extracts an installable WordPress block theme from the workspace: theme.json built from style evidence (presets first, residual CSS only with a documented reason), template parts inferred from cross-page repetition instead of header/footer assumptions, an `index` template plus generic `archive`/`single`/`404` defaults, bundled fonts and media with zero remote URLs, a companion blocks plugin, and a content plugin that imports (and can remove) the generated pages. The theme is verified statically and then booted in WordPress Playground and screenshot-diffed against the original mockups.
+
+Stage-2 tools:
+
+- `analyze_theme_evidence`
+- `infer_template_parts`
+- `fetch_theme_fonts`
+- `scaffold_block_theme`
+- `validate_block_theme`
+- `playground_render`
+
+Workflow, compressed (the skill and its `references/` docs are the contract):
+
+1. Run `analyze_theme_evidence`; read `reports/theme-evidence.json`.
+2. Run `infer_template_parts`; read `reports/template-parts.json`.
+3. Write `plan/theme-plan.md`: token map, lift ledger, a decision for every part-evidence group, template plan, page manifest, media map.
+4. Run `fetch_theme_fonts` to bundle Google Fonts locally as theme.json fontFace entries.
+5. Run `scaffold_block_theme` with the plan's decisions as data.
+6. Run `validate_block_theme`; fix and re-scaffold until `errors` is empty.
+7. Run `playground_render`; repair (theme.json or theme style.css, never the content payloads) until every page passes both viewports.
+8. Quote `reports/theme-validation.json` and the `reports/theme-comparison.json` aggregates in the final response.
+
 ## MCP Tools
 
 The server exposes these tools:
@@ -64,6 +90,12 @@ The server exposes these tools:
 - `screenshot_html`
 - `compare_html`
 - `measure_layout`
+- `analyze_theme_evidence`
+- `infer_template_parts`
+- `fetch_theme_fonts`
+- `scaffold_block_theme`
+- `validate_block_theme`
+- `playground_render`
 
 Run the syntax check with:
 
@@ -79,7 +111,7 @@ Use the repository as a Codex plugin. The manifest is at:
 .codex-plugin/plugin.json
 ```
 
-The skill name is `html-to-blocks`.
+The skill names are `html-to-blocks` and `blocks-to-theme`.
 
 ## Claude / MCP
 
