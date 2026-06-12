@@ -1,7 +1,8 @@
 # blocks-to-theme — Design
 
 Date: 2026-06-12
-Status: approved design, pre-implementation
+Status: implemented (acceptance: bucharest-feline-show — validation clean;
+Playground gate home 0.72%/0px, judges 0.26%/0px, contact 0.02%/0px)
 Repo: wordpress-block-design-compiler
 
 ## Purpose
