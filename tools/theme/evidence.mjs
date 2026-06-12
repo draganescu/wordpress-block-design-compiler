@@ -12,20 +12,31 @@ export function parseCss(css) {
 
     function walk(media) {
         while (i < src.length) {
+            while (i < src.length && /\s/.test(src[i])) i += 1;
+            if (i >= src.length) return;
+            if (src[i] === '}') { // closing of @media (stray "}" at top level is skipped)
+                i += 1;
+                if (media !== null) return;
+                continue;
+            }
             const open = src.indexOf('{', i);
             if (open === -1) { i = src.length; return; }
+            const semi = src.indexOf(';', i);
+            if (semi !== -1 && semi < open) { // blockless at-statement: @import, @charset, @layer a, b;
+                i = semi + 1;
+                continue;
+            }
             const head = src.slice(i, open).trim();
             if (head.startsWith('@media')) {
                 i = open + 1;
                 walk(head.replace(/^@media/, '').trim());
                 continue;
             }
-            if (head.startsWith('@')) { // @import, @keyframes, @font-face: skip block (keyframes nest)
+            if (head.startsWith('@')) { // @keyframes, @font-face, @supports: skip block (keyframes nest)
                 i = skipBlock(open);
                 if (head.startsWith('@keyframes')) out.push({ selector: head, media, declarations: [], atRule: 'keyframes' });
                 continue;
             }
-            if (head === '' && src[i] === '}') { i += 1; return; } // closing of @media
             const close = src.indexOf('}', open);
             const body = src.slice(open + 1, close);
             out.push({
@@ -34,7 +45,6 @@ export function parseCss(css) {
                     .map((d) => { const k = d.indexOf(':'); return [d.slice(0, k).trim(), d.slice(k + 1).trim()]; }),
             });
             i = close + 1;
-            while (src[i] === '}' && media !== null) { i += 1; return; }
         }
     }
     function skipBlock(open) {

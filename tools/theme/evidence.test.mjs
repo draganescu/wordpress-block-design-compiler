@@ -13,6 +13,27 @@ test('parseCss flattens rules and tracks media context', () => {
     assert.equal(rules[2].media, '(max-width:600px)');
 });
 
+test('parseCss exits media context across whitespace and consecutive blocks', () => {
+    const rules = parseCss('@media (max-width:600px) {\n  .a { color: red; }\n}\n@media (min-width:900px) {\n  .b { color: blue; }\n}\n.c { color: green; }');
+    assert.deepEqual(rules.map((r) => [r.selector, r.media]), [
+        ['.a', '(max-width:600px)'],
+        ['.b', '(min-width:900px)'],
+        ['.c', null],
+    ]);
+    assert.deepEqual(rules[2].declarations, [['color', 'green']]);
+
+    const spaced = parseCss('@media x{.a{color:red} }.c{color:green}');
+    assert.deepEqual(spaced.map((r) => [r.selector, r.media]), [['.a', 'x'], ['.c', null]]);
+});
+
+test('parseCss skips blockless at-statements without swallowing the next rule', () => {
+    const rules = parseCss('@import url("https://fonts.googleapis.com/css2?family=Inter");\n.a{color:red}\n.b{color:blue}');
+    assert.deepEqual(rules.map((r) => r.selector), ['.a', '.b']);
+
+    const layered = parseCss('@charset "utf-8";\n@layer reset, base;\n:root{--a:#fff}');
+    assert.deepEqual(layered, [{ selector: ':root', media: null, declarations: [['--a', '#fff']] }]);
+});
+
 test('classifyRule buckets by lift-blocking feature', () => {
     assert.deepEqual(classifyRule({ selector: '.x::before', media: null, declarations: [['content', '"x"']] }), ['pseudo']);
     assert.deepEqual(classifyRule({ selector: '.x', media: '(max-width:600px)', declarations: [['color', 'red']] }), ['media-query']);

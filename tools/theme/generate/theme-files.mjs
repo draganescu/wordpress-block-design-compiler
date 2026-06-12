@@ -32,6 +32,12 @@ add_action('wp_enqueue_scripts', function () {
     wp_enqueue_style('${fn}-style', get_stylesheet_uri(), array(), wp_get_theme()->get('Version'));
 });
 
+// Templates and parts ship {{THEME_URI}} placeholders for bundled assets;
+// resolve them to the absolute theme URL when blocks render.
+add_filter('render_block', function ($content) {
+    return str_replace('{{THEME_URI}}', get_stylesheet_directory_uri(), $content);
+});
+
 add_action('after_setup_theme', function () {
     add_editor_style('style.css');
 });

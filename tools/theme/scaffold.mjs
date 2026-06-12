@@ -29,8 +29,11 @@ export function scaffoldBlockTheme(args) {
         if (!tree) throw new Error(`Part ${part.slug}: unknown source page ${part.source.page}`);
         const block = tree.blocks[part.source.index];
         if (!block) throw new Error(`Part ${part.slug}: no block at index ${part.source.index} on ${part.source.page}`);
+        // Parts keep {{THEME_URI}} placeholders: relative URLs would resolve
+        // against the page URL, not the theme dir. functions.php replaces the
+        // placeholder with get_stylesheet_directory_uri() at render time.
         const markup = serializeBlocks(transformTree([block]), {});
-        writeFile(path.join(themeDir, `parts/${part.slug}.html`), themeAssetUrls(markup));
+        writeFile(path.join(themeDir, `parts/${part.slug}.html`), markup);
         files.push(`parts/${part.slug}.html`);
     }
 
@@ -105,10 +108,4 @@ export function deepMapStrings(value, fn) {
     if (Array.isArray(value)) return value.map((v) => deepMapStrings(v, fn));
     if (value && typeof value === 'object') return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, deepMapStrings(v, fn)]));
     return value;
-}
-
-function themeAssetUrls(markup) {
-    // parts/templates live in the theme: {{THEME_URI}} placeholders are not
-    // resolvable there, so reference assets relatively from the theme root.
-    return markup.split('{{THEME_URI}}/').join('');
 }

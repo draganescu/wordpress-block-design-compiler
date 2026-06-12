@@ -50,8 +50,10 @@ remote-URL validation. Report the run blocked with the fetch error instead.
 4. **Theme CSS** cannot use the placeholder (nothing resolves it in a static
    stylesheet), so the scaffold rewrites CSS media references to RELATIVE
    paths (`../assets/...`-style, relative to the stylesheet location).
-5. **Templates and parts** likewise get relative references — the scaffold
-   strips the placeholder for files living inside the theme.
+5. **Templates and parts** keep the `{{THEME_URI}}` placeholder too (relative
+   URLs would resolve against the page URL, not the theme directory); the
+   generated functions.php registers a `render_block` filter that replaces it
+   with `get_stylesheet_directory_uri()` at render time.
 
 ## The Validator Enforces Zero Remote URLs
 

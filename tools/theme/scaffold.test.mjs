@@ -27,3 +27,30 @@ test('scaffoldBlockTheme writes a complete theme + plugins from the mini fixture
     assert.ok(result.files.length >= 9); // 2 parts + 4 templates + theme.json/style.css/functions.php (empty mediaMap)
     cleanupMini(MINI);
 });
+
+test('scaffoldBlockTheme keeps {{THEME_URI}} placeholders in part markup', () => {
+    // Relative asset URLs in parts resolve against the page URL (/about/assets/...)
+    // instead of the theme dir, so the placeholder must survive into the part
+    // and functions.php must resolve it at render time.
+    const ws = path.join(path.dirname(fileURLToPath(import.meta.url)), 'fixtures/mini-media');
+    fs.rmSync(ws, { recursive: true, force: true });
+    fs.cpSync(path.join(MINI, 'wordpress'), path.join(ws, 'wordpress'), { recursive: true });
+    const treePath = path.join(ws, 'wordpress/pages/home.block-tree.json');
+    const home = JSON.parse(fs.readFileSync(treePath, 'utf8'));
+    home.blocks[0].innerBlocks.push({ blockName: 'core/image', attrs: { url: 'mockup/assets/logo.png', alt: 'Logo' }, innerBlocks: [] });
+    fs.writeFileSync(treePath, JSON.stringify(home, null, 4));
+    fs.mkdirSync(path.join(ws, 'mockup/assets'), { recursive: true });
+    fs.writeFileSync(path.join(ws, 'mockup/assets/logo.png'), 'png-bytes');
+
+    const args = miniScaffoldArgs(ws);
+    args.mediaMap = { 'mockup/assets/logo.png': 'assets/media/logo.png' };
+    scaffoldBlockTheme(args);
+
+    const part = fs.readFileSync(path.join(ws, 'theme/mini/parts/topbar.html'), 'utf8');
+    assert.match(part, /src="\{\{THEME_URI\}\}\/assets\/media\/logo\.png"/);
+    assert.ok(fs.existsSync(path.join(ws, 'theme/mini/assets/media/logo.png')));
+    const php = fs.readFileSync(path.join(ws, 'theme/mini/functions.php'), 'utf8');
+    assert.match(php, /render_block/);
+    assert.match(php, /str_replace\('\{\{THEME_URI\}\}', get_stylesheet_directory_uri\(\)/);
+    fs.rmSync(ws, { recursive: true, force: true });
+});

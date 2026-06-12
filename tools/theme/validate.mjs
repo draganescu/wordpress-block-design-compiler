@@ -2,6 +2,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { createRequire } from 'node:module';
+import { fileURLToPath } from 'node:url';
 import { resolvePath, readJson, readIfExists, writeJson } from '../lib/workspace.mjs';
 import { ensureBlocksRegistered, loadWordPressBlocks } from '../lib/wp-serialize.mjs';
 
@@ -30,7 +31,9 @@ export function validateBlockTheme(args) {
         must(themeJson.version === 3, `theme.json version must be 3, got ${themeJson.version}`);
         const Ajv = require('ajv');
         const ajv = new Ajv({ strict: false, allErrors: true });
-        const schema = readJson(path.join(path.dirname(new URL(import.meta.url).pathname), 'theme-json-schema.json'));
+        // fileURLToPath decodes percent-encoding (URL.pathname keeps "%20" for
+        // spaces, which breaks checkouts living under paths with spaces).
+        const schema = readJson(fileURLToPath(new URL('./theme-json-schema.json', import.meta.url)));
         delete schema.$schema; // ajv8 rejects draft-04 marker; structure still validates
         if (!ajv.validate(schema, themeJson)) {
             for (const e of ajv.errors.slice(0, 20)) errors.push(`theme.json schema: ${e.instancePath} ${e.message}`);
@@ -72,10 +75,13 @@ export function validateBlockTheme(args) {
     }
     for (const file of fs.existsSync(path.join(themeDir, 'templates')) ? fs.readdirSync(path.join(themeDir, 'templates')) : []) {
         const text = readIfExists(path.join(themeDir, 'templates', file));
-        for (const m of text.matchAll(/wp:template-part\s+({[^}]*})/g)) {
-            const slugRef = JSON.parse(m[1]).slug;
-            must(partFiles.includes(slugRef), `templates/${file}: unresolved template-part ref ${slugRef}`);
-        }
+        // The grammar parser handles nested attr objects; a regex over the
+        // comment would truncate at the first "}" inside style attrs.
+        walkParsed(parseGrammar(text), (b) => {
+            if (b.blockName !== 'core/template-part') return;
+            const slugRef = b.attrs?.slug;
+            must(slugRef !== undefined && partFiles.includes(slugRef), `templates/${file}: unresolved template-part ref ${slugRef}`);
+        });
     }
 
     // fonts + no remote urls
@@ -98,8 +104,9 @@ export function validateBlockTheme(args) {
     if (fs.existsSync(contentDir)) {
         const manifest = readJson(path.join(contentDir, 'manifest.json'));
         for (const page of manifest.pages) {
-            const payload = readIfExists(path.join(contentDir, `${page.slug}.html`));
-            must(payload !== null, `content payload missing for ${page.slug}`);
+            const payloadPath = path.join(contentDir, `${page.slug}.html`);
+            must(fs.existsSync(payloadPath), `content payload missing for ${page.slug}`);
+            const payload = readIfExists(payloadPath);
             if (payload) {
                 must(!/href="[^"]*\.html/.test(payload), `content/${page.slug}.html: internal .html link survived permalink rewrite`);
                 const remotes = (payload.match(/https?:\/\/[^"')\s]+/g) || []);

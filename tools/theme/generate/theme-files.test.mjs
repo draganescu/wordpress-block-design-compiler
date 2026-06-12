@@ -20,6 +20,12 @@ test('functionsPhp enqueues style.css, editor style, and warns on missing blocks
     assert.ok(!bare.includes('WP_Block_Type_Registry'));
 });
 
+test('functionsPhp resolves {{THEME_URI}} placeholders at render time', () => {
+    const php = functionsPhp({ slug: 'mini', customBlocks: [] });
+    assert.match(php, /add_filter\('render_block'/);
+    assert.match(php, /str_replace\('\{\{THEME_URI\}\}', get_stylesheet_directory_uri\(\), \$content\)/);
+});
+
 test('buildThemeJson merges presets, fontFace, custom and templateParts', () => {
     const json = buildThemeJson({
         settings: { color: { palette: [{ slug: 'brand', color: '#112233', name: 'Brand' }] }, custom: { pad: 'clamp(10px,2vh,20px)' } },
