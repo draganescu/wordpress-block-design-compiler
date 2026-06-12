@@ -12,6 +12,12 @@ import {
     editorComparisonCss, motionFreezeCss, transientOverlayCaptureCss, comparePngs,
 } from './lib/capture.mjs';
 import { serializeBlockTreeWithWordPress, stripBlockComments } from './lib/wp-serialize.mjs';
+import { analyzeThemeEvidence } from './theme/evidence.mjs';
+import { inferTemplateParts } from './theme/parts.mjs';
+import { fetchThemeFonts } from './theme/fonts.mjs';
+import { scaffoldBlockTheme } from './theme/scaffold.mjs';
+import { validateBlockTheme } from './theme/validate.mjs';
+import { playgroundRender } from './theme/playground.mjs';
 
 const TOOLS = [
   {
@@ -231,6 +237,46 @@ const TOOLS = [
       },
     },
   },
+  {
+    name: 'analyze_theme_evidence',
+    description: 'Scan all page block trees and workspace CSS into a style-evidence report (recurring colors/fonts/spacing with occurrence counts, custom properties, support usage, lift buckets per CSS rule). Facts only — the agent decides what lifts into theme.json.',
+    inputSchema: { type: 'object', additionalProperties: false, required: ['workspaceRoot'], properties: { workspaceRoot: { type: 'string' } } },
+  },
+  {
+    name: 'infer_template_parts',
+    description: 'Group top-level subtrees across pages by exact and structural hashes into template-part candidates with occurrence, position, tag evidence and per-page variance tables. No header/footer assumptions — evidence only.',
+    inputSchema: { type: 'object', additionalProperties: false, required: ['workspaceRoot'], properties: { workspaceRoot: { type: 'string' } } },
+  },
+  {
+    name: 'fetch_theme_fonts',
+    description: 'Resolve the mockup CSS Google Fonts @import to local woff2 files under the theme assets and return ready theme.json fontFace entries. Fails explicitly offline.',
+    inputSchema: { type: 'object', additionalProperties: false, required: ['workspaceRoot', 'slug'], properties: { workspaceRoot: { type: 'string' }, slug: { type: 'string' }, importUrl: { type: 'string' } } },
+  },
+  {
+    name: 'scaffold_block_theme',
+    description: 'Write the block theme (style.css, theme.json, templates incl. default archive/single/404, parts, functions.php, assets), the blocks plugin, and the content plugin payload from agent-authored decisions. Owns serialization and the mechanical rewrites (preset refs, --wp--custom-- renames, permalinks, media placeholders).',
+    inputSchema: { type: 'object', additionalProperties: false,
+        required: ['workspaceRoot', 'slug', 'name', 'tokenMap', 'themeSettings', 'themeStyles', 'parts', 'templates', 'pages'],
+        properties: {
+            workspaceRoot: { type: 'string' }, slug: { type: 'string' }, name: { type: 'string' }, description: { type: 'string' },
+            tokenMap: { type: 'object' }, themeSettings: { type: 'object' }, themeStyles: { type: 'object' },
+            fontFamilies: { type: 'array' }, customCss: { type: 'string' },
+            parts: { type: 'array' },
+            templates: { type: 'object' },
+            pages: { type: 'array', description: 'Page manifest entries: { page, slug, title, front?, stripIndexes?, sourceFile? }. sourceFile is the original mockup filename (e.g. "Bucharest Feline Show.html"); it keys the permalink link map so cross-page <a href> rewrites resolve — required whenever the mockup filename differs from "<page>.html".' },
+            mediaMap: { type: 'object' },
+        } },
+  },
+  {
+    name: 'validate_block_theme',
+    description: 'Static gate: theme.json schema (vendored), template/part parse with all blocks registered, header/file/ref/fontFace/remote-url/payload checks. Writes reports/theme-validation.json.',
+    inputSchema: { type: 'object', additionalProperties: false, required: ['workspaceRoot', 'slug'], properties: { workspaceRoot: { type: 'string' }, slug: { type: 'string' } } },
+  },
+  {
+    name: 'playground_render',
+    description: 'Boot the theme + plugins in WordPress Playground, import the pages through the content plugin, screenshot every page logged-out at both viewports, and diff against the mockups. Writes reports/theme-comparison.json with the standard thresholds.',
+    inputSchema: { type: 'object', additionalProperties: false, required: ['workspaceRoot', 'slug'], properties: { workspaceRoot: { type: 'string' }, slug: { type: 'string' }, port: { type: 'number' }, maxMismatchPercent: { type: 'number' }, maxHeightDelta: { type: 'number' } } },
+  },
 ];
 
 const handlers = {
@@ -243,6 +289,19 @@ const handlers = {
   screenshot_html: screenshotHtml,
   compare_html: compareHtml,
   measure_layout: measureLayout,
+  analyze_theme_evidence: (args) => analyzeThemeEvidence(args),
+  infer_template_parts: (args) => inferTemplateParts(args),
+  fetch_theme_fonts: (args) => {
+      const workspaceRoot = resolvePath(args.workspaceRoot);
+      return fetchThemeFonts({
+          ...args,
+          sourceCss: readIfExists(path.join(workspaceRoot, 'mockup/style.css')) || readIfExists(path.join(workspaceRoot, 'wordpress/style.css')),
+          targetDir: path.join(workspaceRoot, 'theme', args.slug, 'assets/fonts'),
+      });
+  },
+  scaffold_block_theme: (args) => scaffoldBlockTheme(args),
+  validate_block_theme: (args) => validateBlockTheme(args),
+  playground_render: (args) => playgroundRender(args),
 };
 
 let buffer = Buffer.alloc(0);
