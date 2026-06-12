@@ -1,0 +1,8 @@
+:root { --brand: #112233; --paper: #FFEEDD; --pad: clamp(10px,2vh,20px); }
+body { background: var(--paper); color: var(--brand); font-family: Georgia, serif; }
+.topbar { position: fixed; top: 0; }
+.topbar__brand b { color: var(--brand); }
+.intro h1 { font-size: clamp(40px,6vw,90px); }
+.intro:hover { background: #000; }
+.story::before { content: "—"; }
+@media (max-width: 600px) { .intro h1 { font-size: 32px; } }
