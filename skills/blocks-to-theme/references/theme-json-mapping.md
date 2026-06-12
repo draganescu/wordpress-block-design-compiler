@@ -42,11 +42,18 @@ the plan's lift ledger tags it with at least one of:
   arbitrary grids).
 - `interaction` — `:hover`/`:focus`/`:active`/`:checked` states, transitions,
   animations, `@keyframes`.
+- `selector` — the rule targets an arbitrary class composition
+  (`.hero__copy`, `.tier li`) that theme.json structurally cannot address:
+  global styles only reach the root, elements, and registered block types.
+  This category is judged, not tool-assigned: it never applies to rules on
+  `body`, bare element selectors, or `.wp-block-*` roots — those always lift
+  to root styles, `styles.elements`, or `styles.blocks`.
 
-These are exactly the buckets `analyze_theme_evidence` assigns to each rule in
-`cssRules[].buckets`. A rule the report shows with an empty `buckets` array is
-liftable by definition: lift it. Do not solve fidelity by dumping the workspace
-stylesheet into the theme.
+The first six are exactly the buckets `analyze_theme_evidence` assigns to each
+rule in `cssRules[].buckets`. A rule the report shows with an empty `buckets`
+array is either liftable (lift it) or a `selector` case (justify it in the
+ledger). Do not solve fidelity by dumping the workspace stylesheet into the
+theme.
 
 ## The Two Mechanical Rewrites
 

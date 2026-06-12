@@ -99,7 +99,9 @@ reports/theme-comparison.json  Playground gate result (per page, existing aggreg
   Single-page runs normally produce zero parts.
 - **Lift-First Gate**: every rule remaining in `style.css` or block `css`
   carries a reason category: `media-query` | `pseudo` | `position` | `blend`
-  | `grid` | `interaction`. A rule with no category must lift to theme.json.
+  | `grid` | `interaction` | `selector` (rule targets an arbitrary class
+  composition that theme.json cannot address; never valid for body, bare
+  elements, or block roots). A rule with no category must lift to theme.json.
   The ledger lives in `plan/theme-plan.md`.
 - **Completion Gate**: `validate_block_theme` clean AND
   `reports/theme-comparison.json` aggregates within thresholds for every

@@ -41,9 +41,13 @@ designation. Single-page runs normally produce zero parts.
 ### Lift-First Gate
 Every rule remaining in theme `style.css` or any `styles.blocks[...].css`
 carries a reason category in the plan's lift ledger: `media-query`, `pseudo`,
-`position`, `blend`, `grid`, or `interaction`. A rule with no category must be
-lifted into theme.json (presets, root styles, elements, block styles). Do not
-solve fidelity by dumping the workspace stylesheet into the theme.
+`position`, `blend`, `grid`, `interaction`, or `selector`. A rule with no
+category must be lifted into theme.json (presets, root styles, elements, block
+styles). `selector` is the narrow escape for rules theme.json structurally
+cannot target (arbitrary class compositions like `.hero__copy`); it never
+applies to rules on `body`, bare elements, or `.wp-block-*` block roots —
+those always lift. Do not solve fidelity by dumping the workspace stylesheet
+into the theme.
 
 ### Completion Gate
 The run is complete only when `validate_block_theme` reports zero errors AND
