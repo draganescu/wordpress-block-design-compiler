@@ -4,9 +4,13 @@ import http from 'node:http';
 import path from 'node:path';
 import vm from 'node:vm';
 import { createRequire } from 'node:module';
-import { fileURLToPath, pathToFileURL } from 'node:url';
+import { pathToFileURL } from 'node:url';
+import {
+    PLUGIN_ROOT, isPathInside, resolvePath, resolveWorkspacePath, readIfExists, readJson,
+    readJsonIfExists, writeFile, writeJson, firstMatch, cleanText, titleCase,
+    slug, camelName, escapeHtml, escapeAttr, relativeUrl, findFiles,
+} from './lib/workspace.mjs';
 
-const PLUGIN_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const require = createRequire(import.meta.url);
 const DEFAULT_VIEWPORTS = [
   { name: 'desktop', width: 1440, height: 1200 },
@@ -177,7 +181,7 @@ const TOOLS = [
   },
   {
     name: 'compare_html',
-    description: 'Capture mockup/rendered/editor screenshots, generate pixel diffs, and write reports/comparison.json plus reports/repair-tasks.md.',
+    description: 'Capture mockup/rendered/editor screenshots, generate pixel diffs, and write a per-page comparison report plus repair tasks. Reports and screenshots are namespaced by the mockup filename, so multi-page comparisons never overwrite each other.',
     inputSchema: {
       type: 'object',
       additionalProperties: false,
@@ -187,6 +191,8 @@ const TOOLS = [
         mockupPath: { type: 'string', default: 'mockup/index.html' },
         renderedPath: { type: 'string', default: 'rendered/rendered-blocks.html' },
         editorPath: { type: 'string', default: 'editor/block-editor.html' },
+        reportPath: { type: 'string', description: 'Override the comparison JSON path. Default: reports/comparison.json for index, reports/<page>.comparison.json otherwise.' },
+        tasksPath: { type: 'string', description: 'Override the repair-tasks markdown path. Default: reports/repair-tasks.md for index, reports/<page>.repair-tasks.md otherwise.' },
         compareEditor: { type: 'boolean', default: true },
         maxMismatchPercent: { type: 'number', default: 1 },
         maxHeightDelta: { type: 'number', default: 8 },
@@ -206,6 +212,34 @@ const TOOLS = [
       },
     },
   },
+  {
+    name: 'measure_layout',
+    description: 'Compare element geometry (offsetTop/height) between the mockup and a rendered or editor page, aligned by selector match order. Localizes vertical drift to specific sections far faster than reading pixel diffs — use it to find WHERE a height delta comes from, then drill with a narrower selector.',
+    inputSchema: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['workspaceRoot'],
+      properties: {
+        workspaceRoot: { type: 'string' },
+        mockupPath: { type: 'string', default: 'mockup/index.html' },
+        candidatePath: { type: 'string', default: 'rendered/rendered-blocks.html' },
+        candidateKind: { type: 'string', enum: ['html', 'editor'], default: 'html' },
+        selector: { type: 'string', description: 'CSS selector evaluated in both pages; matches are aligned by index. Default: main sections plus footer.' },
+        viewports: {
+          type: 'array',
+          items: {
+            type: 'object',
+            required: ['name', 'width', 'height'],
+            properties: {
+              name: { type: 'string' },
+              width: { type: 'number' },
+              height: { type: 'number' },
+            },
+          },
+        },
+      },
+    },
+  },
 ];
 
 const handlers = {
@@ -217,6 +251,7 @@ const handlers = {
   create_block_editor_preview: createBlockEditorPreview,
   screenshot_html: screenshotHtml,
   compare_html: compareHtml,
+  measure_layout: measureLayout,
 };
 
 let buffer = Buffer.alloc(0);
@@ -379,6 +414,8 @@ async function importProvidedMarkup(args) {
     .join('\n');
   writeFile(cssOutPath, cssBundle || '/* No local stylesheets discovered from provided markup. */\n');
 
+  const pages = discoverProvidedPages(sourceRoot, sourceHtmlPath, path.dirname(mockupPath), workspaceRoot);
+
   return {
     workspaceRoot,
     sourceHtmlPath,
@@ -387,8 +424,40 @@ async function importProvidedMarkup(args) {
     cssOutPath,
     copiedAssets: args.copyAssets !== false,
     stylesheets: stylesheetPaths.map((file) => path.relative(sourceRoot, file)),
-    next: 'Call analyze_mockup on the imported mockup, then plan and assemble the block tree without generating a replacement HTML mockup.',
+    pages,
+    next: pages.length > 1
+      ? 'Multi-page export detected. Call analyze_mockup per page (htmlPath), plan shared blocks once, then use the suggested per-page treePath/renderedPath/editorPath/reportPath when calling serialize_wordpress_blocks, create_block_editor_preview, compare_html, and measure_layout. Every page must pass comparison before the run is complete.'
+      : 'Call analyze_mockup on the imported mockup, then plan and assemble the block tree without generating a replacement HTML mockup.',
   };
+}
+
+function discoverProvidedPages(sourceRoot, primaryHtmlPath, mockupRoot, workspaceRoot) {
+  const htmlFiles = fs.readdirSync(sourceRoot, { withFileTypes: true })
+    .filter((entry) => entry.isFile() && entry.name.toLowerCase().endsWith('.html'))
+    .map((entry) => entry.name)
+    .sort((a, b) => {
+      if (path.join(sourceRoot, a) === primaryHtmlPath) return -1;
+      if (path.join(sourceRoot, b) === primaryHtmlPath) return 1;
+      return a.localeCompare(b);
+    });
+
+  return htmlFiles.map((name) => {
+    const pageSlug = slug(path.basename(name, path.extname(name))) || 'page';
+    return {
+      page: pageSlug,
+      sourceFile: name,
+      primary: path.join(sourceRoot, name) === primaryHtmlPath,
+      mockupPath: path.relative(workspaceRoot, path.join(mockupRoot, name)),
+      suggested: {
+        treePath: `wordpress/pages/${pageSlug}.block-tree.json`,
+        contentPath: `wordpress/pages/${pageSlug}.content.html`,
+        renderedPath: `rendered/${pageSlug}.html`,
+        editorPath: `editor/${pageSlug}.html`,
+        reportPath: `reports/${pageSlug}.comparison.json`,
+        tasksPath: `reports/${pageSlug}.repair-tasks.md`,
+      },
+    };
+  });
 }
 
 function copyProvidedSourceRoot(sourceRoot, mockupRoot) {
@@ -521,11 +590,10 @@ async function serializeWordPressBlocks(args) {
     ? serializeBlockTreeWithWordPress(tree, { workspaceRoot })
     : fs.readFileSync(contentPath, 'utf8');
   const cssSources = workspaceCssSources(workspaceRoot, args);
-  const previewCss = cssSources.map((source) => `/* ${source.relativePath} */\n${source.css}`).join('\n\n');
   const styleAudit = auditStyleUsage(tree, cssSources);
 
   if (treeExists) writeFile(contentPath, `${blockMarkup.trim()}\n`);
-  writeFile(outPath, fullHtml('Rendered WordPress Blocks', previewCss, stripBlockComments(blockMarkup)));
+  writeFile(outPath, renderedPreviewHtml('Rendered WordPress Blocks', path.dirname(outPath), cssSources, stripBlockComments(blockMarkup)));
   if (treeExists) writeFile(editorPath, editorPreviewHtml({ workspaceRoot, editorPath, treePath, cssSources }));
   writeJson(path.join(workspaceRoot, 'reports/style-audit.json'), styleAudit);
   return {
@@ -611,13 +679,67 @@ function editorPreviewHtml({ workspaceRoot, editorPath, treePath, cssSources }) 
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Editable WordPress Block Tree</title>
-    <link rel="stylesheet" href="https://s.w.org/wp-includes/css/dist/components/style.min.css">
-    <link rel="stylesheet" href="https://s.w.org/wp-includes/css/dist/block-editor/style.min.css">
-    <link rel="stylesheet" href="https://s.w.org/wp-includes/css/dist/block-editor/content.min.css">
-    <link rel="stylesheet" href="https://s.w.org/wp-includes/css/dist/block-editor/default-editor-styles.min.css">
-    <link rel="stylesheet" href="https://s.w.org/wp-includes/css/dist/block-library/style.min.css">
+    <style>
+      /*
+        WordPress editor chrome CSS is demoted into a cascade layer so the
+        unlayered workspace stylesheets linked below win by default cascade
+        rules at any specificity — the same relationship theme CSS has to
+        block-library CSS on a real site. default-editor-styles.min.css is
+        intentionally NOT loaded: it themes the canvas (line-height 1.8,
+        fallback fonts) and only creates parity drift against the mockup.
+      */
+      @layer wp-editor, wbdc-parity;
+      @import url("https://s.w.org/wp-includes/css/dist/components/style.min.css") layer(wp-editor);
+      @import url("https://s.w.org/wp-includes/css/dist/block-editor/style.min.css") layer(wp-editor);
+      @import url("https://s.w.org/wp-includes/css/dist/block-editor/content.min.css") layer(wp-editor);
+      @import url("https://s.w.org/wp-includes/css/dist/block-library/style.min.css") layer(wp-editor);
+    </style>
+    <style>
+      @layer wbdc-parity {
+        /*
+          Frontend-parity canvas defaults. These neutralize editor-only
+          deviations (block-gap margins, rich-text pre-wrap, editor
+          line-height) but live in a layer, so any unlayered workspace rule
+          — even a bare element selector — overrides them.
+        */
+        .block-editor-block-list__block {
+          margin-top: 0;
+          margin-bottom: 0;
+        }
+
+        .block-editor-block-list__block:not(button):not(input):not(textarea):not(select),
+        .block-editor-rich-text__editable:not(button):not(input):not(textarea):not(select) {
+          line-height: inherit;
+          white-space: inherit;
+        }
+
+        .block-editor-inner-blocks {
+          display: contents;
+        }
+
+        .is-root-container.block-editor-block-list__layout {
+          padding: 0;
+        }
+
+        .is-root-container > .block-editor-block-list__block {
+          max-width: none;
+        }
+
+        .block-editor-block-list__layout .block-editor-block-list__block::before {
+          outline-color: rgba(215, 255, 56, 0.65);
+        }
+
+        .components-placeholder,
+        .block-editor-block-variation-picker,
+        .block-editor-default-block-appender,
+        .block-editor-block-list__empty-block-inserter {
+          display: none !important;
+        }
+      }
+    </style>
     ${cssLinks}
     <style>
+      /* preview shell chrome — not part of the compared canvas */
       html,
       body {
         margin: 0;
@@ -654,34 +776,6 @@ function editorPreviewHtml({ workspaceRoot, editorPath, treePath, cssSources }) 
 
       .wbdc-editor-canvas {
         min-height: calc(100vh - 44px);
-      }
-
-      .block-editor-inner-blocks {
-        display: contents;
-      }
-
-      .is-root-container.block-editor-block-list__layout {
-        padding: 0;
-      }
-
-      .block-editor-block-list__block {
-        margin-top: 0;
-        margin-bottom: 0;
-      }
-
-      .is-root-container > .block-editor-block-list__block {
-        max-width: none;
-      }
-
-      .block-editor-block-list__layout .block-editor-block-list__block::before {
-        outline-color: rgba(215, 255, 56, 0.65);
-      }
-
-      .components-placeholder,
-      .block-editor-block-variation-picker,
-      .block-editor-default-block-appender,
-      .block-editor-block-list__empty-block-inserter {
-        display: none !important;
       }
 
       .wbdc-editor-error {
@@ -891,18 +985,6 @@ function wordpressBrowserScripts() {
     `${base}/patterns.min.js`,
     `${base}/block-library.min.js`,
   ];
-}
-
-function relativeUrl(fromDir, targetPath) {
-  const relative = path.relative(fromDir, targetPath).split(path.sep).join('/');
-  return relative.startsWith('.') ? relative : `./${relative}`;
-}
-
-function escapeAttr(value) {
-  return String(value)
-    .replace(/&/g, '&amp;')
-    .replace(/"/g, '&quot;')
-    .replace(/</g, '&lt;');
 }
 
 function stripBlockComments(markup) {
@@ -1325,15 +1407,27 @@ async function compareHtml(args) {
   const outDir = path.join(workspaceRoot, 'visual');
   fs.mkdirSync(outDir, { recursive: true });
   const viewports = Array.isArray(args.viewports) && args.viewports.length ? args.viewports : DEFAULT_VIEWPORTS;
+  // Per-page namespacing: comparisons of secondary pages must not overwrite
+  // the index page's reports/screenshots. "index" keeps the legacy names.
+  const pageSlug = pageSlugFor(mockupPath);
+  const prefix = pageSlug === 'index' ? '' : `${pageSlug}-`;
+  const reportPath = resolveWorkspacePath(
+    workspaceRoot,
+    args.reportPath || (pageSlug === 'index' ? 'reports/comparison.json' : `reports/${pageSlug}.comparison.json`),
+  );
+  const tasksPath = resolveWorkspacePath(
+    workspaceRoot,
+    args.tasksPath || (pageSlug === 'index' ? 'reports/repair-tasks.md' : `reports/${pageSlug}.repair-tasks.md`),
+  );
   const browser = await chromium.launch({ headless: true });
   const results = [];
   const server = shouldCompareEditor ? await startStaticServer(workspaceRoot) : null;
 
   try {
     for (const viewport of viewports) {
-      const mockupShot = path.join(outDir, `mockup-${viewport.name}.png`);
-      const renderedShot = path.join(outDir, `rendered-${viewport.name}.png`);
-      const diffShot = path.join(outDir, `diff-${viewport.name}.png`);
+      const mockupShot = path.join(outDir, `${prefix}mockup-${viewport.name}.png`);
+      const renderedShot = path.join(outDir, `${prefix}rendered-${viewport.name}.png`);
+      const diffShot = path.join(outDir, `${prefix}diff-${viewport.name}.png`);
       await capture(browser, mockupPath, mockupShot, viewport);
       await capture(browser, renderedPath, renderedShot, viewport);
       results.push(comparePngs({
@@ -1347,8 +1441,8 @@ async function compareHtml(args) {
       }));
 
       if (shouldCompareEditor) {
-        const editorShot = path.join(outDir, `editor-${viewport.name}.png`);
-        const editorDiffShot = path.join(outDir, `diff-editor-${viewport.name}.png`);
+        const editorShot = path.join(outDir, `${prefix}editor-${viewport.name}.png`);
+        const editorDiffShot = path.join(outDir, `${prefix}diff-editor-${viewport.name}.png`);
         await captureEditor(browser, server.urlFor(editorPath), editorShot, viewport);
         results.push(comparePngs({
           target: 'editor',
@@ -1378,6 +1472,7 @@ async function compareHtml(args) {
   };
   const tasks = comparisonTasks(results, thresholds);
   const report = {
+    page: pageSlug,
     mockupPath,
     renderedPath,
     editorPath: shouldCompareEditor ? editorPath : null,
@@ -1387,16 +1482,134 @@ async function compareHtml(args) {
     results,
     tasks,
   };
-  writeJson(path.join(workspaceRoot, 'reports/comparison.json'), report);
-  writeFile(path.join(workspaceRoot, 'reports/repair-tasks.md'), renderRepairTasks(tasks, report));
+  fs.mkdirSync(path.dirname(reportPath), { recursive: true });
+  writeJson(reportPath, report);
+  writeFile(tasksPath, renderRepairTasks(tasks, report));
 
   return {
-    reportPath: path.join(workspaceRoot, 'reports/comparison.json'),
-    tasksPath: path.join(workspaceRoot, 'reports/repair-tasks.md'),
+    page: pageSlug,
+    reportPath,
+    tasksPath,
     aggregate,
     passed: aggregate.maxMismatchPercent <= thresholds.maxMismatchPercent && aggregate.maxHeightDelta <= thresholds.maxHeightDelta,
     tasks,
   };
+}
+
+function pageSlugFor(mockupPath) {
+  return slug(path.basename(mockupPath, path.extname(mockupPath))) || 'index';
+}
+
+const DEFAULT_MEASURE_SELECTOR = 'main > section, main > div, main section, footer, .site-footer';
+
+async function measureLayout(args) {
+  const workspaceRoot = resolvePath(args.workspaceRoot);
+  let chromium;
+  try {
+    chromium = (await import('playwright')).chromium;
+  } catch (error) {
+    throw new Error(`measure_layout needs optional packages. Run npm install in ${PLUGIN_ROOT}. Missing dependency: ${error.message}`);
+  }
+
+  const mockupPath = resolveWorkspacePath(workspaceRoot, args.mockupPath || 'mockup/index.html');
+  const candidatePath = resolveWorkspacePath(workspaceRoot, args.candidatePath || 'rendered/rendered-blocks.html');
+  const candidateKind = args.candidateKind === 'editor' ? 'editor' : 'html';
+  const selector = args.selector || DEFAULT_MEASURE_SELECTOR;
+  const viewports = Array.isArray(args.viewports) && args.viewports.length ? args.viewports : DEFAULT_VIEWPORTS;
+  for (const file of [mockupPath, candidatePath]) {
+    if (!fs.existsSync(file)) throw new Error(`measure_layout target does not exist: ${file}`);
+  }
+
+  const browser = await chromium.launch({ headless: true });
+  const server = candidateKind === 'editor' ? await startStaticServer(workspaceRoot) : null;
+  const measurements = [];
+
+  try {
+    for (const viewport of viewports) {
+      const mockup = await measurePageGeometry(browser, { htmlPath: mockupPath, kind: 'html', viewport, selector });
+      const candidate = await measurePageGeometry(browser, {
+        htmlPath: candidatePath,
+        kind: candidateKind,
+        url: server ? server.urlFor(candidatePath) : null,
+        viewport,
+        selector,
+      });
+
+      const count = Math.max(mockup.elements.length, candidate.elements.length);
+      const rows = [];
+      for (let index = 0; index < count; index += 1) {
+        const a = mockup.elements[index] || null;
+        const b = candidate.elements[index] || null;
+        rows.push({
+          index,
+          key: (a || b).key,
+          mockup: a ? { top: a.top, height: a.height } : null,
+          candidate: b ? { top: b.top, height: b.height } : null,
+          deltaTop: a && b ? b.top - a.top : null,
+          deltaHeight: a && b ? b.height - a.height : null,
+          drifted: a && b ? Math.abs(b.top - a.top) > 2 || Math.abs(b.height - a.height) > 2 : true,
+          missingIn: a ? (b ? null : 'candidate') : 'mockup',
+        });
+      }
+
+      measurements.push({
+        viewport: viewport.name,
+        width: viewport.width,
+        bodyHeight: { mockup: mockup.bodyHeight, candidate: candidate.bodyHeight, delta: candidate.bodyHeight - mockup.bodyHeight },
+        driftedRows: rows.filter((row) => row.drifted).length,
+        rows,
+      });
+    }
+  } finally {
+    await browser.close();
+    if (server) await server.close();
+  }
+
+  return {
+    mockupPath,
+    candidatePath,
+    candidateKind,
+    selector,
+    measurements,
+    next: 'Rows with drifted=true localize the divergence. Re-run with a narrower selector (e.g. ".section-x > *") to drill into the drifted section, then fix the block tree or CSS rather than guessing from pixel diffs.',
+  };
+}
+
+async function measurePageGeometry(browser, { htmlPath, kind, url, viewport, selector }) {
+  const page = await browser.newPage({
+    viewport: { width: Number(viewport.width), height: Number(viewport.height) },
+    deviceScaleFactor: 1,
+  });
+  try {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    if (kind === 'editor') {
+      await page.goto(url, { waitUntil: 'networkidle', timeout: 60000 });
+      await page.waitForSelector('.block-editor-block-list__layout', { timeout: 60000 });
+      await page.addStyleTag({ content: editorComparisonCss() });
+    } else {
+      await page.goto(pathToFileURL(htmlPath).href, { waitUntil: 'networkidle' });
+      await page.addStyleTag({ content: `${motionFreezeCss()}\n${transientOverlayCaptureCss()}` });
+    }
+    await page.waitForTimeout(150);
+    return await page.evaluate((sel) => {
+      const seen = new Set();
+      const elements = [];
+      for (const node of document.querySelectorAll(sel)) {
+        if (seen.has(node)) continue;
+        seen.add(node);
+        const rect = node.getBoundingClientRect();
+        elements.push({
+          key: `${node.tagName.toLowerCase()}${node.className && typeof node.className === 'string' ? ` ${node.className.split(/\s+/).filter(Boolean).slice(0, 4).join('.')}` : ''}`.trim(),
+          top: Math.round(rect.top + window.scrollY),
+          height: Math.round(rect.height),
+        });
+        if (elements.length >= 400) break;
+      }
+      return { elements, bodyHeight: Math.round(document.body.scrollHeight) };
+    }, selector);
+  } finally {
+    await page.close();
+  }
 }
 
 async function screenshotHtml(args) {
@@ -1544,11 +1757,6 @@ async function startStaticServer(rootDir) {
   };
 }
 
-function isPathInside(parent, child) {
-  const relative = path.relative(parent, child);
-  return relative === '' || (relative && !relative.startsWith('..') && !path.isAbsolute(relative));
-}
-
 function mimeType(filePath) {
   const ext = path.extname(filePath).toLowerCase();
   return {
@@ -1610,15 +1818,15 @@ async function captureEditor(browser, editorUrl, screenshotPath, viewport) {
 }
 
 function editorComparisonCss() {
+  // Hide editor chrome and freeze motion for the screenshot. Block margins
+  // are deliberately NOT zeroed here: the preview's wbdc-parity layer already
+  // neutralizes editor block-gap margins, and the workspace CSS owns the
+  // document rhythm — zeroing with !important would erase that layout signal.
   return `
     ${motionFreezeCss()}
     ${transientOverlayCaptureCss()}
     .wbdc-editor-toolbar{display:none!important}
     .wbdc-editor-shell,.wbdc-editor-canvas,.is-root-container.block-editor-block-list__layout{min-height:0!important}
-    .block-editor-inner-blocks{display:contents!important}
-    .is-root-container.block-editor-block-list__layout{padding:0!important}
-    .block-editor-block-list__block{margin-top:0!important;margin-bottom:0!important}
-    .is-root-container > .block-editor-block-list__block{max-width:none!important}
     .editor-styles-wrapper{padding:0!important}
     .block-editor-block-list__block::before,
     .block-editor-block-list__block::after,
@@ -2159,96 +2367,31 @@ ${body}
 `;
 }
 
+function renderedPreviewHtml(title, outDir, cssSources, body) {
+  // CSS is linked (not inlined) so relative url() assets resolve from each
+  // stylesheet's own directory — identical to how the editor preview loads
+  // the same files. Inlining used to shift url() resolution to the rendered/
+  // directory, splitting asset paths between the two surfaces.
+  const cssLinks = cssSources
+    .map((source) => `<link rel="stylesheet" href="${escapeAttr(relativeUrl(outDir, source.path))}">`)
+    .join('\n    ');
+  return `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>${escapeHtml(title)}</title>
+    ${cssLinks}
+  </head>
+  <body>
+${body}
+  </body>
+</html>
+`;
+}
+
 function copyReference(name, target) {
   const source = path.join(PLUGIN_ROOT, 'skills/html-to-blocks/references', name);
   if (fs.existsSync(source)) writeFile(target, fs.readFileSync(source, 'utf8'));
 }
 
-function findFiles(root, basename) {
-  if (!fs.existsSync(root)) return [];
-  const found = [];
-  for (const entry of fs.readdirSync(root, { withFileTypes: true })) {
-    const filePath = path.join(root, entry.name);
-    if (entry.isDirectory()) found.push(...findFiles(filePath, basename));
-    else if (entry.name === basename) found.push(filePath);
-  }
-  return found;
-}
-
-function resolvePath(value) {
-  if (!value) throw new Error('Path is required.');
-  return path.resolve(String(value));
-}
-
-function resolveWorkspacePath(workspaceRoot, value) {
-  if (!value) throw new Error('Workspace-relative path is required.');
-  const resolved = path.resolve(workspaceRoot, String(value));
-  if (!isPathInside(workspaceRoot, resolved)) {
-    throw new Error(`Path must stay inside workspaceRoot: ${value}`);
-  }
-  return resolved;
-}
-
-function readIfExists(filePath) {
-  return fs.existsSync(filePath) ? fs.readFileSync(filePath, 'utf8') : '';
-}
-
-function readJson(filePath) {
-  return JSON.parse(fs.readFileSync(filePath, 'utf8'));
-}
-
-function readJsonIfExists(filePath) {
-  return fs.existsSync(filePath) ? readJson(filePath) : {};
-}
-
-function writeFile(filePath, content) {
-  fs.mkdirSync(path.dirname(filePath), { recursive: true });
-  fs.writeFileSync(filePath, content, 'utf8');
-}
-
-function writeJson(filePath, data) {
-  writeFile(filePath, `${JSON.stringify(data, null, 2)}\n`);
-}
-
-function firstMatch(value, pattern, group = 1) {
-  const match = String(value || '').match(pattern);
-  return match ? match[group] : '';
-}
-
-function cleanText(value) {
-  return String(value || '')
-    .replace(/<script[\s\S]*?<\/script>/gi, '')
-    .replace(/<style[\s\S]*?<\/style>/gi, '')
-    .replace(/<[^>]+>/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-
-function titleCase(value) {
-  return String(value || '')
-    .replace(/[-_]/g, ' ')
-    .replace(/([a-z])([A-Z])/g, '$1 $2')
-    .replace(/\b\w/g, (char) => char.toUpperCase());
-}
-
-function slug(value) {
-  return String(value || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-}
-
-function camelName(value) {
-  const raw = String(value || '').trim();
-  if (/^[A-Za-z_$][A-Za-z0-9_$]*$/.test(raw)) {
-    return raw.charAt(0).toLowerCase() + raw.slice(1);
-  }
-  const parts = slug(raw).split('-').filter(Boolean);
-  if (!parts.length) return 'field';
-  return parts[0] + parts.slice(1).map((part) => part.charAt(0).toUpperCase() + part.slice(1)).join('');
-}
-
-function escapeHtml(value) {
-  return String(value || '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
-}
