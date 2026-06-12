@@ -21,7 +21,7 @@ export function scaffoldBlockTheme(args) {
 
     const transformTree = (blocks) => blocks
         .map((b) => rewriteTreePresets(b, tokenMap))
-        .map((b) => deepMapStrings(b, (s) => rewriteMediaUrls(rewriteLinks(s, linkMap), mediaMap, '{{THEME_URI}}')));
+        .map((b) => deepMapStrings(b, (s) => rewriteCssVars(rewriteMediaUrls(rewriteLinks(s, linkMap), mediaMap, '{{THEME_URI}}'), tokenMap.custom)));
 
     // parts
     for (const part of args.parts) {
@@ -71,7 +71,11 @@ export function scaffoldBlockTheme(args) {
     writeJson(path.join(themeDir, 'theme.json'), themeJson);
     const css = rewriteMediaUrls(rewriteCssVars(args.customCss || '', tokenMap.custom), mediaMap, '..');
     writeFile(path.join(themeDir, 'style.css'), styleCss({ name, slug, description: args.description }, css));
-    const blocksResult = writeBlocksPlugin({ workspaceRoot, slug, themeName: name, outDir: path.join(workspaceRoot, 'theme-plugin', `${slug}-blocks`) });
+    const blocksResult = writeBlocksPlugin({
+        workspaceRoot, slug, themeName: name,
+        outDir: path.join(workspaceRoot, 'theme-plugin', `${slug}-blocks`),
+        transformCss: (blockCss) => rewriteCssVars(blockCss, tokenMap.custom),
+    });
     writeFile(path.join(themeDir, 'functions.php'), functionsPhp({ slug, customBlocks: blocksResult.blocks }));
     files.push('theme.json', 'style.css', 'functions.php');
 

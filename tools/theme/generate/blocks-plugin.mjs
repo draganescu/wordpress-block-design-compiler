@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { readJson, writeFile, writeJson } from '../../lib/workspace.mjs';
 
-export function writeBlocksPlugin({ workspaceRoot, slug, themeName, outDir }) {
+export function writeBlocksPlugin({ workspaceRoot, slug, themeName, outDir, transformCss = (css) => css }) {
     const srcRoot = path.join(workspaceRoot, 'wordpress/blocks');
     const blockDirs = fs.existsSync(srcRoot)
         ? fs.readdirSync(srcRoot).filter((d) => fs.existsSync(path.join(srcRoot, d, 'block.json'))).sort()
@@ -17,9 +17,13 @@ export function writeBlocksPlugin({ workspaceRoot, slug, themeName, outDir }) {
         const blockJson = readJson(path.join(srcRoot, dir, 'block.json'));
         delete blockJson.editorScript; // enqueued below with explicit wp-* deps (no asset.php in no-build blocks)
         writeJson(path.join(dest, 'block.json'), blockJson);
-        for (const file of ['index.js', 'style.css']) {
-            const src = path.join(srcRoot, dir, file);
-            if (fs.existsSync(src)) fs.copyFileSync(src, path.join(dest, file));
+        const indexSrc = path.join(srcRoot, dir, 'index.js');
+        if (fs.existsSync(indexSrc)) fs.copyFileSync(indexSrc, path.join(dest, 'index.js'));
+        const cssSrc = path.join(srcRoot, dir, 'style.css');
+        if (fs.existsSync(cssSrc)) {
+            // block CSS references the run's design tokens; the theme moves
+            // those to --wp--custom--*, so the same rename must apply here
+            writeFile(path.join(dest, 'style.css'), transformCss(fs.readFileSync(cssSrc, 'utf8')));
         }
         blocks.push(blockJson.name);
     }
