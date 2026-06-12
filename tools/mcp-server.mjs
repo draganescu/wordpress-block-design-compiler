@@ -1,6 +1,5 @@
 #!/usr/bin/env node
 import fs from 'node:fs';
-import http from 'node:http';
 import path from 'node:path';
 import vm from 'node:vm';
 import { createRequire } from 'node:module';
@@ -10,12 +9,12 @@ import {
     readJsonIfExists, writeFile, writeJson, firstMatch, cleanText, titleCase,
     slug, camelName, escapeHtml, escapeAttr, relativeUrl, findFiles,
 } from './lib/workspace.mjs';
+import {
+    DEFAULT_VIEWPORTS, loadCaptureDeps, serveDirectory, capture, captureEditor,
+    editorComparisonCss, motionFreezeCss, transientOverlayCaptureCss, comparePngs,
+} from './lib/capture.mjs';
 
 const require = createRequire(import.meta.url);
-const DEFAULT_VIEWPORTS = [
-  { name: 'desktop', width: 1440, height: 1200 },
-  { name: 'mobile', width: 390, height: 1200 },
-];
 const customInnerBlocksStack = [];
 const customBlockPropsStack = [];
 const ALLOWED_GROUP_TAGS = new Set(['div', 'main', 'section', 'article', 'aside', 'header', 'footer']);
@@ -1389,16 +1388,7 @@ function setupDomEnvironment() {
 
 async function compareHtml(args) {
   const workspaceRoot = resolvePath(args.workspaceRoot);
-  let chromium;
-  let pixelmatch;
-  let PNG;
-  try {
-    chromium = (await import('playwright')).chromium;
-    pixelmatch = (await import('pixelmatch')).default;
-    PNG = (await import('pngjs')).PNG;
-  } catch (error) {
-    throw new Error(`compare_html needs optional packages. Run npm install in ${PLUGIN_ROOT}. Missing dependency: ${error.message}`);
-  }
+  const { chromium, PNG, pixelmatch } = await loadCaptureDeps(PLUGIN_ROOT);
 
   const mockupPath = path.join(workspaceRoot, args.mockupPath || 'mockup/index.html');
   const renderedPath = path.join(workspaceRoot, args.renderedPath || 'rendered/rendered-blocks.html');
@@ -1421,7 +1411,7 @@ async function compareHtml(args) {
   );
   const browser = await chromium.launch({ headless: true });
   const results = [];
-  const server = shouldCompareEditor ? await startStaticServer(workspaceRoot) : null;
+  const server = shouldCompareEditor ? await serveDirectory(workspaceRoot) : null;
 
   try {
     for (const viewport of viewports) {
@@ -1521,7 +1511,7 @@ async function measureLayout(args) {
   }
 
   const browser = await chromium.launch({ headless: true });
-  const server = candidateKind === 'editor' ? await startStaticServer(workspaceRoot) : null;
+  const server = candidateKind === 'editor' ? await serveDirectory(workspaceRoot) : null;
   const measurements = [];
 
   try {
@@ -1627,7 +1617,7 @@ async function screenshotHtml(args) {
   const targets = normalizeScreenshotTargets(workspaceRoot, args.targets);
   const needsServer = targets.some((target) => target.kind === 'editor');
   const browser = await chromium.launch({ headless: true });
-  const server = needsServer ? await startStaticServer(workspaceRoot) : null;
+  const server = needsServer ? await serveDirectory(workspaceRoot) : null;
   const screenshots = [];
 
   try {
@@ -1700,218 +1690,6 @@ function aggregateComparisonResults(results) {
     maxMismatchPercent: Math.max(...results.map((result) => result.mismatchPercent)),
     maxHeightDelta: Math.max(...results.map((result) => result.heightDelta)),
   };
-}
-
-async function startStaticServer(rootDir) {
-  const root = path.resolve(rootDir);
-  const server = http.createServer((request, response) => {
-    if (!['GET', 'HEAD'].includes(request.method || '')) {
-      response.writeHead(405, { Allow: 'GET, HEAD' });
-      response.end('Method not allowed');
-      return;
-    }
-
-    const requestUrl = new URL(request.url || '/', 'http://127.0.0.1');
-    const pathname = decodeURIComponent(requestUrl.pathname);
-    const filePath = path.resolve(root, `.${pathname.endsWith('/') ? `${pathname}index.html` : pathname}`);
-    if (!isPathInside(root, filePath)) {
-      response.writeHead(403);
-      response.end('Forbidden');
-      return;
-    }
-
-    if (!fs.existsSync(filePath) || !fs.statSync(filePath).isFile()) {
-      response.writeHead(404);
-      response.end('Not found');
-      return;
-    }
-
-    response.writeHead(200, { 'Content-Type': mimeType(filePath) });
-    if (request.method === 'HEAD') {
-      response.end();
-      return;
-    }
-    fs.createReadStream(filePath).pipe(response);
-  });
-
-  await new Promise((resolve, reject) => {
-    server.once('error', reject);
-    server.listen(0, '127.0.0.1', () => {
-      server.off('error', reject);
-      resolve();
-    });
-  });
-
-  const address = server.address();
-  const port = typeof address === 'object' && address ? address.port : 0;
-  return {
-    urlFor(filePath) {
-      const relative = path.relative(root, filePath).split(path.sep).map(encodeURIComponent).join('/');
-      return `http://127.0.0.1:${port}/${relative}`;
-    },
-    close() {
-      return new Promise((resolve, reject) => {
-        server.close((error) => error ? reject(error) : resolve());
-      });
-    },
-  };
-}
-
-function mimeType(filePath) {
-  const ext = path.extname(filePath).toLowerCase();
-  return {
-    '.css': 'text/css; charset=utf-8',
-    '.html': 'text/html; charset=utf-8',
-    '.js': 'text/javascript; charset=utf-8',
-    '.json': 'application/json; charset=utf-8',
-    '.svg': 'image/svg+xml',
-    '.png': 'image/png',
-    '.jpg': 'image/jpeg',
-    '.jpeg': 'image/jpeg',
-    '.webp': 'image/webp',
-  }[ext] || 'application/octet-stream';
-}
-
-async function capture(browser, htmlPath, screenshotPath, viewport) {
-  const page = await browser.newPage({
-    viewport: { width: Number(viewport.width), height: Number(viewport.height) },
-    deviceScaleFactor: 1,
-  });
-  try {
-    await page.emulateMedia({ reducedMotion: 'reduce' });
-    await page.goto(pathToFileURL(htmlPath).href, { waitUntil: 'networkidle' });
-    await page.addStyleTag({
-      content: `${motionFreezeCss()}\n${transientOverlayCaptureCss()}`,
-    });
-    await page.screenshot({
-      path: screenshotPath,
-      fullPage: viewport.fullPage !== false,
-      animations: 'disabled',
-    });
-  } finally {
-    await page.close();
-  }
-}
-
-async function captureEditor(browser, editorUrl, screenshotPath, viewport) {
-  const page = await browser.newPage({
-    viewport: { width: Number(viewport.width), height: Number(viewport.height) },
-    deviceScaleFactor: 1,
-  });
-  try {
-    await page.emulateMedia({ reducedMotion: 'reduce' });
-    await page.goto(editorUrl, { waitUntil: 'networkidle', timeout: 60000 });
-    await page.waitForSelector('.block-editor-block-list__layout', { timeout: 60000 });
-    const errorText = await page.locator('.wbdc-editor-error').textContent({ timeout: 250 }).catch(() => '');
-    if (errorText && !/Loading WordPress block editor/i.test(errorText)) {
-      throw new Error(`Editor preview failed before screenshot: ${errorText}`);
-    }
-    await page.addStyleTag({ content: editorComparisonCss() });
-    await page.screenshot({
-      path: screenshotPath,
-      fullPage: viewport.fullPage !== false,
-      animations: 'disabled',
-    });
-  } finally {
-    await page.close();
-  }
-}
-
-function editorComparisonCss() {
-  // Hide editor chrome and freeze motion for the screenshot. Block margins
-  // are deliberately NOT zeroed here: the preview's wbdc-parity layer already
-  // neutralizes editor block-gap margins, and the workspace CSS owns the
-  // document rhythm — zeroing with !important would erase that layout signal.
-  return `
-    ${motionFreezeCss()}
-    ${transientOverlayCaptureCss()}
-    .wbdc-editor-toolbar{display:none!important}
-    .wbdc-editor-shell,.wbdc-editor-canvas,.is-root-container.block-editor-block-list__layout{min-height:0!important}
-    .editor-styles-wrapper{padding:0!important}
-    .block-editor-block-list__block::before,
-    .block-editor-block-list__block::after,
-    .block-editor-block-list__breadcrumb,
-    .block-editor-block-list__insertion-point,
-    .block-editor-block-contextual-toolbar,
-    .block-editor-block-toolbar,
-    .block-editor-inserter,
-    .block-editor-warning,
-    .components-placeholder,
-    .block-editor-block-variation-picker,
-    .block-editor-default-block-appender,
-    .block-editor-block-list__empty-block-inserter,
-    .components-popover{display:none!important}
-    .block-editor-block-list__block,
-    .block-editor-block-list__block.is-selected,
-    .block-editor-block-list__block.has-child-selected{outline:0!important;box-shadow:none!important}
-  `;
-}
-
-function motionFreezeCss() {
-  return '*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}';
-}
-
-function transientOverlayCaptureCss() {
-  return `
-    .loading-screen,
-    .loading-fade,
-    .preloader,
-    .loader,
-    .cookie-jar,
-    [data-role="cookie-jar-pop-up"],
-    [aria-label="Cookie"],
-    [aria-label="Cookies"] {
-      display: none !important;
-      opacity: 0 !important;
-      visibility: hidden !important;
-      pointer-events: none !important;
-    }
-
-    .c-scrollbar {
-      display: none !important;
-    }
-  `;
-}
-
-function comparePngs({ target, mockupShot, candidateShot, diffShot, viewport, PNG, pixelmatch }) {
-  const mockup = PNG.sync.read(fs.readFileSync(mockupShot));
-  const candidate = PNG.sync.read(fs.readFileSync(candidateShot));
-  const width = Math.min(mockup.width, candidate.width);
-  const height = Math.min(mockup.height, candidate.height);
-  const diff = new PNG({ width, height });
-  const mismatch = pixelmatch(
-    cropPng(mockup, width, height, PNG).data,
-    cropPng(candidate, width, height, PNG).data,
-    diff.data,
-    width,
-    height,
-    { threshold: 0.1 }
-  );
-  fs.writeFileSync(diffShot, PNG.sync.write(diff));
-  return {
-    target,
-    viewport: viewport.name,
-    size: `${viewport.width}x${viewport.height}`,
-    mockup: mockupShot,
-    candidate: candidateShot,
-    ...(target === 'rendered' ? { rendered: candidateShot } : {}),
-    ...(target === 'editor' ? { editor: candidateShot } : {}),
-    diff: diffShot,
-    mismatchPercent: Number(((mismatch / (width * height)) * 100).toFixed(2)),
-    widthDelta: Math.abs(mockup.width - candidate.width),
-    heightDelta: Math.abs(mockup.height - candidate.height),
-  };
-}
-
-function cropPng(source, width, height, PNG) {
-  if (source.width === width && source.height === height) return source;
-  const cropped = new PNG({ width, height });
-  for (let y = 0; y < height; y += 1) {
-    const sourceStart = y * source.width * 4;
-    const targetStart = y * width * 4;
-    source.data.copy(cropped.data, targetStart, sourceStart, sourceStart + width * 4);
-  }
-  return cropped;
 }
 
 function comparisonTasks(results, thresholds) {
