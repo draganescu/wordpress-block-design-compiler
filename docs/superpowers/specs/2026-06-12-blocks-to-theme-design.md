@@ -91,9 +91,12 @@ reports/theme-comparison.json  Playground gate result (per page, existing aggreg
 ### Hard gates
 
 - **Evidence Gate**: no template part without a cited occurrence group from
-  `reports/template-parts.json`; no template beyond `index.html` without a
-  cited difference in chrome variants or front-page designation. Single-page
-  runs normally produce zero parts.
+  `reports/template-parts.json`. The standing template set is `index.html`
+  plus the generic-situation defaults `archive.html`, `single.html`, and
+  `404.html` (good practice; composed from the inferred chrome + global
+  styles, no per-run evidence required). Any template beyond that set needs
+  a cited difference in chrome variants or front-page designation.
+  Single-page runs normally produce zero parts.
 - **Lift-First Gate**: every rule remaining in `style.css` or block `css`
   carries a reason category: `media-query` | `pseudo` | `position` | `blend`
   | `grid` | `interaction`. A rule with no category must lift to theme.json.
@@ -240,8 +243,8 @@ after import has no effect on the site.
   index's choice (the nav current-page variant case).
 - `front-page.html` only when the manifest designates a front page and its
   chrome differs from index.
-- No speculative archive/single/404 templates; anything beyond index cites
-  evidence in the plan.
+- Always make archive, single and 404 templates for generic situations; anything beyond
+ generic cites evidence in the plan.
 
 ## Edge cases
 
