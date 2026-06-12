@@ -41,6 +41,10 @@ add_filter('render_block', function ($content) {
 add_action('after_setup_theme', function () {
     add_editor_style('style.css');
 });
+
+// The source design's typography is authored verbatim (straight quotes,
+// spaced dashes); texturizing would shift glyphs in display-size headings.
+add_filter('run_wptexturize', '__return_false');
 ${notice}`;
 }
 

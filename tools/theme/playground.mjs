@@ -14,7 +14,10 @@ export function buildBlueprint({ slug, hasBlocksPlugin }) {
             ...(hasBlocksPlugin ? [{ step: 'activatePlugin', pluginPath: `${slug}-blocks/${slug}-blocks.php` }] : []),
             { step: 'activatePlugin', pluginPath: `${slug}-content/${slug}-content.php` },
             { step: 'activateTheme', themeFolderName: slug },
-            { step: 'runPHP', code: `<?php require '/wordpress/wp-load.php'; var_export(${prefix}_import_pages());` },
+            // wp_set_current_user(1): without unfiltered_html, kses strips the
+            // form/select/input markup from imported page content — a real
+            // admin clicking the Import button has that capability
+            { step: 'runPHP', code: `<?php require '/wordpress/wp-load.php'; wp_set_current_user(1); var_export(${prefix}_import_pages());` },
         ],
     };
 }
@@ -58,6 +61,11 @@ export async function playgroundRender(args) {
 
     try {
         await waitForServer(base, 120000, () => proc.exitCode);
+        // the server answers before the blueprint's runPHP import step finishes;
+        // capturing early races the import (front page = blog index). The last
+        // manifest page resolving proves the import ran to completion.
+        const lastPage = manifest.pages[manifest.pages.length - 1];
+        if (lastPage) await waitForImport(pageUrl(base, { ...lastPage, front: false }), 120000, () => proc.exitCode);
         const { chromium, PNG, pixelmatch } = await loadCaptureDeps(PLUGIN_ROOT);
         const browser = await chromium.launch({ headless: true });
         const server = await serveDirectory(workspaceRoot); // mockup screenshots through the same pipeline
@@ -114,6 +122,19 @@ async function waitForServer(base, timeoutMs, exited) {
         await new Promise((r) => setTimeout(r, 1000));
     }
     throw new Error(`playground server not ready after ${timeoutMs}ms`);
+}
+
+async function waitForImport(url, timeoutMs, exited) {
+    const start = Date.now();
+    while (Date.now() - start < timeoutMs) {
+        if (exited() !== null) throw new Error('playground process exited during content import');
+        try {
+            const res = await fetch(url, { redirect: 'manual' });
+            if (res.status === 200) return;
+        } catch { /* still importing */ }
+        await new Promise((r) => setTimeout(r, 1000));
+    }
+    throw new Error(`content import did not complete within ${timeoutMs}ms (${url} never returned 200)`);
 }
 
 function inferMockupPath(workspaceRoot, page) {

@@ -95,7 +95,9 @@ export function validateBlockTheme(args) {
     }
     const themeTexts = [['style.css', styleCss], ['theme.json', JSON.stringify(themeJson)]];
     for (const [label, text] of themeTexts) {
-        const remotes = (text.match(/https?:\/\/[^"')\s]+/g) || []).filter((u) => !u.includes('schemas.wp.org') && !u.includes('gnu.org'));
+        // www.w3.org appears as the xmlns of inline data-URI SVGs — a namespace
+        // identifier, never fetched
+        const remotes = (text.match(/https?:\/\/[^"')\s]+/g) || []).filter((u) => !u.includes('schemas.wp.org') && !u.includes('gnu.org') && !u.includes('www.w3.org'));
         for (const u of remotes) errors.push(`${label}: remote url ${u}`);
     }
 
