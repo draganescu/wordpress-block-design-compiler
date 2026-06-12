@@ -9,7 +9,7 @@
   },
   "scripts": {
     "check": "node --check tools/mcp-server.mjs && node --check tools/lib/workspace.mjs && node --check tools/lib/capture.mjs && node --check tools/lib/wp-serialize.mjs",
-    "test": "node --test 'tools/theme/*.test.mjs'"
+    "test": "node --test 'tools/theme/**/*.test.mjs'"
   },
   "dependencies": {
     "@wordpress/block-library": "^9.48.0",
