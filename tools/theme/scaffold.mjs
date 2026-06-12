@@ -60,7 +60,8 @@ export function scaffoldBlockTheme(args) {
         settings: args.themeSettings,
         styles: deepMapStrings(args.themeStyles || {}, (s) => rewriteCssVars(s, tokenMap.custom)),
         fontFamilies: args.fontFamilies || [],
-        templateParts: args.parts.map(({ slug: s, area, tagName }) => ({ slug: s, area, ...(tagName ? { tagName } : {}) })),
+        // theme.json schema: templateParts items allow only name/title/area (name = parts/<name>.html).
+        templateParts: args.parts.map(({ slug: s, area }) => ({ name: s, area })),
         customTemplates: Object.keys(args.templates).filter((t) => !['index', 'archive', 'single', '404'].includes(t) && !t.startsWith('page-') && !t.startsWith('front-page'))
             .map((t) => ({ name: t, title: t, postTypes: ['page'] })),
     });
