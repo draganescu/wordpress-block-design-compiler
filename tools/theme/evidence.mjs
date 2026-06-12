@@ -92,7 +92,7 @@ export function analyzeThemeEvidence(args) {
                 supportUsage[block.blockName] ??= {};
                 supportUsage[block.blockName][key] = (supportUsage[block.blockName][key] || 0) + 1;
                 const ref = { kind: 'attr', page, blockName: block.blockName, path: `${blockPath.join('.')}:${p.path}` };
-                if (p.path.startsWith('color.')) record(acc.colors, p.value, ref);
+                if (p.path.startsWith('color.')) record(acc.colors, String(p.value).toLowerCase(), ref);
                 else if (p.path.startsWith('typography.fontSize')) record(acc.fontSizes, p.value, ref);
                 else if (p.path.startsWith('spacing.')) record(acc.spacing, p.value, ref);
             }

@@ -4,7 +4,7 @@ import crypto from 'node:crypto';
 import { writeJson, resolvePath } from '../lib/workspace.mjs';
 import { loadPageTrees } from './evidence.mjs';
 
-const CONTENT_KEYS = new Set(['content', 'text', 'caption', 'label', 'alt', 'okText', 'noteText', 'submitText', 'brand', 'items', 'links', 'fields', 'url', 'href']);
+const CONTENT_KEYS = new Set(['content', 'text', 'caption', 'label', 'alt', 'okText', 'noteText', 'submitText', 'brand', 'items', 'links', 'fields', 'url', 'href', 'anchor']);
 
 function sha(value) { return crypto.createHash('sha1').update(JSON.stringify(value)).digest('hex'); }
 
