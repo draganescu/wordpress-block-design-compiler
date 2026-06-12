@@ -5,7 +5,7 @@ description: Use when a user asks to transform designed or provided HTML/CSS/JS 
 
 # HTML To Blocks
 
-Use this skill when the user wants an HTML/CSS/JS design or provided markup transformed into editable WordPress blocks. The agent remains responsible for design judgment and code edits. The tools provide workspace setup, mockup analysis, custom-block scaffolding, preview wrapping, and screenshot comparison.
+Use this skill when the user wants an HTML/CSS/JS design or provided markup transformed into editable WordPress blocks. The agent remains responsible for design judgment and code edits. The tools provide workspace setup, mockup analysis, custom-block scaffolding, preview wrapping, screenshot comparison, and DOM geometry measurement (`measure_layout`).
 
 ## Required Workflow
 
@@ -19,16 +19,38 @@ Use this skill when the user wants an HTML/CSS/JS design or provided markup tran
 8. Use `create_block_editor_preview` whenever you need to refresh or inspect a block editor instance from a generated tree without reserializing all outputs. For multi-file generations, call it per tree/page.
 9. Use `screenshot_html` for inspection screenshots of mockup, rendered, editor, or arbitrary workspace HTML files. For multi-file generations, pass explicit targets for the page under inspection.
 10. Run `compare_html`.
-11. Inspect rendered frontend screenshots, editable editor screenshots, and diffs. Write `reports/repair-tasks.md`, fix each task as an agent, then repeat preview/compare until both saved frontend and editor-preview thresholds are met. Do not stop at "close", "structurally close", or "good enough".
+11. When a comparison fails, run `measure_layout` BEFORE staring at pixel diffs: it returns per-element top/height deltas between the mockup and the rendered or editor page (`candidateKind: "editor"`), aligned by selector order. Drill from sections to children with narrower selectors until the drift names a specific element, then fix that. Pixel diffs localize; measurements identify.
+12. Inspect rendered frontend screenshots, editable editor screenshots, and diffs. Write the repair-tasks file, fix each task as an agent, then repeat preview/compare until both saved frontend and editor-preview thresholds are met. Do not stop at "close", "structurally close", or "good enough".
 
 Default thresholds: `maxMismatchPercent <= 1` and `maxHeightDelta <= 8`.
 
-Completion requires both `reports/comparison.json` aggregates to pass:
+Completion requires both comparison aggregates to pass for EVERY page in the run:
 
 - `aggregates.rendered.maxMismatchPercent <= maxMismatchPercent` and `aggregates.rendered.maxHeightDelta <= maxHeightDelta`
 - `aggregates.editor.maxMismatchPercent <= maxMismatchPercent` and `aggregates.editor.maxHeightDelta <= maxHeightDelta`
 
+Comparison reports are per page: `reports/comparison.json` for the index page, `reports/<page>.comparison.json` for the rest. They never overwrite each other; a complete multi-page run leaves one passing report per page.
+
 If these criteria are not met, the skill run is incomplete. Continue repairing. If progress is impossible after concrete repair attempts, report the run as blocked with the current metrics and blocking cause; do not present it as complete.
+
+## Multi-Page Exports
+
+`import_provided_markup` detects sibling `.html` pages in the source root and returns a `pages` manifest with suggested per-page paths. Follow the manifest conventions for every page, including the primary/index page, so the workspace stays symmetric:
+
+- Block tree: `wordpress/pages/<page>.block-tree.json`
+- Serialized markup: `wordpress/pages/<page>.content.html`
+- Frontend preview: `rendered/<page>.html`
+- Editor preview: `editor/<page>.html`
+- Comparison report: `reports/<page>.comparison.json` (pass via `compare_html`'s defaults — the report name is derived from the mockup filename)
+
+Workflow for multi-page runs:
+
+1. Import once; read the `pages` manifest.
+2. Analyze and read every page before planning: shared chrome (header/nav/footer), shared components (cards, forms, teasers), and page-local sections. Plan custom blocks ONCE for the whole site; pages reuse them with different attributes.
+3. Build and fully pass one page first (usually the index) — it forces the shared blocks, design tokens, and editor parity into shape. Subsequent pages then converge in a few iterations each.
+4. Page-specific CSS goes into clearly labelled sections of `wordpress/style.css` (or block CSS when component-scoped). Keep the shared token/base layer at the top.
+5. Run serialize + compare per page with the manifest paths. The completion gate applies to every page; a run where one page fails is an incomplete run.
+6. Beware margins hidden by layout context: a missing margin can be invisible at desktop (a taller sibling column masks it) and only surface at mobile when columns stack. Always compare both viewports per page.
 
 ## Hard Gates
 
@@ -120,7 +142,7 @@ The editor setup is reusable and must not be recreated by hand for each generate
 
 ## Repair Loop
 
-Read `references/repair-loop.md` before starting visual repair.
+Read `references/repair-loop.md` and `references/css-transfer-gotchas.md` before starting visual repair.
 
 The comparison tool returns metrics and images; the agent must inspect the screenshots/diffs and write concrete tasks. Tasks must be implementation-level:
 

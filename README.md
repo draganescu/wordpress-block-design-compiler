@@ -26,7 +26,17 @@ Generated runs should live outside the repository, or under ignored local folder
 6. Assemble `wordpress/block-tree.json` as data only: block names, attributes, supports/style attrs, classes, and inner blocks.
 7. Run `serialize_wordpress_blocks` to produce canonical block markup, rendered preview HTML, editor preview HTML, and a style audit.
 8. Run `compare_html` against both the saved frontend render and the editable editor preview.
-9. Repair from explicit visual-diff tasks until rendered and editor mismatch thresholds pass.
+9. Localize failures with `measure_layout` (per-element geometry drift between mockup and rendered/editor pages), then repair from explicit tasks until rendered and editor mismatch thresholds pass.
+
+## Multi-Page Exports
+
+`import_provided_markup` returns a `pages` manifest when the source root contains sibling `.html` pages. Use the suggested paths for every page (including the primary one):
+
+- `wordpress/pages/<page>.block-tree.json` + `wordpress/pages/<page>.content.html`
+- `rendered/<page>.html` + `editor/<page>.html`
+- `reports/<page>.comparison.json` (compare_html derives this from the mockup filename, so per-page reports never overwrite each other)
+
+Plan shared blocks once, pass the first page fully, then iterate the rest. The run is complete only when every page's comparison passes both surfaces.
 
 The block tree must not contain raw markup escape hatches such as `htmlLines`, `innerHTML`, `innerContent`, `markup`, or `sourceHtml`.
 
@@ -53,6 +63,7 @@ The server exposes these tools:
 - `create_block_editor_preview`
 - `screenshot_html`
 - `compare_html`
+- `measure_layout`
 
 Run the syntax check with:
 
@@ -93,3 +104,5 @@ Example Claude Desktop server entry:
 ```
 
 Agents should read `claude/CLAUDE.md` or `skills/html-to-blocks/SKILL.md` before calling the tools.
+
+Note for stdio clients: the server speaks JSON-RPC with `Content-Length` framing (LSP-style), not newline-delimited JSON. It accepts both framings on input but always frames its responses.

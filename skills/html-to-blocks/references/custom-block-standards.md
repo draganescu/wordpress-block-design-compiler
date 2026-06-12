@@ -38,6 +38,14 @@ Editor parity contract:
 - `InspectorControls` and `BlockControls` are for settings; they must not create visible canvas layout unless the same visual element exists on the frontend.
 - Treat WordPress editor wrappers as comparison noise only. All block-owned markup inside those wrappers should match the mockup as closely as the saved frontend.
 
+Editor-canvas pitfalls (each one has produced real comparison failures):
+
+- RichText-editable `<button>` elements must keep `line-height: normal` like real buttons; an inherited document line-height makes the canvas button 1–2px taller than the saved one.
+- Disabled inputs/textareas in `edit()` need `opacity: 1` and `-webkit-text-fill-color` set to the frontend text color, or the browser greys them and the pixel diff lights up.
+- Plain (non-RichText) text elements rendered by `edit()` — helper paragraphs, blurbs, counts — should have their line-height pinned in the block CSS rather than relying on inheritance through editor wrappers.
+- Sticky-positioned block roots engage their sticky offset inside the editor scroll context at scroll 0; add an editor-only `position: static` override (`.your-block.block-editor-block-list__block { position: static; }`) so screenshots show the static position like the mockup.
+- The block root in the canvas is the same element as `save()`'s root plus editor classes; write editor-only overrides as `tag.block-editor-block-list__block.your-class` next to the base rule they adjust.
+
 Form-like blocks:
 
 - Save real `<form>` markup.
@@ -46,6 +54,7 @@ Form-like blocks:
 - Disabled controls in `edit` should keep the same element type, dimensions, classes, and state-dependent styling as the saved form.
 - Labels and button text are inline editable with `RichText`.
 - Action/method/field behavior belongs in inspector controls.
+- Do not set explicit font sizes on inputs the mockup left unstyled — unstyled inputs use the UA default (13.33px), and "correcting" them changes control heights.
 
 Quality bar:
 

@@ -45,6 +45,10 @@ Static preview caveat:
 - Some WordPress support props are serialized through the WordPress style engine rather than directly into saved HTML. If a prop is present in the block comment but does not affect `rendered/rendered-blocks.html` or the editor screenshot, do not silently fall back to ad hoc CSS.
 - First check whether a more specific core block serializes the visual behavior better. For example, use `core/cover` for media backgrounds with overlay content instead of relying on `core/group` background-image support in this static preview.
 - If the chosen prop is still the correct WordPress model, document the preview limitation and add one focused renderer/editor-preview support fix rather than spreading equivalent CSS across page selectors.
+- The RENDERED preview loads only workspace CSS — no block-library CSS. Core blocks whose layout depends on library rules (`core/cover`'s absolute image + inner container, `core/columns` flex, `core/buttons` flex, `core/separator` defaults) render unstyled there unless the workspace CSS shims those classes. The editor preview DOES load library CSS (in a low-priority cascade layer), so a library-dependent block can look right in the editor and broken in rendered. Either shim the wp-block classes in `wordpress/style.css` or pick a block whose saved markup is self-sufficient.
+- Confirmed pattern: when the mockup's "image" is a decorative CSS background (placeholder plates, tone classes), `core/group` carrying the mockup's own background classes beats `core/cover` on both preview surfaces — the media is not editable content, and the group renders the same plain div in editor and rendered.
+- Confirmed pattern: asymmetric grid tracks (e.g. `1.4fr 1fr 1fr`) are not `core/columns` widths; use `core/group` with the mockup's grid CSS on a className. Static serialization does not materialize column layout styles anyway.
+- `core/table` (head/body/foot cell arrays) and `core/quote` (inner paragraph blocks) serialize cleanly in this pipeline and are good fits for data tables and pull quotes — but see the quote markup note in `css-transfer-gotchas.md`.
 
 ## Common Mappings
 
