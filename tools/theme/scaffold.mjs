@@ -46,7 +46,12 @@ export function scaffoldBlockTheme(args) {
         templates[tplName] ??= [...chromeTop, ...body, ...chromeBottom];
     }
     for (const [tplName, entries] of Object.entries(templates)) {
-        writeFile(path.join(themeDir, `templates/${tplName}.html`), templateMarkup(entries));
+        // tree entries (the generic defaults, or agent-authored bodies) are
+        // serialized through @wordpress/blocks so the markup is canonical
+        const resolved = entries.map((entry) => entry.type === 'tree'
+            ? { type: 'blocks', markup: serializeBlocks(entry.blocks, {}) }
+            : entry);
+        writeFile(path.join(themeDir, `templates/${tplName}.html`), templateMarkup(resolved));
         files.push(`templates/${tplName}.html`);
     }
 

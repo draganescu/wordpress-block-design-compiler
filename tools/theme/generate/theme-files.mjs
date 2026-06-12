@@ -75,49 +75,71 @@ export function templateMarkup(entries) {
         if (entry.type === 'post-content') return '<!-- wp:post-content {"layout":{"type":"default"}} /-->';
         if (entry.type === 'raw') return entry.markup.trim();
         if (entry.type === 'blocks') return entry.markup.trim();
+        if (entry.type === 'tree') throw new Error('tree entries must be serialized by the scaffold before templateMarkup');
         throw new Error(`Unknown template entry type: ${entry.type}`);
     }).join('\n') + '\n';
 }
 
-// Generic-situation defaults (spec: standing template set). Bodies are plain core
-// blocks styled by global styles; chrome entries get prepended by the scaffold.
+// Generic-situation defaults (spec: standing template set). Bodies are
+// data-only block TREES — the scaffold serializes them through
+// @wordpress/blocks so the emitted markup is canonical by construction
+// (hand-written markup here is the one place save() drift could enter).
+// Chrome entries get prepended by the scaffold.
+const defaultShell = (innerBlocks) => ({
+    blockName: 'core/group',
+    attrs: {
+        tagName: 'main',
+        layout: { type: 'constrained' },
+        style: { spacing: { padding: { top: '6rem', bottom: '6rem' } } },
+    },
+    innerBlocks,
+});
+
 export const DEFAULT_TEMPLATES = {
     archive: [{
-        type: 'blocks',
-        markup: `<!-- wp:group {"tagName":"main","layout":{"type":"constrained"},"style":{"spacing":{"padding":{"top":"6rem","bottom":"6rem"}}}} -->
-<div class="wp-block-group" style="padding-top:6rem;padding-bottom:6rem"><!-- wp:query-title {"type":"archive"} /-->
-<!-- wp:query {"query":{"perPage":10,"postType":"post","inherit":true}} -->
-<div class="wp-block-query"><!-- wp:post-template -->
-<!-- wp:post-title {"isLink":true} /-->
-<!-- wp:post-date /-->
-<!-- wp:post-excerpt /-->
-<!-- /wp:post-template -->
-<!-- wp:query-pagination -->
-<!-- wp:query-pagination-previous /-->
-<!-- wp:query-pagination-numbers /-->
-<!-- wp:query-pagination-next /-->
-<!-- /wp:query-pagination --></div>
-<!-- /wp:query --></div>
-<!-- /wp:group -->`,
+        type: 'tree',
+        blocks: [defaultShell([
+            { blockName: 'core/query-title', attrs: { type: 'archive' }, innerBlocks: [] },
+            {
+                blockName: 'core/query',
+                attrs: { query: { perPage: 10, postType: 'post', inherit: true } },
+                innerBlocks: [
+                    {
+                        blockName: 'core/post-template',
+                        attrs: {},
+                        innerBlocks: [
+                            { blockName: 'core/post-title', attrs: { isLink: true }, innerBlocks: [] },
+                            { blockName: 'core/post-date', attrs: {}, innerBlocks: [] },
+                            { blockName: 'core/post-excerpt', attrs: {}, innerBlocks: [] },
+                        ],
+                    },
+                    {
+                        blockName: 'core/query-pagination',
+                        attrs: {},
+                        innerBlocks: [
+                            { blockName: 'core/query-pagination-previous', attrs: {}, innerBlocks: [] },
+                            { blockName: 'core/query-pagination-numbers', attrs: {}, innerBlocks: [] },
+                            { blockName: 'core/query-pagination-next', attrs: {}, innerBlocks: [] },
+                        ],
+                    },
+                ],
+            },
+        ])],
     }],
     single: [{
-        type: 'blocks',
-        markup: `<!-- wp:group {"tagName":"main","layout":{"type":"constrained"},"style":{"spacing":{"padding":{"top":"6rem","bottom":"6rem"}}}} -->
-<div class="wp-block-group" style="padding-top:6rem;padding-bottom:6rem"><!-- wp:post-title /-->
-<!-- wp:post-date /-->
-<!-- wp:post-content {"layout":{"type":"default"}} /--></div>
-<!-- /wp:group -->`,
+        type: 'tree',
+        blocks: [defaultShell([
+            { blockName: 'core/post-title', attrs: {}, innerBlocks: [] },
+            { blockName: 'core/post-date', attrs: {}, innerBlocks: [] },
+            { blockName: 'core/post-content', attrs: { layout: { type: 'default' } }, innerBlocks: [] },
+        ])],
     }],
     404: [{
-        type: 'blocks',
-        markup: `<!-- wp:group {"tagName":"main","layout":{"type":"constrained"},"style":{"spacing":{"padding":{"top":"6rem","bottom":"6rem"}}}} -->
-<div class="wp-block-group" style="padding-top:6rem;padding-bottom:6rem"><!-- wp:heading {"level":1} -->
-<h1 class="wp-block-heading">Page not found</h1>
-<!-- /wp:heading -->
-<!-- wp:paragraph -->
-<p>The page you are looking for does not exist.</p>
-<!-- /wp:paragraph -->
-<!-- wp:search {"label":"Search","showLabel":false,"buttonText":"Search"} /--></div>
-<!-- /wp:group -->`,
+        type: 'tree',
+        blocks: [defaultShell([
+            { blockName: 'core/heading', attrs: { level: 1, content: 'Page not found' }, innerBlocks: [] },
+            { blockName: 'core/paragraph', attrs: { content: 'The page you are looking for does not exist.' }, innerBlocks: [] },
+            { blockName: 'core/search', attrs: { label: 'Search', showLabel: false, buttonText: 'Search' }, innerBlocks: [] },
+        ])],
     }],
 };

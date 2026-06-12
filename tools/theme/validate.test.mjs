@@ -72,11 +72,15 @@ test('validateBlockTheme catches violations', () => {
     fs.writeFileSync(path.join(theme, 'parts/orphan.html'), '<!-- wp:not-a-real/block /-->');
     fs.appendFileSync(path.join(theme, 'style.css'), '\n.x{background:url(https://cdn.example.com/x.png)}');
     fs.rmSync(path.join(theme, 'templates/index.html'));
+    // drifted markup: declared padding without the matching inline style
+    fs.writeFileSync(path.join(theme, 'parts/drifted.html'),
+        '<!-- wp:group {"style":{"spacing":{"padding":{"top":"6rem"}}}} -->\n<div class="wp-block-group"></div>\n<!-- /wp:group -->');
     const report = validateBlockTheme({ workspaceRoot: MINI, slug: 'mini', write: false });
     assert.equal(report.passed, false);
     assert.ok(report.errors.some((e) => e.includes('templates/index.html')));
     assert.ok(report.errors.some((e) => e.includes('not-a-real/block')));
     assert.ok(report.errors.some((e) => e.includes('remote url')));
+    assert.ok(report.errors.some((e) => e.includes('invalid block markup') && e.includes('fix_block_markup')));
     cleanupMini(MINI);
     fs.rmSync(MINI, { recursive: true, force: true });
 });

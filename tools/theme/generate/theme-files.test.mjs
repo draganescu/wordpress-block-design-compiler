@@ -54,12 +54,15 @@ test('templateMarkup composes parts and post-content', () => {
     ].join('\n') + '\n');
 });
 
-test('DEFAULT_TEMPLATES provides generic archive, single and 404 bodies', () => {
+test('DEFAULT_TEMPLATES provides generic archive, single and 404 bodies as trees', () => {
     for (const name of ['archive', 'single', '404']) {
-        assert.ok(DEFAULT_TEMPLATES[name].some((e) => e.type === 'blocks' || e.type === 'post-content'), name);
+        assert.ok(DEFAULT_TEMPLATES[name].some((e) => e.type === 'tree' && Array.isArray(e.blocks)), name);
     }
-    // Serialized block comments omit the implicit core/ namespace, so the
-    // canonical markers are wp:query and wp:post-title.
-    assert.ok(JSON.stringify(DEFAULT_TEMPLATES.archive).includes('wp:query'));
-    assert.ok(JSON.stringify(DEFAULT_TEMPLATES.single).includes('wp:post-title'));
+    assert.ok(JSON.stringify(DEFAULT_TEMPLATES.archive).includes('core/query'));
+    assert.ok(JSON.stringify(DEFAULT_TEMPLATES.single).includes('core/post-title'));
+    assert.ok(JSON.stringify(DEFAULT_TEMPLATES[404]).includes('core/search'));
+});
+
+test('templateMarkup rejects unserialized tree entries', () => {
+    assert.throws(() => templateMarkup([{ type: 'tree', blocks: [] }]), /serialized by the scaffold/);
 });

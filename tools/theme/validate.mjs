@@ -5,6 +5,7 @@ import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { resolvePath, readJson, readIfExists, writeJson } from '../lib/workspace.mjs';
 import { ensureBlocksRegistered, loadWordPressBlocks } from '../lib/wp-serialize.mjs';
+import { fixBlockMarkup } from '../lib/fix-markup.mjs';
 
 const require = createRequire(import.meta.url);
 
@@ -54,13 +55,22 @@ export function validateBlockTheme(args) {
         if (!fs.existsSync(dir)) continue;
         for (const file of fs.readdirSync(dir).filter((f) => f.endsWith('.html'))) {
             const rel = `${sub}/${file}`;
-            const parsed = parseGrammar(readIfExists(path.join(dir, file)));
+            const text = readIfExists(path.join(dir, file));
+            const parsed = parseGrammar(text);
             walkParsed(parsed, (b) => {
                 if (b.blockName === null && b.innerHTML.trim() !== '') errors.push(`${rel}: contains freeform/unparsed content`);
                 if (b.blockName && !known.has(b.blockName)) errors.push(`${rel}: unknown block ${b.blockName}`);
             });
+            // canonicality: parse() self-heals drifted markup through block
+            // deprecations (so isValid stays true), but the file on disk
+            // still fails editor validation. The reliable signal is the
+            // round trip: regenerated markup must match the file.
+            const roundTrip = fixBlockMarkup(text);
+            const normalizeGaps = (s) => s.replace(/\n+/g, '\n').trim();
+            if (normalizeGaps(roundTrip.markup) !== normalizeGaps(text)) {
+                errors.push(`${rel}: invalid block markup (drifts from save() output) — run fix_block_markup`);
+            }
             if (sub === 'templates' && file !== '404.html') {
-                const text = readIfExists(path.join(dir, file));
                 const isContentful = /wp:post-content|wp:query/.test(text);
                 must(isContentful, `${rel}: template renders no content (needs post-content or a query loop)`);
             }

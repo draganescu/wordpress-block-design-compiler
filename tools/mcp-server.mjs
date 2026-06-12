@@ -1,4 +1,11 @@
 #!/usr/bin/env node
+// stdout carries the Content-Length-framed MCP protocol; library logging
+// (e.g. @wordpress/blocks block-validation diffs) must go to stderr or it
+// corrupts the stream.
+for (const method of ['log', 'info', 'warn', 'debug']) {
+    console[method] = (...args) => process.stderr.write(`${args.map(String).join(' ')}\n`);
+}
+
 import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -11,7 +18,8 @@ import {
     DEFAULT_VIEWPORTS, loadCaptureDeps, serveDirectory, capture, captureEditor,
     editorComparisonCss, motionFreezeCss, transientOverlayCaptureCss, comparePngs,
 } from './lib/capture.mjs';
-import { serializeBlockTreeWithWordPress, stripBlockComments } from './lib/wp-serialize.mjs';
+import { serializeBlockTreeWithWordPress, stripBlockComments, ensureBlocksRegistered } from './lib/wp-serialize.mjs';
+import { fixBlockMarkup } from './lib/fix-markup.mjs';
 import { analyzeThemeEvidence } from './theme/evidence.mjs';
 import { inferTemplateParts } from './theme/parts.mjs';
 import { fetchThemeFonts } from './theme/fonts.mjs';
@@ -277,6 +285,20 @@ const TOOLS = [
     description: 'Boot the theme + plugins in WordPress Playground, import the pages through the content plugin, screenshot every page logged-out at both viewports, and diff against the mockups. Writes reports/theme-comparison.json with the standard thresholds.',
     inputSchema: { type: 'object', additionalProperties: false, required: ['workspaceRoot', 'slug'], properties: { workspaceRoot: { type: 'string' }, slug: { type: 'string' }, port: { type: 'number' }, maxMismatchPercent: { type: 'number' }, maxHeightDelta: { type: 'number' } } },
   },
+  {
+    name: 'fix_block_markup',
+    description: 'Canonicalize block markup: parse, recreate every block from its attributes, and re-serialize so the markup byte-matches save() output, eliminating editor block-validation errors. Pass raw markup, or workspace-relative file paths to fix in place. Registers the workspace custom blocks before parsing.',
+    inputSchema: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['workspaceRoot'],
+      properties: {
+        workspaceRoot: { type: 'string' },
+        markup: { type: 'string' },
+        paths: { type: 'array', items: { type: 'string' } },
+      },
+    },
+  },
 ];
 
 const handlers = {
@@ -302,6 +324,23 @@ const handlers = {
   scaffold_block_theme: (args) => scaffoldBlockTheme(args),
   validate_block_theme: (args) => validateBlockTheme(args),
   playground_render: (args) => playgroundRender(args),
+  fix_block_markup: (args) => {
+      const workspaceRoot = resolvePath(args.workspaceRoot);
+      ensureBlocksRegistered(workspaceRoot);
+      if (args.markup !== undefined) {
+          return fixBlockMarkup(args.markup);
+      }
+      if (!Array.isArray(args.paths) || args.paths.length === 0) {
+          throw new Error('fix_block_markup needs either markup or a non-empty paths array.');
+      }
+      const results = args.paths.map((rel) => {
+          const filePath = resolveWorkspacePath(workspaceRoot, rel);
+          const result = fixBlockMarkup(readIfExists(filePath));
+          if (result.changed) writeFile(filePath, result.markup);
+          return { path: rel, changed: result.changed, issues: result.issues };
+      });
+      return { results, next: 'Re-run validate_block_theme to confirm the markup is clean.' };
+  },
 };
 
 let buffer = Buffer.alloc(0);
