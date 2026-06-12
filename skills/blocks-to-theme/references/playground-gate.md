@@ -81,3 +81,13 @@ the worst page first, re-run `validate_block_theme` after any re-scaffold,
 then re-run `playground_render`. Do not stop at "close" or "structurally
 right"; if the thresholds cannot be met, report the run blocked with the
 metrics and the blocking cause.
+
+## Editor Validation Pass
+
+After the frontend captures, the gate logs into wp-admin and opens every
+imported page in the block editor, collecting `Block validation failed`
+console messages. The run fails on ANY such message — the editor recomputes
+save() in the browser and catches drift no Node-side round trip can see
+(kses `--` escaping in style attributes, content-filter mangling of empty
+inline elements, unslashed comment-JSON escapes). The per-page counts land in
+`reports/theme-comparison.json` under `editorValidation`.

@@ -52,6 +52,8 @@ into the theme.
 ### Completion Gate
 The run is complete only when `validate_block_theme` reports zero errors AND
 `reports/theme-comparison.json` shows every page within thresholds
-(`maxMismatchPercent <= 1`, `maxHeightDelta <= 8`) at both viewports. Quote
+(`maxMismatchPercent <= 1`, `maxHeightDelta <= 8`) at both viewports AND
+every page's `editorValidation.failures` is zero (the gate opens each page
+in the real editor and collects block-validation console errors). Quote
 both in the final response. Otherwise keep repairing or report the run blocked
 with the metrics and the blocking cause.

@@ -90,6 +90,10 @@ export async function playgroundRender(args) {
                 pagesReport.push({ page: page.slug, mockupPath, results, aggregate,
                     passed: aggregate.maxMismatchPercent <= thresholds.maxMismatchPercent && aggregate.maxHeightDelta <= thresholds.maxHeightDelta });
             }
+            // editor validation: the real editor recomputes save() in the
+            // browser and flags drift our Node round-trip cannot see (kses
+            // escaping, content-filter mangling). Zero failures required.
+            await editorValidation(browser, base, manifest.pages, pagesReport);
         } finally {
             await browser.close();
             await server.close?.();
@@ -100,7 +104,7 @@ export async function playgroundRender(args) {
                 maxMismatchPercent: Math.max(...pagesReport.map((p) => p.aggregate.maxMismatchPercent)),
                 maxHeightDelta: Math.max(...pagesReport.map((p) => p.aggregate.maxHeightDelta)),
             },
-            passed: pagesReport.every((p) => p.passed),
+            passed: pagesReport.every((p) => p.passed && (p.editorValidation?.failures ?? 0) === 0),
         };
         writeJson(path.join(workspaceRoot, 'reports/theme-comparison.json'), report);
         return report;
@@ -108,6 +112,46 @@ export async function playgroundRender(args) {
         throw new Error(`playground_render failed: ${error.message}\n--- playground logs (tail) ---\n${logs.slice(-2000)}`);
     } finally {
         proc.kill('SIGTERM');
+    }
+}
+
+async function editorValidation(browser, base, pages, pagesReport) {
+    const context = await browser.newContext();
+    const page = await context.newPage();
+    try {
+        await page.goto(`${base}/wp-login.php`);
+        await page.fill('#user_login', 'admin');
+        await page.fill('#user_pass', 'password');
+        await page.click('#wp-submit');
+        await page.waitForLoadState('networkidle');
+        for (const manifestPage of pages) {
+            const entry = pagesReport.find((p) => p.page === manifestPage.slug);
+            if (!entry) continue;
+            const failures = [];
+            const onConsole = (msg) => {
+                const text = msg.text();
+                if (/Block validation failed/i.test(text)) {
+                    failures.push(text.slice(0, 300));
+                }
+            };
+            page.on('console', onConsole);
+            // resolve the post id from the editor list is brittle; the edit
+            // link on the frontend admin bar is too — use post slug query
+            await page.goto(`${base}/wp-admin/edit.php?post_type=page&s=${encodeURIComponent(manifestPage.title)}`);
+            const editHref = await page.getAttribute('.row-title >> nth=0', 'href').catch(() => null);
+            if (editHref) {
+                await page.goto(editHref);
+                await page.waitForSelector('.block-editor-block-list__layout', { timeout: 60000 }).catch(() => {});
+                await page.waitForTimeout(2000);
+            } else {
+                failures.push(`could not locate the page "${manifestPage.title}" in wp-admin`);
+            }
+            page.off('console', onConsole);
+            entry.editorValidation = { failures: failures.length, samples: failures.slice(0, 3) };
+            if (failures.length > 0) entry.passed = false;
+        }
+    } finally {
+        await context.close();
     }
 }
 

@@ -121,3 +121,13 @@ Never reason about these from the stylesheet alone. Use `measure_layout`
 repair batch; a drift table pinpoints which of the gotchas above actually
 fired. Computed-style probes (font-size, line-height, white-space, margins)
 on a single drifted element settle the cause in one step.
+
+## WordPress content filters (downstream)
+
+**Empty inline elements do not survive WordPress.** A decorative
+`<span class="bar"></span>` inside rich-text content passes every preview
+gate, but `wp_insert_post`'s tag balancing eats the closing tag of empty
+inline elements, leaving an unclosed span that swallows the following text
+and fails editor validation. If a downstream stage will import the content
+into real WordPress (blocks-to-theme does), express decorative bars and
+ornaments as CSS pseudo-elements on the parent instead.

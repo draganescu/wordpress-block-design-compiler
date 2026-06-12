@@ -54,12 +54,15 @@ function ${prefix}_import_pages() {
         }
         $markup = file_get_contents(__DIR__ . '/content/' . $slug . '.html');
         $markup = str_replace('{{THEME_URI}}', get_stylesheet_directory_uri(), $markup);
+        // wp_insert_post unslashes its input; without wp_slash the JSON
+        // escapes in block comments (& etc.) lose their backslash and
+        // the editor sees corrupted attribute values
         $post_id = wp_insert_post(array(
             'post_type' => 'page',
             'post_status' => 'publish',
-            'post_title' => $page['title'],
+            'post_title' => wp_slash($page['title']),
             'post_name' => $slug,
-            'post_content' => $markup,
+            'post_content' => wp_slash($markup),
         ));
         if (is_wp_error($post_id)) {
             $results[$slug] = array('status' => 'error: ' . $post_id->get_error_message(), 'permalink' => null);

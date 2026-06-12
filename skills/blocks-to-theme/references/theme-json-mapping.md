@@ -55,6 +55,20 @@ array is either liftable (lift it) or a `selector` case (justify it in the
 ledger). Do not solve fidelity by dumping the workspace stylesheet into the
 theme.
 
+## Editor-Runtime Constraints On Attribute Values
+
+- Raw `var(--…)` references must NOT appear in style attribute values
+  (spacing, color, etc.). The browser-side save escapes `--` inside `style`
+  attributes as `u002du002d` (kses protection), so such markup can never
+  validate in the editor. Tokens used in attr values must become presets
+  (`var:preset|spacing|<slug>`), which are exempt. Raw `var()` is fine in CSS
+  files — only attribute values are affected.
+- Block attributes containing `&`, `<`, `>`, `"` or `--` are escaped as
+  `\uXXXX` sequences in the serialized comment JSON. Anything that inserts
+  that markup through PHP must `wp_slash()` it first — `wp_insert_post`
+  unslashes input and silently corrupts the escapes (the generated content
+  plugin does this; custom import paths must too).
+
 ## The Two Mechanical Rewrites
 
 You declare the token map; `scaffold_block_theme` performs the rewrites. Know

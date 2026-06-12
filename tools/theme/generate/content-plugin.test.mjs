@@ -25,6 +25,7 @@ test('writeContentPlugin writes manifest, payload and admin plugin', () => {
     assert.match(php, /add_management_page/);
     assert.match(php, /\{\{THEME_URI\}\}/);
     assert.match(php, /wp_verify_nonce/);
+    assert.match(php, /wp_slash\(\$markup\)/);
 });
 
 test('writeContentPlugin manifest carries through extra page fields like sourceFile, page and mockupPath', () => {
