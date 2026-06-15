@@ -1,18 +1,19 @@
 # HTML to Blocks
 
-Use this plugin when the user asks to transform designed or provided HTML/CSS/JS into editable WordPress blocks.
+Use this plugin when the user asks to plan WordPress content architecture, transform designed or provided HTML/CSS/JS into editable WordPress blocks, or turn a completed block workspace into a block theme.
 
 Workflow:
 
 1. Generate a polished standalone HTML/CSS/JS mockup from the user request plus the design prompt in `skills/html-to-blocks/references/design-prompt.md`, or call `import_provided_markup` when the user supplied existing markup.
 2. Analyze the mockup with the `analyze_mockup` tool.
-3. Plan core blocks, custom blocks, and style responsibilities. Use block support/style attributes first; CSS needs a support-limitation reason.
-4. Generate vanilla JavaScript custom blocks with real editor affordances: in-canvas RichText for visible copy, InspectorControls for behavior/settings, block supports for style controls, and semantic save markup.
-5. Assemble block content and serialize it with `serialize_wordpress_blocks`.
-6. Refresh editor previews with `create_block_editor_preview` when inspecting a generated tree directly or when working with multiple generated page trees.
-7. Capture inspection screenshots with `screenshot_html` when you need to look at mockup, rendered output, editor output, or multiple generated pages without running a pixel diff.
-8. Compare the mockup against both the rendered frontend preview and editable editor preview with `compare_html`.
-9. Turn the screenshots/diffs into explicit repair tasks, fix them, and repeat until both `aggregates.rendered` and `aggregates.editor` are under threshold.
+3. If the design implies durable content collections, run `skills/content-modeling/SKILL.md`: write `content-model/content-model.json`, validate it with `validate_content_model`, then generate the plugin with `scaffold_content_model_plugin`.
+4. Plan core blocks, custom blocks, and style responsibilities. Use block support/style attributes first; CSS needs a support-limitation reason.
+5. Generate vanilla JavaScript custom blocks with real editor affordances: in-canvas RichText for visible copy, InspectorControls for behavior/settings, block supports for style controls, and semantic save markup.
+6. Assemble block content and serialize it with `serialize_wordpress_blocks`.
+7. Refresh editor previews with `create_block_editor_preview` when inspecting a generated tree directly or when working with multiple generated page trees.
+8. Capture inspection screenshots with `screenshot_html` when you need to look at mockup, rendered output, editor output, or multiple generated pages without running a pixel diff.
+9. Compare the mockup against both the rendered frontend preview and editable editor preview with `compare_html`.
+10. Turn the screenshots/diffs into explicit repair tasks, fix them, and repeat until both `aggregates.rendered` and `aggregates.editor` are under threshold.
 
 Keep the HTML mockup as the source of truth. Prefer core blocks and block supports before custom blocks. Use custom blocks only when they provide a better editable content model or semantic frontend contract.
 

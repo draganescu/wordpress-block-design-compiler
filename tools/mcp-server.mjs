@@ -26,6 +26,7 @@ import { fetchThemeFonts } from './theme/fonts.mjs';
 import { scaffoldBlockTheme } from './theme/scaffold.mjs';
 import { validateBlockTheme } from './theme/validate.mjs';
 import { playgroundRender } from './theme/playground.mjs';
+import { validateContentModel, scaffoldContentModelPlugin } from './content/model.mjs';
 
 const TOOLS = [
   {
@@ -246,6 +247,35 @@ const TOOLS = [
     },
   },
   {
+    name: 'validate_content_model',
+    description: 'Validate an agent-authored WordPress content model JSON for CPT, taxonomy, meta, REST, and seed-content consistency. Writes reports/content-model-validation.json.',
+    inputSchema: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['workspaceRoot'],
+      properties: {
+        workspaceRoot: { type: 'string' },
+        modelPath: { type: 'string', default: 'content-model/content-model.json' },
+        reportPath: { type: 'string', default: 'reports/content-model-validation.json' },
+      },
+    },
+  },
+  {
+    name: 'scaffold_content_model_plugin',
+    description: 'Generate an installable WordPress plugin from content-model/content-model.json. The plugin registers CPTs, taxonomies, post meta, submission REST routes, and idempotent seed entries, plus a Tools screen to apply/remove generated seed content.',
+    inputSchema: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['workspaceRoot'],
+      properties: {
+        workspaceRoot: { type: 'string' },
+        modelPath: { type: 'string', default: 'content-model/content-model.json' },
+        reportPath: { type: 'string', default: 'reports/content-model-validation.json' },
+        outDir: { type: 'string', default: 'content-model/plugin' },
+      },
+    },
+  },
+  {
     name: 'analyze_theme_evidence',
     description: 'Scan all page block trees and workspace CSS into a style-evidence report (recurring colors/fonts/spacing with occurrence counts, custom properties, support usage, lift buckets per CSS rule). Facts only — the agent decides what lifts into theme.json.',
     inputSchema: { type: 'object', additionalProperties: false, required: ['workspaceRoot'], properties: { workspaceRoot: { type: 'string' } } },
@@ -311,6 +341,8 @@ const handlers = {
   screenshot_html: screenshotHtml,
   compare_html: compareHtml,
   measure_layout: measureLayout,
+  validate_content_model: (args) => validateContentModel(args),
+  scaffold_content_model_plugin: (args) => scaffoldContentModelPlugin(args),
   analyze_theme_evidence: (args) => analyzeThemeEvidence(args),
   infer_template_parts: (args) => inferTemplateParts(args),
   fetch_theme_fonts: (args) => {
@@ -436,7 +468,7 @@ async function createWorkspace(args) {
     throw new Error(`Workspace exists: ${workspaceRoot}. Pass force=true to reuse it.`);
   }
 
-  for (const dir of ['mockup', 'analysis', 'plan', 'wordpress/blocks', 'rendered', 'editor', 'reports', 'visual']) {
+  for (const dir of ['mockup', 'analysis', 'plan', 'content-model', 'wordpress/blocks', 'rendered', 'editor', 'reports', 'visual']) {
     fs.mkdirSync(path.join(workspaceRoot, dir), { recursive: true });
   }
 
@@ -447,6 +479,15 @@ async function createWorkspace(args) {
   writeJson(path.join(workspaceRoot, 'wordpress/block-tree.json'), { version: 2, contract: 'data-only', blocks: [] });
   writeFile(path.join(workspaceRoot, 'wordpress/content.html'), '<!-- Serialized from wordpress/block-tree.json by @wordpress/blocks. -->\n');
   writeJson(path.join(workspaceRoot, 'plan/block-plan.json'), { sections: [], customBlocks: [] });
+  writeJson(path.join(workspaceRoot, 'content-model/content-model.json'), {
+    version: 1,
+    plugin: {
+      slug: `${slug(path.basename(workspaceRoot)) || 'site'}-content`,
+      name: `${titleCase(path.basename(workspaceRoot)) || 'Site'} Content Model`,
+    },
+    postTypes: [],
+    taxonomies: [],
+  });
   copyReference('design-prompt.md', path.join(workspaceRoot, 'plan/design-prompt.md'));
 
   return {
@@ -458,6 +499,7 @@ async function createWorkspace(args) {
       blockPlan: path.join(workspaceRoot, 'plan/block-plan.json'),
       blockTree: path.join(workspaceRoot, 'wordpress/block-tree.json'),
       blockContent: path.join(workspaceRoot, 'wordpress/content.html'),
+      contentModel: path.join(workspaceRoot, 'content-model/content-model.json'),
       editorPreview: path.join(workspaceRoot, 'editor/block-editor.html'),
       wordpressCss: path.join(workspaceRoot, 'wordpress/style.css'),
     },
@@ -1938,4 +1980,3 @@ function copyReference(name, target) {
   const source = path.join(PLUGIN_ROOT, 'skills/html-to-blocks/references', name);
   if (fs.existsSync(source)) writeFile(target, fs.readFileSync(source, 'utf8'));
 }
-

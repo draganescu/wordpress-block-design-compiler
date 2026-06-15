@@ -6,7 +6,9 @@ The workflow is intentionally staged. The HTML mockup stays the visual source of
 
 ## What Is Included
 
-- `skills/html-to-blocks/SKILL.md` - the orchestrator skill an agent should follow.
+- `skills/content-modeling/SKILL.md` - the content architecture skill for posts, CPTs, taxonomies, meta, submissions, seed data, and model plugins.
+- `skills/content-modeling/references/` - content modeling and plugin-contract guidance.
+- `skills/html-to-blocks/SKILL.md` - the HTML-to-editable-blocks skill an agent should follow.
 - `skills/html-to-blocks/references/` - design, planning, core-block, custom-block, and repair-loop guidance.
 - `skills/blocks-to-theme/SKILL.md` - the stage-2 skill that turns a completed run into an installable block theme.
 - `skills/blocks-to-theme/references/` - theme.json mapping, part inference, template planning, fonts/media, and Playground-gate guidance.
@@ -23,12 +25,24 @@ Generated runs should live outside the repository, or under ignored local folder
 1. Create a workspace with `create_workspace`.
 2. Generate `mockup/index.html` and `mockup/style.css` from the user brief, or import existing markup with `import_provided_markup`.
 3. Analyze the mockup with `analyze_mockup`.
-4. Write a core-first block plan in `plan/block-plan.md` and `plan/block-plan.json`.
-5. Generate custom blocks only when core blocks and block supports cannot preserve both fidelity and editability.
-6. Assemble `wordpress/block-tree.json` as data only: block names, attributes, supports/style attrs, classes, and inner blocks.
-7. Run `serialize_wordpress_blocks` to produce canonical block markup, rendered preview HTML, editor preview HTML, and a style audit.
-8. Run `compare_html` against both the saved frontend render and the editable editor preview.
-9. Localize failures with `measure_layout` (per-element geometry drift between mockup and rendered/editor pages), then repair from explicit tasks until rendered and editor mismatch thresholds pass.
+4. If the brief/design contains dynamic content collections, run the `content-modeling` skill: write `content-model/content-model.json`, validate it, and scaffold the installable content-model plugin.
+5. Write a core-first block plan in `plan/block-plan.md` and `plan/block-plan.json`.
+6. Generate custom blocks only when core blocks and block supports cannot preserve both fidelity and editability.
+7. Assemble `wordpress/block-tree.json` as data only: block names, attributes, supports/style attrs, classes, and inner blocks.
+8. Run `serialize_wordpress_blocks` to produce canonical block markup, rendered preview HTML, editor preview HTML, and a style audit.
+9. Run `compare_html` against both the saved frontend render and the editable editor preview.
+10. Localize failures with `measure_layout` (per-element geometry drift between mockup and rendered/editor pages), then repair from explicit tasks until rendered and editor mismatch thresholds pass.
+
+## Stage 0: content-modeling
+
+Use `skills/content-modeling/SKILL.md` when the site needs durable data architecture: custom post types, taxonomies, structured meta, submission storage, or sample data. This stage looks at the design and brief before blocks are assembled and decides what should remain page content versus what belongs in WordPress admin as posts, CPTs, taxonomy terms, or form submissions.
+
+Stage-0 tools:
+
+- `validate_content_model`
+- `scaffold_content_model_plugin`
+
+The canonical model is `content-model/content-model.json`. The generated installable plugin is written to `content-model/plugin/<plugin-slug>/` and registers CPTs, taxonomies, post meta, submission REST routes, and seed entries. The plugin adds a Tools screen to apply the model again or remove generated seed posts.
 
 ## Multi-Page Exports
 
@@ -96,6 +110,8 @@ The server exposes these tools:
 - `screenshot_html`
 - `compare_html`
 - `measure_layout`
+- `validate_content_model`
+- `scaffold_content_model_plugin`
 - `analyze_theme_evidence`
 - `infer_template_parts`
 - `fetch_theme_fonts`
@@ -118,7 +134,7 @@ Use the repository as a Codex plugin. The manifest is at:
 .codex-plugin/plugin.json
 ```
 
-The skill names are `html-to-blocks` and `blocks-to-theme`.
+The skill names are `content-modeling`, `html-to-blocks`, and `blocks-to-theme`.
 
 ## Claude / MCP
 

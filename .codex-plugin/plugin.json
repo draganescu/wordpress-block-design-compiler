@@ -1,18 +1,20 @@
 {
   "name": "html-to-blocks",
   "version": "0.1.0",
-  "description": "Agent workflow and MCP tools for transforming designed or provided HTML/CSS/JS into editable WordPress blocks, then extracting an installable WordPress block theme from the result.",
+  "description": "Agent workflows and MCP tools for content modeling, transforming designed HTML into editable WordPress blocks, and extracting installable block themes.",
   "author": {
     "name": "Andrei Draganescu"
   },
   "skills": "./skills/",
   "interface": {
     "displayName": "HTML to WordPress Blocks",
-    "shortDescription": "Transform designed HTML into editable WordPress blocks and an installable block theme.",
-    "longDescription": "A staged html-to-blocks workflow for importing or generating high-quality HTML/CSS/JS mockups, planning core/custom WordPress blocks, generating vanilla JS custom blocks only when needed, assembling data-only block trees, and iterating with rendered/editor screenshot diffs until visual fidelity is high. A second skill, blocks-to-theme, turns a completed run into an installable WordPress block theme: theme.json extracted from style evidence, template parts inferred from cross-page repetition, bundled fonts and media, a blocks plugin and a content import/remove plugin, verified in WordPress Playground against the mockups.",
+    "shortDescription": "Model content, transform designed HTML into editable WordPress blocks, and extract an installable block theme.",
+    "longDescription": "A staged WordPress design workflow. content-modeling decides posts, CPTs, taxonomies, meta, submission models, seed data, and generates an installable plugin to apply the model. html-to-blocks imports or generates high-quality HTML/CSS/JS mockups, plans core/custom WordPress blocks, assembles data-only block trees, and iterates with rendered/editor screenshot diffs. blocks-to-theme turns a completed run into an installable block theme: theme.json extracted from style evidence, template parts inferred from cross-page repetition, bundled fonts and media, generated plugins, and WordPress Playground verification against the mockups.",
     "developerName": "Andrei Draganescu",
     "category": "Developer",
     "capabilities": [
+      "WordPress content modeling",
+      "CPT taxonomy and meta plugin generation",
       "HTML to WordPress block conversion",
       "Core-first block planning",
       "Rendered and editor visual diff loops",
