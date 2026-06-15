@@ -42,7 +42,7 @@ Stage-0 tools:
 - `validate_content_model`
 - `scaffold_content_model_plugin`
 
-The canonical model is `content-model/content-model.json`. The generated installable plugin is written to `content-model/plugin/<plugin-slug>/` and registers CPTs, taxonomies, post meta, submission REST routes, and seed entries. The plugin adds a Tools screen to apply the model again or remove generated seed posts.
+The canonical model is `content-model/content-model.json`. The generated installable plugin is written to `content-model/plugin/<plugin-slug>/` and registers CPTs, taxonomies, post meta, and submission REST routes while active. Like the theme page-content importer, seed records are explicit: manifests describe records, seed post markup is moved to `content/seeds/...` payload files, and the plugin adds a Tools screen to import generated seed content, report slug collisions/modified imports, and remove generated seed content.
 
 ## Multi-Page Exports
 

@@ -14,6 +14,8 @@ content-model/plugin/<plugin-slug>/
 
 Run `validate_content_model` before `scaffold_content_model_plugin`.
 
+The canonical source model may include `seed[].content` for review. During scaffolding, seed post content is moved into payload files under `content/seeds/<post-type>/<seed-slug>.html`, and the plugin model uses `contentFile` references. This mirrors the page-content importer: manifests describe records; large block markup lives in payload files.
+
 ## Shape
 
 ```json
@@ -100,8 +102,10 @@ The generated plugin:
 - loads `content-model.json`
 - registers CPTs, taxonomies, and post meta on `init`
 - registers public REST submit routes for `kind: "submission"` CPTs
-- seeds taxonomy terms and entries on activation
 - flushes rewrite rules on activation/deactivation
-- adds a Tools screen to apply the model again or remove generated seed posts
+- keeps CPT/taxonomy/meta registration active while the plugin is active
+- stores seed post block markup in separate `content/seeds/...` payload files
+- imports seed taxonomy terms and entries only from the Tools screen
+- tracks generated seed state, reports slug collisions and modified imports, and removes generated seed content from the Tools screen
 
 It does not generate visual blocks. The html-to-blocks skill must still create any query-loop card layouts, object-card blocks, or form blocks that use the model.

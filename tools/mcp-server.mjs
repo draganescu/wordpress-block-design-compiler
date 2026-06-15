@@ -262,7 +262,7 @@ const TOOLS = [
   },
   {
     name: 'scaffold_content_model_plugin',
-    description: 'Generate an installable WordPress plugin from content-model/content-model.json. The plugin registers CPTs, taxonomies, post meta, submission REST routes, and idempotent seed entries, plus a Tools screen to apply/remove generated seed content.',
+    description: 'Generate an installable WordPress plugin from content-model/content-model.json. The plugin registers CPTs, taxonomies, post meta, and submission REST routes while active, plus a Tools screen to import/remove generated seed content with state and collision reporting.',
     inputSchema: {
       type: 'object',
       additionalProperties: false,

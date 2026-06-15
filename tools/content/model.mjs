@@ -47,8 +47,21 @@ export function scaffoldContentModelPlugin(args) {
     const pluginRoot = path.join(outDir, pluginSlug);
     const pluginFile = path.join(pluginRoot, `${pluginSlug}.php`);
     fs.mkdirSync(pluginRoot, { recursive: true });
-    writeJson(path.join(pluginRoot, 'content-model.json'), model);
-    writeFile(pluginFile, contentModelPluginPhp(model));
+    fs.mkdirSync(path.join(pluginRoot, 'content'), { recursive: true });
+    const pluginModel = writeSeedPayloads(model, pluginRoot);
+    writeJson(path.join(pluginRoot, 'content-model.json'), pluginModel);
+    writeJson(path.join(pluginRoot, 'content/manifest.json'), {
+        model: pluginModel.plugin,
+        postTypes: pluginModel.postTypes.map((type) => ({
+            slug: type.slug,
+            kind: type.kind,
+            singular: type.singular,
+            plural: type.plural,
+            seed: type.seed.map(({ content, ...entry }) => entry),
+        })),
+        taxonomies: pluginModel.taxonomies,
+    });
+    writeFile(pluginFile, contentModelPluginPhp(pluginModel));
     writeJson(path.join(workspaceRoot, 'content-model/plugin-manifest.json'), {
         plugin: model.plugin,
         sourceModel: path.relative(workspaceRoot, modelPath),
@@ -64,8 +77,23 @@ export function scaffoldContentModelPlugin(args) {
         pluginFile,
         postTypes: model.postTypes.map((type) => type.slug),
         taxonomies: model.taxonomies.map((taxonomy) => taxonomy.slug),
-        next: 'Install and activate this plugin in WordPress. Activation registers the model and seeds sample entries; Tools > Content model can re-apply or remove generated seed posts.',
+        next: 'Install and activate this plugin in WordPress. Activation registers the model and flushes rewrites. Use Tools > Content model to import or remove generated seed content.',
     };
+}
+
+function writeSeedPayloads(model, pluginRoot) {
+    const pluginModel = JSON.parse(JSON.stringify(model));
+    for (const type of pluginModel.postTypes) {
+        for (const entry of type.seed) {
+            const content = String(entry.content || '');
+            delete entry.content;
+            if (!content.trim()) continue;
+            const rel = `content/seeds/${type.slug}/${entry.slug}.html`;
+            writeFile(path.join(pluginRoot, rel), `${content.trim()}\n`);
+            entry.contentFile = rel;
+        }
+    }
+    return pluginModel;
 }
 
 export function normalizeContentModel(raw) {
@@ -263,6 +291,7 @@ function contentModelPluginPhp(model) {
 defined('ABSPATH') || exit;
 
 const ${prefix.toUpperCase()}_MODEL_FILE = __DIR__ . '/content-model.json';
+const ${prefix.toUpperCase()}_SEED_OPTION = '${prefix}_seed_imports';
 const ${prefix.toUpperCase()}_SEED_META = '_${prefix}_seed_id';
 
 function ${prefix}_model() {
@@ -450,24 +479,65 @@ function ${prefix}_submission_content($params) {
     return wp_json_encode($params, JSON_PRETTY_PRINT);
 }
 
-function ${prefix}_seed_terms() {
-    foreach ((${prefix}_model()['taxonomies'] ?? array()) as $taxonomy) {
-        foreach (($taxonomy['terms'] ?? array()) as $term) {
-            if (!term_exists($term['slug'], $taxonomy['slug'])) {
-                wp_insert_term($term['name'], $taxonomy['slug'], array(
-                    'slug' => $term['slug'],
-                    'description' => $term['description'] ?? '',
-                ));
-            }
-        }
-    }
+function ${prefix}_seed_state() {
+    $state = get_option(${prefix.toUpperCase()}_SEED_OPTION, array('posts' => array(), 'terms' => array()));
+    if (!is_array($state)) $state = array();
+    if (!isset($state['posts']) || !is_array($state['posts'])) $state['posts'] = array();
+    if (!isset($state['terms']) || !is_array($state['terms'])) $state['terms'] = array();
+    return $state;
 }
 
-function ${prefix}_seed_posts() {
+function ${prefix}_seed_id($type, $entry) {
+    return $type['slug'] . ':' . ($entry['seedId'] ?? $entry['slug']);
+}
+
+function ${prefix}_import_seed_terms(&$state) {
+    $results = array();
+    foreach ((${prefix}_model()['taxonomies'] ?? array()) as $taxonomy) {
+        foreach (($taxonomy['terms'] ?? array()) as $term) {
+            $seed_id = $taxonomy['slug'] . ':' . $term['slug'];
+            $existing = term_exists($term['slug'], $taxonomy['slug']);
+            if ($existing) {
+                $results[$seed_id] = array('status' => 'already-exists', 'term_id' => is_array($existing) ? (int) $existing['term_id'] : (int) $existing);
+                continue;
+            }
+            $created = wp_insert_term($term['name'], $taxonomy['slug'], array(
+                'slug' => $term['slug'],
+                'description' => $term['description'] ?? '',
+            ));
+            if (is_wp_error($created)) {
+                $results[$seed_id] = array('status' => 'error: ' . $created->get_error_message(), 'term_id' => 0);
+                continue;
+            }
+            $term_id = (int) $created['term_id'];
+            $state['terms'][$seed_id] = array('term_id' => $term_id, 'taxonomy' => $taxonomy['slug'], 'imported_at' => time());
+            $results[$seed_id] = array('status' => 'imported', 'term_id' => $term_id);
+        }
+    }
+    return $results;
+}
+
+function ${prefix}_seed_entry_content($entry) {
+    $content = $entry['content'] ?? '';
+    if (!empty($entry['contentFile'])) {
+        $file = __DIR__ . '/' . ltrim($entry['contentFile'], '/');
+        if (is_readable($file)) {
+            $content = file_get_contents($file);
+        }
+    }
+    return str_replace('{{THEME_URI}}', get_stylesheet_directory_uri(), $content);
+}
+
+function ${prefix}_import_seed_posts(&$state) {
+    $results = array();
     foreach ((${prefix}_model()['postTypes'] ?? array()) as $type) {
         foreach (($type['seed'] ?? array()) as $entry) {
-            $seed_id = $type['slug'] . ':' . ($entry['seedId'] ?? $entry['slug']);
-            $existing = get_posts(array(
+            $seed_id = ${prefix}_seed_id($type, $entry);
+            if (isset($state['posts'][$seed_id]) && get_post($state['posts'][$seed_id]['post_id'])) {
+                $results[$seed_id] = array('status' => 'already-imported', 'post_id' => $state['posts'][$seed_id]['post_id']);
+                continue;
+            }
+            $generated = get_posts(array(
                 'post_type' => $type['slug'],
                 'post_status' => 'any',
                 'meta_key' => ${prefix.toUpperCase()}_SEED_META,
@@ -475,10 +545,20 @@ function ${prefix}_seed_posts() {
                 'posts_per_page' => 1,
                 'fields' => 'ids',
             ));
-            if ($existing) {
+            if ($generated) {
+                $state['posts'][$seed_id] = array('post_id' => (int) $generated[0], 'post_type' => $type['slug'], 'slug' => $entry['slug'], 'imported_at' => time());
+                $results[$seed_id] = array('status' => 'already-imported', 'post_id' => (int) $generated[0]);
                 continue;
             }
-            if (get_page_by_path($entry['slug'], OBJECT, $type['slug'])) {
+            $collision = get_page_by_path($entry['slug'], OBJECT, $type['slug']);
+            if ($collision) {
+                $collision_seed_id = get_post_meta($collision->ID, ${prefix.toUpperCase()}_SEED_META, true);
+                if ($collision_seed_id === $seed_id) {
+                    $state['posts'][$seed_id] = array('post_id' => $collision->ID, 'post_type' => $type['slug'], 'slug' => $entry['slug'], 'imported_at' => time());
+                    $results[$seed_id] = array('status' => 'already-imported', 'post_id' => $collision->ID);
+                    continue;
+                }
+                $results[$seed_id] = array('status' => 'slug-collision', 'post_id' => $collision->ID);
                 continue;
             }
             $meta = $entry['meta'] ?? array();
@@ -488,21 +568,44 @@ function ${prefix}_seed_posts() {
                 'post_status' => $entry['status'] ?? 'publish',
                 'post_title' => wp_slash($entry['title']),
                 'post_name' => $entry['slug'],
-                'post_content' => wp_slash($entry['content'] ?? ''),
+                'post_content' => wp_slash(${prefix}_seed_entry_content($entry)),
                 'post_excerpt' => wp_slash($entry['excerpt'] ?? ''),
                 'meta_input' => $meta,
             ), true);
             if (is_wp_error($post_id)) {
+                $results[$seed_id] = array('status' => 'error: ' . $post_id->get_error_message(), 'post_id' => 0);
                 continue;
             }
             foreach (($entry['terms'] ?? array()) as $taxonomy_slug => $terms) {
                 wp_set_object_terms($post_id, array_values((array) $terms), $taxonomy_slug, false);
             }
+            $state['posts'][$seed_id] = array('post_id' => $post_id, 'post_type' => $type['slug'], 'slug' => $entry['slug'], 'imported_at' => time());
+            $results[$seed_id] = array('status' => 'imported', 'post_id' => $post_id);
         }
     }
+    return $results;
 }
 
-function ${prefix}_remove_seed_posts() {
+function ${prefix}_import_seed_content() {
+    ${prefix}_register_content_model();
+    $state = ${prefix}_seed_state();
+    $results = array(
+        'terms' => ${prefix}_import_seed_terms($state),
+        'posts' => ${prefix}_import_seed_posts($state),
+    );
+    update_option(${prefix.toUpperCase()}_SEED_OPTION, $state);
+    return $results;
+}
+
+function ${prefix}_remove_seed_content() {
+    $state = ${prefix}_seed_state();
+    foreach ($state['posts'] as $seed_id => $entry) {
+        $post = get_post($entry['post_id'] ?? 0);
+        if ($post && get_post_meta($post->ID, ${prefix.toUpperCase()}_SEED_META, true) === $seed_id) {
+            wp_delete_post($post->ID, true);
+        }
+        unset($state['posts'][$seed_id]);
+    }
     foreach ((${prefix}_model()['postTypes'] ?? array()) as $type) {
         $posts = get_posts(array(
             'post_type' => $type['slug'],
@@ -515,15 +618,53 @@ function ${prefix}_remove_seed_posts() {
             wp_delete_post($post_id, true);
         }
     }
+    foreach ($state['terms'] as $seed_id => $entry) {
+        $taxonomy = $entry['taxonomy'] ?? '';
+        $term = get_term((int) ($entry['term_id'] ?? 0), $taxonomy);
+        if ($term && !is_wp_error($term) && (int) $term->count === 0) {
+            wp_delete_term($term->term_id, $taxonomy);
+        }
+        unset($state['terms'][$seed_id]);
+    }
+    update_option(${prefix.toUpperCase()}_SEED_OPTION, $state);
 }
 
-function ${prefix}_apply_content_model() {
+function ${prefix}_seed_post_status($type, $entry, $state) {
+    $seed_id = ${prefix}_seed_id($type, $entry);
+    if (isset($state['posts'][$seed_id])) {
+        $tracked = $state['posts'][$seed_id];
+        $post = get_post($tracked['post_id'] ?? 0);
+        if ($post && get_post_meta($post->ID, ${prefix.toUpperCase()}_SEED_META, true) === $seed_id) {
+            if (strtotime($post->post_modified_gmt) > (int) ($tracked['imported_at'] ?? 0) + 5) return 'modified since import';
+            return 'imported';
+        }
+    }
+    $generated = get_posts(array(
+        'post_type' => $type['slug'],
+        'post_status' => 'any',
+        'meta_key' => ${prefix.toUpperCase()}_SEED_META,
+        'meta_value' => $seed_id,
+        'posts_per_page' => 1,
+        'fields' => 'ids',
+    ));
+    if ($generated) return 'imported';
+    $collision = get_page_by_path($entry['slug'], OBJECT, $type['slug']);
+    if ($collision) return 'slug collision';
+    return 'not imported';
+}
+
+function ${prefix}_seed_term_status($taxonomy, $term, $state) {
+    $seed_id = $taxonomy['slug'] . ':' . $term['slug'];
+    if (isset($state['terms'][$seed_id]) && term_exists((int) $state['terms'][$seed_id]['term_id'], $taxonomy['slug'])) return 'imported';
+    if (term_exists($term['slug'], $taxonomy['slug'])) return 'already exists';
+    return 'not imported';
+}
+
+function ${prefix}_activate() {
     ${prefix}_register_content_model();
-    ${prefix}_seed_terms();
-    ${prefix}_seed_posts();
     flush_rewrite_rules();
 }
-register_activation_hook(__FILE__, '${prefix}_apply_content_model');
+register_activation_hook(__FILE__, '${prefix}_activate');
 
 register_deactivation_hook(__FILE__, function () {
     flush_rewrite_rules();
@@ -542,25 +683,35 @@ add_action('admin_menu', function () {
 function ${prefix}_admin_page() {
     if (!current_user_can('manage_options')) return;
     if (isset($_POST['${prefix}_action']) && wp_verify_nonce($_POST['_wpnonce'] ?? '', '${prefix}')) {
-        if ($_POST['${prefix}_action'] === 'apply') {
-            ${prefix}_apply_content_model();
-            echo '<div class="notice notice-success"><p>Content model applied.</p></div>';
+        if ($_POST['${prefix}_action'] === 'import') {
+            ${prefix}_import_seed_content();
+            echo '<div class="notice notice-success"><p>Seed content imported.</p></div>';
         }
         if ($_POST['${prefix}_action'] === 'remove') {
-            ${prefix}_remove_seed_posts();
-            echo '<div class="notice notice-warning"><p>Generated seed posts removed.</p></div>';
+            ${prefix}_remove_seed_content();
+            echo '<div class="notice notice-warning"><p>Generated seed content removed.</p></div>';
         }
     }
     $model = ${prefix}_model();
+    $state = ${prefix}_seed_state();
     echo '<div class="wrap"><h1>' . esc_html($model['plugin']['name'] ?? 'Content model') . '</h1>';
-    echo '<table class="widefat striped"><thead><tr><th>Type</th><th>Kind</th><th>Seed entries</th></tr></thead><tbody>';
+    echo '<p>This plugin registers the content model while active. Seed content is imported only when requested.</p>';
+    echo '<h2>Post type seeds</h2><table class="widefat striped"><thead><tr><th>Type</th><th>Kind</th><th>Seed</th><th>Slug</th><th>Status</th></tr></thead><tbody>';
     foreach (($model['postTypes'] ?? array()) as $type) {
-        echo '<tr><td>' . esc_html($type['slug']) . '</td><td>' . esc_html($type['kind'] ?? 'content') . '</td><td>' . esc_html(count($type['seed'] ?? array())) . '</td></tr>';
+        foreach (($type['seed'] ?? array()) as $entry) {
+            echo '<tr><td>' . esc_html($type['slug']) . '</td><td>' . esc_html($type['kind'] ?? 'content') . '</td><td>' . esc_html($entry['title'] ?? $entry['slug']) . '</td><td>' . esc_html($entry['slug']) . '</td><td>' . esc_html(${prefix}_seed_post_status($type, $entry, $state)) . '</td></tr>';
+        }
+    }
+    echo '</tbody></table><h2>Taxonomy seeds</h2><table class="widefat striped"><thead><tr><th>Taxonomy</th><th>Term</th><th>Slug</th><th>Status</th></tr></thead><tbody>';
+    foreach (($model['taxonomies'] ?? array()) as $taxonomy) {
+        foreach (($taxonomy['terms'] ?? array()) as $term) {
+            echo '<tr><td>' . esc_html($taxonomy['slug']) . '</td><td>' . esc_html($term['name']) . '</td><td>' . esc_html($term['slug']) . '</td><td>' . esc_html(${prefix}_seed_term_status($taxonomy, $term, $state)) . '</td></tr>';
+        }
     }
     echo '</tbody></table><form method="post" style="margin-top:12px">';
     wp_nonce_field('${prefix}');
-    echo '<button class="button button-primary" name="${prefix}_action" value="apply">Apply content model</button> ';
-    echo '<button class="button" name="${prefix}_action" value="remove" onclick="return confirm(\\'Remove generated seed posts?\\')">Remove seed posts</button>';
+    echo '<button class="button button-primary" name="${prefix}_action" value="import">Import seed content</button> ';
+    echo '<button class="button" name="${prefix}_action" value="remove" onclick="return confirm(\\'Remove generated seed content? Modified generated posts will be deleted too. Generated terms are removed only when unused.\\')">Remove seed content</button>';
     echo '</form></div>';
 }
 `;

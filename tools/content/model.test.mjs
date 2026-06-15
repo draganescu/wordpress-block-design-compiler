@@ -58,7 +58,15 @@ test('scaffoldContentModelPlugin writes an installable plugin and embedded manif
 
     assert.ok(fs.existsSync(result.pluginFile));
     assert.ok(fs.existsSync(path.join(result.pluginRoot, 'content-model.json')));
+    assert.ok(fs.existsSync(path.join(result.pluginRoot, 'content/manifest.json')));
+    assert.ok(fs.existsSync(path.join(result.pluginRoot, 'content/seeds/objet/opaline-glass-vase.html')));
     assert.ok(fs.existsSync(path.join(root, 'content-model/plugin-manifest.json')));
+    const pluginModel = JSON.parse(fs.readFileSync(path.join(result.pluginRoot, 'content-model.json'), 'utf8'));
+    assert.equal(pluginModel.postTypes[0].seed[0].content, undefined);
+    assert.equal(pluginModel.postTypes[0].seed[0].contentFile, 'content/seeds/objet/opaline-glass-vase.html');
+    const manifest = JSON.parse(fs.readFileSync(path.join(result.pluginRoot, 'content/manifest.json'), 'utf8'));
+    assert.equal(manifest.postTypes.length, 2);
+    assert.equal(manifest.postTypes[0].seed[0].content, undefined);
     const php = fs.readFileSync(result.pluginFile, 'utf8');
     assert.match(php, /Plugin Name: Maison Clouet Content Model/);
     assert.match(php, /register_post_type/);
@@ -67,7 +75,13 @@ test('scaffoldContentModelPlugin writes an installable plugin and embedded manif
     assert.match(php, /register_rest_route/);
     assert.match(php, /register_activation_hook/);
     assert.match(php, /add_management_page/);
-    assert.match(php, /maison_clouet_content_apply_content_model/);
+    assert.match(php, /maison_clouet_content_import_seed_content/);
+    assert.match(php, /maison_clouet_content_remove_seed_content/);
+    assert.match(php, /maison_clouet_content_seed_entry_content/);
+    assert.match(php, /\{\{THEME_URI\}\}/);
+    assert.match(php, /slug-collision/);
+    assert.match(php, /modified since import/);
+    assert.doesNotMatch(php, /register_activation_hook\(__FILE__, 'maison_clouet_content_import_seed_content'\)/);
 });
 
 function fixtureModel() {
