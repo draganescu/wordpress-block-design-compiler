@@ -69,8 +69,10 @@ test('validateBlockTheme works from a checkout path containing spaces', () => {
 test('validateBlockTheme catches violations', () => {
     scaffoldMini();
     const theme = path.join(MINI, 'theme/mini');
+    const contentHome = path.join(MINI, 'theme-plugin/mini-content/content/home.html');
     fs.writeFileSync(path.join(theme, 'parts/orphan.html'), '<!-- wp:not-a-real/block /-->');
     fs.appendFileSync(path.join(theme, 'style.css'), '\n.x{background:url(https://cdn.example.com/x.png)}');
+    fs.appendFileSync(contentHome, '\n<!-- wp:paragraph --><p><a href="https://example.com">External link</a><img src="https://cdn.example.com/x.png" alt=""></p><!-- /wp:paragraph -->');
     fs.rmSync(path.join(theme, 'templates/index.html'));
     // drifted markup: declared padding without the matching inline style
     fs.writeFileSync(path.join(theme, 'parts/drifted.html'),
@@ -80,6 +82,8 @@ test('validateBlockTheme catches violations', () => {
     assert.ok(report.errors.some((e) => e.includes('templates/index.html')));
     assert.ok(report.errors.some((e) => e.includes('not-a-real/block')));
     assert.ok(report.errors.some((e) => e.includes('remote url')));
+    assert.ok(report.errors.some((e) => e.includes('content/home.html: remote asset url https://cdn.example.com/x.png')));
+    assert.ok(!report.errors.some((e) => e.includes('https://example.com')));
     assert.ok(report.errors.some((e) => e.includes('invalid block markup') && e.includes('fix_block_markup')));
     cleanupMini(MINI);
     fs.rmSync(MINI, { recursive: true, force: true });

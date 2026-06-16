@@ -1,9 +1,11 @@
 # Fonts and Media: Bundling Every Remote Asset Into the Theme
 
-An installable theme depends on zero remote URLs. Fonts are downloaded and
-declared in theme.json; media is copied into the theme and referenced through
-placeholders. `validate_block_theme` enforces zero remote URLs in the theme
-files and the content payloads — this is not optional polish.
+An installable theme should not depend on remote assets. Fonts are downloaded
+and declared in theme.json; media is copied into the theme and referenced
+through placeholders. `validate_block_theme` enforces zero remote asset URLs in
+theme files and content payloads — this is not optional polish. Outbound
+content links (`href="https://..."`) are allowed because they are navigation,
+not theme dependencies.
 
 ## Font Fetch Flow (`fetch_theme_fonts`)
 
@@ -58,7 +60,8 @@ remote-URL validation. Report the run blocked with the fetch error instead.
 ## The Validator Enforces Zero Remote URLs
 
 `validate_block_theme` fails on any `http(s)://` URL in `style.css`,
-`theme.json` (schema/license URLs excepted), or any content payload (payloads
-must use `{{THEME_URI}}`), and on any internal `*.html` link that survived
-permalink rewriting. If validation reports a remote URL, the fix is to bundle
-the asset and map it — never to allowlist the URL.
+`theme.json` (schema/license URLs excepted), or asset-bearing content payload
+attributes/CSS such as `src`, `srcset`, `poster`, and `url(...)` (payload assets
+must use `{{THEME_URI}}`). It also fails on any internal `*.html` link that
+survived permalink rewriting. If validation reports a remote asset URL, the fix
+is to bundle the asset and map it — never to allowlist the URL.
