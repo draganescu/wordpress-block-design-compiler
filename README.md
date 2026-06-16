@@ -97,6 +97,16 @@ Workflow, compressed (the skill and its `references/` docs are the contract):
 7. Run `playground_render`; repair (theme.json or theme style.css, never the content payloads) until every page passes both viewports.
 8. Quote `reports/theme-validation.json` and the `reports/theme-comparison.json` aggregates in the final response.
 
+## Timing Runs
+
+Timing reports must name what clock they measured:
+
+- **Agent wall-clock** is the elapsed time from the user request to completion. It includes reading context, LLM planning and generation, repair iterations, debugging, tests, commits, pushes, and any blocked or failed attempts.
+- **Deterministic tool time** is only the runtime of MCP/tool calls such as analysis, serialization, theme scaffolding, font fetching, and static validation. It does not include agent thinking, LLM edits, screenshot inspection, or manual repair.
+- **Playground verification time** is separate because it boots WordPress, imports content, captures pages, and may dominate or block the run.
+
+A reused workspace must be reported as a partial-stage timing. For example, running `blocks-to-theme` on an already completed html-to-blocks workspace is not an HTML-to-theme timing; it is a static theme scaffold timing from existing block trees.
+
 ## MCP Tools
 
 The server exposes these tools:

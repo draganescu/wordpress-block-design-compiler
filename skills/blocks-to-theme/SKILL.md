@@ -57,3 +57,23 @@ every page's `editorValidation.failures` is zero (the gate opens each page
 in the real editor and collects block-validation console errors). Quote
 both in the final response. Otherwise keep repairing or report the run blocked
 with the metrics and the blocking cause.
+
+### Timing Gate
+
+If the user asks to time a run, report separate clocks:
+
+- **Agent wall-clock**: elapsed time from the user's request to the final answer,
+  including context reads, LLM planning/editing, repair loops, debugging, tests,
+  commits, pushes, and failed or blocked attempts.
+- **Deterministic tool time**: measured runtime of tools such as
+  `analyze_theme_evidence`, `infer_template_parts`, `fetch_theme_fonts`,
+  `scaffold_block_theme`, and `validate_block_theme`. This is a sub-stage
+  metric, not a transformation time.
+- **Playground verification time**: measured runtime of `playground_render`,
+  reported separately because WordPress boot/import/screenshot work can dominate
+  or block the run.
+
+Never label deterministic `blocks-to-theme` timing from a reused completed
+html-to-blocks workspace as "HTML to theme". Call it "static theme scaffold from
+existing block trees" and explicitly state that the html-to-blocks agent/LLM
+stage was reused, not timed.
