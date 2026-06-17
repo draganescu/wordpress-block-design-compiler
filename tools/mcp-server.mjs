@@ -19,6 +19,7 @@ import {
     editorComparisonCss, motionFreezeCss, transientOverlayCaptureCss, comparePngs,
 } from './lib/capture.mjs';
 import { serializeBlockTreeWithWordPress, stripBlockComments, ensureBlocksRegistered } from './lib/wp-serialize.mjs';
+import { DEFAULT_PREVIEW_CONTEXT, EDITOR_SHIM_BLOCKS } from './lib/dynamic-render.mjs';
 import { fixBlockMarkup } from './lib/fix-markup.mjs';
 import { analyzeThemeEvidence } from './theme/evidence.mjs';
 import { inferTemplateParts } from './theme/parts.mjs';
@@ -717,14 +718,22 @@ async function serializeWordPressBlocks(args) {
   const editorPath = path.join(workspaceRoot, args.editorPath || 'editor/block-editor.html');
   const treeExists = fs.existsSync(treePath);
   const tree = treeExists ? readJson(treePath) : null;
+  const previewContext = readPreviewContext(workspaceRoot);
+  // content.html is the canonical (un-shimmed) WordPress block markup. The
+  // rendered/ preview is serialized with dynamic-block shims so navigation,
+  // search, site-title, pagination etc. actually show their frontend HTML —
+  // letting the visual gate pass on REAL core blocks instead of custom stand-ins.
   const blockMarkup = treeExists
     ? serializeBlockTreeWithWordPress(tree, { workspaceRoot })
     : fs.readFileSync(contentPath, 'utf8');
+  const renderedMarkup = treeExists
+    ? serializeBlockTreeWithWordPress(tree, { workspaceRoot }, { shimDynamic: true, previewContext })
+    : blockMarkup;
   const cssSources = workspaceCssSources(workspaceRoot, args);
   const styleAudit = auditStyleUsage(tree, cssSources);
 
   if (treeExists) writeFile(contentPath, `${blockMarkup.trim()}\n`);
-  writeFile(outPath, renderedPreviewHtml('Rendered WordPress Blocks', path.dirname(outPath), cssSources, stripBlockComments(blockMarkup)));
+  writeFile(outPath, renderedPreviewHtml('Rendered WordPress Blocks', path.dirname(outPath), cssSources, stripBlockComments(renderedMarkup)));
   if (treeExists) writeFile(editorPath, editorPreviewHtml({ workspaceRoot, editorPath, treePath, cssSources }));
   writeJson(path.join(workspaceRoot, 'reports/style-audit.json'), styleAudit);
   return {
@@ -788,6 +797,45 @@ function cssSource(workspaceRoot, filePath) {
   };
 }
 
+// Preview values for entity-backed dynamic blocks (site title/logo, post date,
+// post terms). Lets site-title etc. render with real-looking text on both
+// surfaces. Optional: wordpress/preview-context.json overrides the defaults.
+function readPreviewContext(workspaceRoot) {
+  const fromFile = readJsonIfExists(path.join(workspaceRoot, 'wordpress/preview-context.json')) || {};
+  return { ...DEFAULT_PREVIEW_CONTEXT, ...fromFile };
+}
+
+// The dynamic-render module is pure (no imports); strip its `export` keywords
+// and inline it so the editor canvas can render the entity-backed blocks
+// identically to the static preview. navigation/search/pagination/etc. keep
+// their native edit(); only EDITOR_SHIM_BLOCKS are overridden.
+function dynamicRenderBrowserScript(previewContext) {
+  const source = readIfExists(path.join(PLUGIN_ROOT, 'tools/lib/dynamic-render.mjs'))
+    .replace(/^export\s+/gm, '');
+  return `<script>
+      (function () {
+        ${source}
+        window.__wbdcPreviewContext = ${JSON.stringify(previewContext)};
+        window.__wbdcApplyEditorShims = function () {
+          if (!window.wp || !wp.blocks) return;
+          EDITOR_SHIM_BLOCKS.forEach(function (name) {
+            var type = wp.blocks.getBlockType(name);
+            if (!type) return;
+            wp.blocks.unregisterBlockType(name);
+            wp.blocks.registerBlockType(name, Object.assign({}, type, {
+              edit: function (props) {
+                var html = renderDynamicBlock(name, props.attributes, [], window.__wbdcPreviewContext);
+                var blockProps = wp.blockEditor.useBlockProps();
+                return wp.element.createElement('div', blockProps,
+                  html == null ? null : wp.element.createElement(wp.element.RawHTML, null, html));
+              }
+            }));
+          });
+        };
+      })();
+    </script>`;
+}
+
 function editorPreviewHtml({ workspaceRoot, editorPath, treePath, cssSources }) {
   const editorDir = path.dirname(editorPath);
   const tree = readJson(treePath);
@@ -803,6 +851,7 @@ function editorPreviewHtml({ workspaceRoot, editorPath, treePath, cssSources }) 
   const scriptTags = wordpressBrowserScripts()
     .map((src) => `<script src="${src}"></script>`)
     .join('\n    ');
+  const dynamicShimScript = dynamicRenderBrowserScript(readPreviewContext(workspaceRoot));
 
   return `<!doctype html>
 <html lang="en">
@@ -924,6 +973,7 @@ function editorPreviewHtml({ workspaceRoot, editorPath, treePath, cssSources }) 
       <pre class="wbdc-editor-error">Loading WordPress block editor...</pre>
     </div>
     ${scriptTags}
+    ${dynamicShimScript}
     <script>
       window.wpEditorL10n = window.wpEditorL10n || {};
       window.__unstableAutoRegisterBlocks = false;
@@ -1051,6 +1101,7 @@ function editorPreviewHtml({ workspaceRoot, editorPath, treePath, cssSources }) 
           if (wp.blockLibrary && wp.blockLibrary.registerCoreBlocks) {
             wp.blockLibrary.registerCoreBlocks();
           }
+          if (window.__wbdcApplyEditorShims) window.__wbdcApplyEditorShims();
           await registerCustomBlocks();
           const tree = ${JSON.stringify(tree)};
           window.__wbdcInitialBlocks = (Array.isArray(tree) ? tree : tree.blocks || []).map(toWpBlock);
