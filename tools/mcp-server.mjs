@@ -17,6 +17,7 @@ import {
 import {
     DEFAULT_VIEWPORTS, loadCaptureDeps, serveDirectory, capture, captureEditor,
     editorComparisonCss, motionFreezeCss, transientOverlayCaptureCss, comparePngs,
+    launchBrowser,
 } from './lib/capture.mjs';
 import { serializeBlockTreeWithWordPress, stripBlockComments, ensureBlocksRegistered } from './lib/wp-serialize.mjs';
 import { DEFAULT_PREVIEW_CONTEXT, EDITOR_SHIM_BLOCKS } from './lib/dynamic-render.mjs';
@@ -29,6 +30,7 @@ import { validateBlockTheme } from './theme/validate.mjs';
 import { playgroundRender } from './theme/playground.mjs';
 import { validateContentModel, scaffoldContentModelPlugin } from './content/model.mjs';
 import { auditStandins, checkStandins, hydrateStandins } from './content/standins.mjs';
+import * as profile from './lib/profile.mjs';
 
 const TOOLS = [
   {
@@ -461,7 +463,23 @@ async function handleMessage(message) {
     if (message.method === 'tools/call') {
       const { name, arguments: args = {} } = message.params || {};
       if (!handlers[name]) throw new Error(`Unknown tool: ${name}`);
-      const result = await handlers[name](args);
+      // Per-tool wall-clock profiling. mark/measure spans the await so async
+      // handlers are timed correctly; meta carries arg/result JSON sizes. All
+      // profiler output goes to files/stderr only — never the stdout protocol
+      // stream below. flush() persists incrementally for a long-lived server.
+      profile.setRunMeta({ tool: name });
+      const _argBytes = profile.isOn() ? Buffer.byteLength(JSON.stringify(args ?? null), 'utf8') : 0;
+      const _toolMark = profile.mark('tool.' + name);
+      let result;
+      try {
+        result = await handlers[name](args);
+      } finally {
+        if (_toolMark) {
+          const _resultBytes = Buffer.byteLength(JSON.stringify(result ?? null), 'utf8');
+          profile.measure(_toolMark, { argBytes: _argBytes, resultBytes: _resultBytes });
+          profile.flush();
+        }
+      }
       return send({
         jsonrpc: '2.0',
         id: message.id,
@@ -1363,7 +1381,7 @@ async function compareHtml(args) {
     workspaceRoot,
     args.tasksPath || (pageSlug === 'index' ? 'reports/repair-tasks.md' : `reports/${pageSlug}.repair-tasks.md`),
   );
-  const browser = await chromium.launch({ headless: true });
+  const browser = await launchBrowser(chromium, { headless: true }, { tool: 'compare_html' });
   const results = [];
   const server = shouldCompareEditor ? await serveDirectory(workspaceRoot) : null;
 
@@ -1464,7 +1482,7 @@ async function measureLayout(args) {
     if (!fs.existsSync(file)) throw new Error(`measure_layout target does not exist: ${file}`);
   }
 
-  const browser = await chromium.launch({ headless: true });
+  const browser = await launchBrowser(chromium, { headless: true }, { tool: 'measure_layout' });
   const server = candidateKind === 'editor' ? await serveDirectory(workspaceRoot) : null;
   const measurements = [];
 
@@ -1570,7 +1588,7 @@ async function screenshotHtml(args) {
   const viewports = Array.isArray(args.viewports) && args.viewports.length ? args.viewports : DEFAULT_VIEWPORTS;
   const targets = normalizeScreenshotTargets(workspaceRoot, args.targets);
   const needsServer = targets.some((target) => target.kind === 'editor');
-  const browser = await chromium.launch({ headless: true });
+  const browser = await launchBrowser(chromium, { headless: true }, { tool: 'screenshot_html' });
   const server = needsServer ? await serveDirectory(workspaceRoot) : null;
   const screenshots = [];
 

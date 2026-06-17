@@ -2,9 +2,16 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
+import { performance } from 'node:perf_hooks';
 import { resolvePath, readJson, writeJson } from '../lib/workspace.mjs';
-import { loadCaptureDeps, serveDirectory, captureUrl, comparePngs, DEFAULT_VIEWPORTS } from '../lib/capture.mjs';
+import { loadCaptureDeps, serveDirectory, captureUrl, comparePngs, DEFAULT_VIEWPORTS, launchBrowser } from '../lib/capture.mjs';
 import { PLUGIN_ROOT } from '../lib/workspace.mjs';
+import * as profile from '../lib/profile.mjs';
+
+// Above this many ms, the server-ready wait almost certainly included a cold
+// WordPress build download (first run); below it the Playground CLI hit its
+// cache. Used to infer and tag the run's cold/warm state for the profiler.
+const COLD_SERVER_WAIT_MS = 20000;
 
 export function buildBlueprint({ slug, hasBlocksPlugin, contentModel }) {
     const prefix = slug.replace(/-/g, '_') + '_content';
@@ -70,23 +77,37 @@ export async function playgroundRender(args) {
 
     const blueprintPath = path.join(outDir, 'blueprint.json');
     writeJson(blueprintPath, buildBlueprint({ slug, hasBlocksPlugin, contentModel }));
-    const proc = spawn('npx', ['@wp-playground/cli', ...buildCliArgs({
+    profile.setRunMeta({ tool: 'playground_render', slug });
+    const proc = profile.span('playground.cli.spawn', () => spawn('npx', ['@wp-playground/cli', ...buildCliArgs({
         slug, themeDir, blueprintPath, port,
         pluginDirs: [blocksDir, contentDir, contentModel && contentModel.dir].filter((d) => d && fs.existsSync(d)),
-    })], { cwd: PLUGIN_ROOT, stdio: ['ignore', 'pipe', 'pipe'] });
+    })], { cwd: PLUGIN_ROOT, stdio: ['ignore', 'pipe', 'pipe'] }));
     let logs = '';
     proc.stdout.on('data', (d) => { logs += d; });
     proc.stderr.on('data', (d) => { logs += d; });
 
     try {
+        // The server-ready wait subsumes the cold WordPress build download on a
+        // first run; timing it (and whether it crossed the cold threshold or the
+        // CLI logged a download) is how we infer and tag cold vs warm.
+        const serverWaitTok = profile.mark('playground.wait.server');
+        const serverWaitStart = performance.now();
         await waitForServer(base, 120000, () => proc.exitCode);
+        const serverWaitMs = performance.now() - serverWaitStart;
+        const cold = serverWaitMs > COLD_SERVER_WAIT_MS || /\b(download|fetch)ing wordpress/i.test(logs);
+        profile.measure(serverWaitTok, { cold, waitMs: serverWaitMs });
+        profile.setRunMeta({ cold });
         // the server answers before the blueprint's runPHP import step finishes;
         // capturing early races the import (front page = blog index). The last
         // manifest page resolving proves the import ran to completion.
         const lastPage = manifest.pages[manifest.pages.length - 1];
-        if (lastPage) await waitForImport(pageUrl(base, { ...lastPage, front: false }), 120000, () => proc.exitCode);
+        if (lastPage) {
+            const importTok = profile.mark('playground.wait.import');
+            await waitForImport(pageUrl(base, { ...lastPage, front: false }), 120000, () => proc.exitCode);
+            profile.measure(importTok, { cold });
+        }
         const { chromium, PNG, pixelmatch } = await loadCaptureDeps(PLUGIN_ROOT);
-        const browser = await chromium.launch({ headless: true });
+        const browser = await launchBrowser(chromium, { headless: true }, { tool: 'playground_render' });
         const server = await serveDirectory(workspaceRoot); // mockup screenshots through the same pipeline
         const thresholds = { maxMismatchPercent: args.maxMismatchPercent ?? 1, maxHeightDelta: args.maxHeightDelta ?? 8 };
         const pagesReport = [];
@@ -98,9 +119,10 @@ export async function playgroundRender(args) {
                     const mockShot = path.join(outDir, `${page.slug}-mockup-${viewport.name}.png`);
                     const wpShot = path.join(outDir, `${page.slug}-wp-${viewport.name}.png`);
                     const diffShot = path.join(outDir, `${page.slug}-diff-${viewport.name}.png`);
-                    await captureUrl(browser, server.urlFor(path.join(workspaceRoot, mockupPath)), mockShot, viewport);
-                    await captureUrl(browser, pageUrl(base, page), wpShot, viewport);
-                    results.push(comparePngs({ target: 'wordpress', mockupShot: mockShot, candidateShot: wpShot, diffShot, viewport, PNG, pixelmatch }));
+                    const capMeta = { page: page.slug, viewport: viewport.name };
+                    await profile.span('playground.capture.mockup', () => captureUrl(browser, server.urlFor(path.join(workspaceRoot, mockupPath)), mockShot, viewport), capMeta);
+                    await profile.span('playground.capture.wp', () => captureUrl(browser, pageUrl(base, page), wpShot, viewport), capMeta);
+                    results.push(profile.span('playground.compare', () => comparePngs({ target: 'wordpress', mockupShot: mockShot, candidateShot: wpShot, diffShot, viewport, PNG, pixelmatch }), capMeta));
                 }
                 const aggregate = {
                     maxMismatchPercent: Math.max(...results.map((r) => r.mismatchPercent)),
@@ -112,7 +134,7 @@ export async function playgroundRender(args) {
             // editor validation: the real editor recomputes save() in the
             // browser and flags drift our Node round-trip cannot see (kses
             // escaping, content-filter mangling). Zero failures required.
-            await editorValidation(browser, base, manifest.pages, pagesReport);
+            await profile.span('playground.editorValidation', () => editorValidation(browser, base, manifest.pages, pagesReport), { pages: manifest.pages.length });
         } finally {
             await browser.close();
             await server.close?.();

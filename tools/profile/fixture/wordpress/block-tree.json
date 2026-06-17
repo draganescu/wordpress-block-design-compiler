@@ -1,0 +1,73 @@
+{
+    "version": 2,
+    "contract": "data-only",
+    "blocks": [
+        {
+            "blockName": "core/group",
+            "attrs": { "tagName": "header", "className": "site-header" },
+            "innerBlocks": [
+                {
+                    "blockName": "core/navigation",
+                    "attrs": { "overlayMenu": "never" },
+                    "innerBlocks": [
+                        {
+                            "blockName": "core/navigation-link",
+                            "attrs": { "label": "Home", "url": "#home" },
+                            "innerBlocks": []
+                        },
+                        {
+                            "blockName": "core/navigation-link",
+                            "attrs": { "label": "About", "url": "#about" },
+                            "innerBlocks": []
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "blockName": "core/group",
+            "attrs": {
+                "tagName": "section",
+                "className": "hero",
+                "style": {
+                    "color": { "background": "#0b1f3a", "text": "#f5f7fb" },
+                    "spacing": {
+                        "padding": {
+                            "top": "clamp(24px,6vh,72px)",
+                            "bottom": "clamp(24px,6vh,72px)",
+                            "left": "24px",
+                            "right": "24px"
+                        }
+                    }
+                }
+            },
+            "innerBlocks": [
+                {
+                    "blockName": "core/heading",
+                    "attrs": { "level": 1, "content": "Profiling Fixture" },
+                    "innerBlocks": []
+                },
+                {
+                    "blockName": "core/paragraph",
+                    "attrs": { "content": "A tiny workspace that drives the profiling harness." },
+                    "innerBlocks": []
+                }
+            ]
+        },
+        {
+            "blockName": "core/group",
+            "attrs": {
+                "tagName": "footer",
+                "className": "site-footer",
+                "style": { "color": { "background": "#0b1f3a", "text": "#f5f7fb" } }
+            },
+            "innerBlocks": [
+                {
+                    "blockName": "core/paragraph",
+                    "attrs": { "content": "© Profiling Fixture" },
+                    "innerBlocks": []
+                }
+            ]
+        }
+    ]
+}
