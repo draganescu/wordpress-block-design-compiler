@@ -45,18 +45,55 @@ adds stylesheets the preview never had, so expect NEW drift on the first run:
 - **layout supports** — `is-layout-constrained`/`is-layout-flow` rules add
   content-width centering and block-gap margins.
 
+### The layout cascade (why full-width sections render narrow)
+
+WordPress constrains every child of a constrained-layout container to
+theme.json's `settings.layout.contentSize`, through the rule
+`.is-layout-constrained > *:not(.alignwide):not(.alignfull)`. The
+html-to-blocks previews never loaded that rule, so a section that filled the
+width on workspace CSS alone can render with gutters here — a hero meant to be
+edge-to-edge showing ~1248px at a 1280px viewport. `width: 100%` in style.css
+cannot beat that selector; the block carries its own width through `align`:
+
+- **Full-bleed band, centered inner content** (hero, banner, CTA): the group
+  has `align: full` with `layout` type `constrained`.
+- **Full-bleed band, edge-to-edge inner content** (galleries): outer AND inner
+  groups have `align: full` with `layout` type `default`.
+- **Normal reading content**: no `align` at all.
+
+Confirm the first section's computed width equals the viewport before assuming
+a CSS fix — if it does not, the cause is the block's `align`/`layout` (or root
+padding / `useRootPaddingAwareAlignments` in theme.json), not a missing rule in
+style.css.
+
+Vertical rhythm is owned by the same layer:
+`:where(.is-layout-flow) > * + *` adds
+`margin-block-start: var(--wp--style--block-gap)` between stacked blocks. Set
+section spacing through theme.json `styles.spacing.blockGap` or per-block
+spacing attributes, not margins in style.css that fight it.
+
 ### Where to fix what
 
 - Token-level or element-level drift (wrong color/size/spacing resolved from a
   preset, heading/link styles) → fix **theme.json**.
+- Width or block-gap drift from the layout rules above (a section narrower than
+  its mockup, unexpected gaps between stacked blocks) → the block's own
+  `align`/`layout` and spacing attributes carry width and gap, or theme.json
+  `contentSize`/`blockGap` do. Setting a correct `align: full`/`layout` on a
+  block is a block-attribute fix, not a CSS one — `width`/`margin` overrides in
+  style.css lose to the cascade. Prefer to set it in the stage-1 block tree and
+  re-serialize so the source of truth stays consistent.
 - Structural shims (killing an unwanted core margin, overriding a layout rule
   for a specific class) → fix **theme `style.css`** (with a lift-ledger
   category, usually it is genuinely unliftable).
-- **Never the content payload.** Editing imported page markup to absorb
-  WordPress's CSS dodges the diff instead of fixing the theme — the next page
-  created in the editor would look wrong. Payload edits are only legitimate
-  when the payload itself is wrong (bad media path, missed permalink rewrite),
-  which the validator should already have caught.
+- **Never the content payload to absorb WordPress's CSS.** Editing imported
+  page markup so it soaks up a core stylesheet dodges the diff instead of
+  fixing the theme — the next page created in the editor would look wrong. This
+  is different from setting a block's own `align`/`layout`/spacing attribute
+  (the width fix above): that expresses real design intent and is best done in
+  the stage-1 tree. Free-form payload edits are otherwise only legitimate when
+  the payload itself is wrong (bad media path, missed permalink rewrite), which
+  the validator should already have caught.
 
 ## Operational Notes
 
