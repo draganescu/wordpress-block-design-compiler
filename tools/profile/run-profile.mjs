@@ -335,11 +335,24 @@ function readSpans(profileDir) {
 function layerOf(label) {
     if (label.startsWith('tool.')) return 'tool';
     if (label.startsWith('serialize.')) return 'tool-cpu';
-    if (label.startsWith('capture.network')) return 'network';
-    if (label.startsWith('capture.browser')) return 'subprocess';
+    // capture.network is the per-host rollup EVENT; it summarizes requests that
+    // happened DURING capture.navigate, so counting its duration would
+    // double-count that time. 'rollup' is excluded from the split sum (it feeds
+    // only the host table).
+    if (label.startsWith('capture.network')) return 'rollup';
+    if (label === 'capture.comparePngs') return 'tool-cpu';        // in-process pixelmatch
+    if (label.startsWith('capture.browser')) return 'subprocess';  // chromium launch
+    if (label === 'capture.screenshot') return 'subprocess';       // browser render + encode
+    // navigate (page.goto blocks on networkidle — the 47 s.w.org scripts) and the
+    // editor selector/networkidle wait are the network-bound time.
+    if (label.startsWith('capture.navigate') || label.startsWith('capture.wait')) return 'network';
+    if (label.startsWith('capture.')) return 'subprocess';
     if (label.startsWith('playground.')) {
         if (label.includes('cli.spawn') || label.includes('wait.server') || label.includes('wait.import')) return 'subprocess';
-        return 'tool-cpu';
+        // playground.capture.* / playground.compare wrap the instrumented
+        // capture.* helpers, whose inner spans already carry the layer time —
+        // exclude the wrappers so their duration is not double-counted.
+        return 'rollup';
     }
     return 'other';
 }
@@ -366,7 +379,7 @@ function aggregate(spans, meta) {
     // agent-observed wall; sub-phases (serialize.*, capture.*, playground.*)
     // partition that wall, so we keep them in separate sub-buckets and report
     // tool-wall and sub-phase splits side by side without double counting.
-    const layerTotals = { tool: 0, 'tool-cpu': 0, subprocess: 0, network: 0, other: 0 };
+    const layerTotals = { tool: 0, 'tool-cpu': 0, subprocess: 0, network: 0, rollup: 0, other: 0 };
     const hostTotals = new Map(); // host -> { count, bytes, totalMs }
     const pids = new Set();
     let launchCount = 0;

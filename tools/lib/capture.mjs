@@ -39,12 +39,14 @@ function _attachNetCapture(page, meta) {
 
     const durationOf = (timing) => {
         if (!timing) return 0;
-        const start = timing.startTime;
+        // Playwright timing: startTime is an absolute epoch (ms), but every other
+        // field (requestStart, responseStart, responseEnd, …) is an OFFSET
+        // relative to startTime, or -1 when unavailable. responseEnd is therefore
+        // already the request's duration. The previous code computed
+        // responseEnd - startTime — a relative offset minus an epoch — so the
+        // `end >= start` guard always failed and every request measured 0 ms.
         const end = timing.responseEnd;
-        if (typeof start === 'number' && typeof end === 'number' && end >= start) {
-            return end - start;
-        }
-        return 0;
+        return typeof end === 'number' && end >= 0 ? end : 0;
     };
 
     const onFinished = (request) => {
