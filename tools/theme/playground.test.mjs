@@ -15,6 +15,16 @@ test('buildBlueprint without custom blocks activates one plugin', () => {
     assert.deepEqual(bp.steps.map((s) => s.step), ['activatePlugin', 'activateTheme', 'runPHP']);
 });
 
+test('buildBlueprint activates and seeds the content-model plugin when present', () => {
+    const bp = buildBlueprint({ slug: 'mini', hasBlocksPlugin: true, contentModel: { slug: 'maison-content', prefix: 'maison_content' } });
+    const steps = bp.steps.map((s) => s.step);
+    // content-model activate first, then blocks, content, theme, seed import, page import
+    assert.deepEqual(steps, ['activatePlugin', 'activatePlugin', 'activatePlugin', 'activateTheme', 'runPHP', 'runPHP']);
+    assert.equal(bp.steps[0].pluginPath, 'maison-content/maison-content.php');
+    assert.match(bp.steps[4].code, /maison_content_import_seed_content\(\)/);
+    assert.match(bp.steps[5].code, /mini_content_import_pages\(\)/);
+});
+
 test('buildCliArgs mounts theme and plugins', () => {
     const args = buildCliArgs({ slug: 'mini', themeDir: '/ws/theme/mini', pluginDirs: ['/ws/theme-plugin/mini-blocks', '/ws/theme-plugin/mini-content'], blueprintPath: '/ws/reports/playground/blueprint.json', port: 9400 });
     assert.ok(args.includes('server'));

@@ -6,17 +6,22 @@ import { resolvePath, readJson, writeJson } from '../lib/workspace.mjs';
 import { loadCaptureDeps, serveDirectory, captureUrl, comparePngs, DEFAULT_VIEWPORTS } from '../lib/capture.mjs';
 import { PLUGIN_ROOT } from '../lib/workspace.mjs';
 
-export function buildBlueprint({ slug, hasBlocksPlugin }) {
+export function buildBlueprint({ slug, hasBlocksPlugin, contentModel }) {
     const prefix = slug.replace(/-/g, '_') + '_content';
     return {
         landingPage: '/',
         steps: [
+            // The content-model plugin registers the CPTs/taxonomies the hydrated
+            // query loops iterate, and seeds them so those loops render real
+            // entries — without it a hydrated archive/grid renders empty.
+            ...(contentModel ? [{ step: 'activatePlugin', pluginPath: `${contentModel.slug}/${contentModel.slug}.php` }] : []),
             ...(hasBlocksPlugin ? [{ step: 'activatePlugin', pluginPath: `${slug}-blocks/${slug}-blocks.php` }] : []),
             { step: 'activatePlugin', pluginPath: `${slug}-content/${slug}-content.php` },
             { step: 'activateTheme', themeFolderName: slug },
             // wp_set_current_user(1): without unfiltered_html, kses strips the
             // form/select/input markup from imported page content — a real
             // admin clicking the Import button has that capability
+            ...(contentModel ? [{ step: 'runPHP', code: `<?php require '/wordpress/wp-load.php'; wp_set_current_user(1); ${contentModel.prefix}_import_seed_content();` }] : []),
             { step: 'runPHP', code: `<?php require '/wordpress/wp-load.php'; wp_set_current_user(1); var_export(${prefix}_import_pages());` },
         ],
     };
@@ -36,6 +41,19 @@ export function pageUrl(base, page) {
     return page.front ? `${base}/` : `${base}/?pagename=${page.slug}`;
 }
 
+// Detect a content-model plugin produced by the content-modeling skill so its
+// CPTs/taxonomies/seeds are available to hydrated query loops. Returns the
+// mount dir, plugin slug, and PHP function prefix, or null when absent.
+export function resolveContentModelPlugin(workspaceRoot) {
+    const manifestPath = path.join(workspaceRoot, 'content-model/plugin-manifest.json');
+    if (!fs.existsSync(manifestPath)) return null;
+    const manifest = readJson(manifestPath);
+    const dir = path.join(workspaceRoot, manifest.pluginRoot);
+    if (!fs.existsSync(dir)) return null;
+    const pluginSlug = manifest.plugin.slug;
+    return { dir, slug: pluginSlug, prefix: pluginSlug.replace(/-/g, '_') };
+}
+
 export async function playgroundRender(args) {
     const workspaceRoot = resolvePath(args.workspaceRoot);
     const slug = args.slug;
@@ -44,16 +62,17 @@ export async function playgroundRender(args) {
     const contentDir = path.join(workspaceRoot, 'theme-plugin', `${slug}-content`);
     const manifest = readJson(path.join(contentDir, 'content/manifest.json'));
     const hasBlocksPlugin = fs.existsSync(blocksDir);
+    const contentModel = resolveContentModelPlugin(workspaceRoot);
     const port = args.port || 9400;
     const base = `http://127.0.0.1:${port}`;
     const outDir = path.join(workspaceRoot, 'reports/playground');
     fs.mkdirSync(outDir, { recursive: true });
 
     const blueprintPath = path.join(outDir, 'blueprint.json');
-    writeJson(blueprintPath, buildBlueprint({ slug, hasBlocksPlugin }));
+    writeJson(blueprintPath, buildBlueprint({ slug, hasBlocksPlugin, contentModel }));
     const proc = spawn('npx', ['@wp-playground/cli', ...buildCliArgs({
         slug, themeDir, blueprintPath, port,
-        pluginDirs: [blocksDir, contentDir].filter((d) => fs.existsSync(d)),
+        pluginDirs: [blocksDir, contentDir, contentModel && contentModel.dir].filter((d) => d && fs.existsSync(d)),
     })], { cwd: PLUGIN_ROOT, stdio: ['ignore', 'pipe', 'pipe'] });
     let logs = '';
     proc.stdout.on('data', (d) => { logs += d; });

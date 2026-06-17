@@ -8,6 +8,16 @@ description: Use when a user asks to turn the output of an html-to-blocks run (s
 Run this skill on a COMPLETED html-to-blocks workspace (its comparison gates
 passed). The tools gather evidence and verify; you make the design decisions.
 
+The page trees are expected to contain real dynamic core blocks (navigation,
+search, site-title, comments, query-pagination, post fields) and, when a
+content-modeling run hydrated them, `core/query` loops — not custom stand-in
+blocks. A workspace heavy with custom `site-nav`/`search`/`pagination`/`card`
+blocks is an upstream smell: such a tree was built before the core-first rules
+and should be fixed in html-to-blocks, not papered over in the theme. If a
+`content-model/plugin-manifest.json` exists, `playground_render` mounts,
+activates, and seeds that plugin automatically so the hydrated query loops
+render real entries in the gate.
+
 ## Required Workflow
 
 1. Run `analyze_theme_evidence`; read `reports/theme-evidence.json`.
@@ -26,7 +36,10 @@ passed). The tools gather evidence and verify; you make the design decisions.
    CSS interference the preview never had — fix it in theme.json or theme
    style.css, never by editing content payloads to dodge the diff.
 8. Final response: quote `reports/theme-validation.json` (`passed`) and
-   `reports/theme-comparison.json` aggregates.
+   `reports/theme-comparison.json` aggregates, plus the custom-block count and
+   how many stand-ins were hydrated (from `reports/standins-hydration.json` when
+   present). A run shipping many custom blocks for core-block work is not clean
+   even if the gates pass — say so.
 
 ## Hard Gates
 
