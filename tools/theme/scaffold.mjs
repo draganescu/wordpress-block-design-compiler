@@ -37,13 +37,19 @@ function validateScaffoldArgs(args) {
     } else {
         for (const [t, entries] of Object.entries(args.templates)) {
             if (!Array.isArray(entries)) { problems.push(`templates.${t} must be an array of entries.`); continue; }
+            // Valid entry types mirror what templateMarkup() renders (see
+            // generate/theme-files.mjs): part, tree (serialized to blocks by the
+            // scaffold first), blocks, post-content, and raw. Keep this set in
+            // sync with that renderer or args it accepts will crash downstream.
             entries.forEach((e, i) => {
-                if (!e || (e.type !== 'part' && e.type !== 'tree' && e.type !== 'blocks')) {
-                    problems.push(`templates.${t}[${i}]: entry needs "type": "part" | "tree".`);
+                if (!e || !['part', 'tree', 'blocks', 'post-content', 'raw'].includes(e.type)) {
+                    problems.push(`templates.${t}[${i}]: entry needs "type": "part" | "tree" | "blocks" | "post-content" | "raw".`);
                 } else if (e.type === 'part' && typeof e.slug !== 'string') {
                     problems.push(`templates.${t}[${i}]: part entry needs string "slug" matching a parts[].slug.`);
                 } else if (e.type === 'tree' && !Array.isArray(e.blocks)) {
                     problems.push(`templates.${t}[${i}]: tree entry needs a "blocks" array.`);
+                } else if ((e.type === 'blocks' || e.type === 'raw') && typeof e.markup !== 'string') {
+                    problems.push(`templates.${t}[${i}]: ${e.type} entry needs string "markup".`);
                 }
             });
         }
