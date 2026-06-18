@@ -28,6 +28,7 @@ import { fetchThemeFonts } from './theme/fonts.mjs';
 import { scaffoldBlockTheme } from './theme/scaffold.mjs';
 import { validateBlockTheme } from './theme/validate.mjs';
 import { playgroundRender } from './theme/playground.mjs';
+import { makeKey, stop as stopPlayground, stopAll as stopAllPlayground, stopAllSync as stopAllPlaygroundSync, startReaper as startPlaygroundReaper } from './theme/playground-server.mjs';
 import { validateContentModel, scaffoldContentModelPlugin } from './content/model.mjs';
 import { auditStandins, checkStandins, hydrateStandins } from './content/standins.mjs';
 import * as profile from './lib/profile.mjs';
@@ -347,6 +348,11 @@ const TOOLS = [
     inputSchema: { type: 'object', additionalProperties: false, required: ['workspaceRoot', 'slug'], properties: { workspaceRoot: { type: 'string' }, slug: { type: 'string' }, port: { type: 'number' }, maxMismatchPercent: { type: 'number' }, maxHeightDelta: { type: 'number' } } },
   },
   {
+    name: 'playground_stop',
+    description: 'Stop the warm WordPress Playground server held for this workspace+slug (if any), releasing its process. Returns { stopped: boolean } indicating whether a warm server was running.',
+    inputSchema: { type: 'object', additionalProperties: false, required: ['workspaceRoot', 'slug'], properties: { workspaceRoot: { type: 'string' }, slug: { type: 'string' } } },
+  },
+  {
     name: 'fix_block_markup',
     description: 'Canonicalize block markup: parse, recreate every block from its attributes, and re-serialize so the markup byte-matches save() output, eliminating editor block-validation errors. Pass raw markup, or workspace-relative file paths to fix in place. Registers the workspace custom blocks before parsing.',
     inputSchema: {
@@ -389,6 +395,10 @@ const handlers = {
   scaffold_block_theme: (args) => scaffoldBlockTheme(args),
   validate_block_theme: (args) => validateBlockTheme(args),
   playground_render: (args) => playgroundRender(args),
+  playground_stop: async (args) => {
+      const stopped = await stopPlayground(makeKey(resolvePath(args.workspaceRoot), args.slug));
+      return { stopped };
+  },
   fix_block_markup: (args) => {
       const workspaceRoot = resolvePath(args.workspaceRoot);
       ensureBlocksRegistered(workspaceRoot);
@@ -409,6 +419,28 @@ const handlers = {
 };
 
 let buffer = Buffer.alloc(0);
+
+// Reap warm Playground servers idle longer than 10 minutes so a repair loop that
+// goes quiet does not pin a WordPress process indefinitely. The registry owns the
+// proc lifetime; the reaper's timer is unref'd so it never keeps Node alive.
+startPlaygroundReaper(10 * 60 * 1000);
+
+// Tear down every warm Playground server when this MCP process exits, so no
+// orphaned @wp-playground/cli child outlives us. 'exit' is sync-only (its async
+// stopAll cannot await), so SIGTERM/SIGINT do the graceful teardown and then
+// re-exit; 'exit' is the last-resort best-effort kill.
+let shuttingDown = false;
+async function shutdown(signal) {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  await stopAllPlayground();
+  process.exit(signal === 'SIGINT' ? 130 : 0);
+}
+process.on('SIGTERM', () => { void shutdown('SIGTERM'); });
+process.on('SIGINT', () => { void shutdown('SIGINT'); });
+// 'exit' runs synchronously — an async stopAll would only kill the first server
+// before the handler returns. stopAllSync SIGKILLs every warm process inline.
+process.on('exit', () => { stopAllPlaygroundSync(); });
 
 process.stdin.on('data', (chunk) => {
   buffer = Buffer.concat([buffer, chunk]);

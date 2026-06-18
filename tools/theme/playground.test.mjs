@@ -25,12 +25,14 @@ test('buildBlueprint activates and seeds the content-model plugin when present',
     assert.match(bp.steps[5].code, /mini_content_import_pages\(\)/);
 });
 
-test('buildCliArgs mounts theme and plugins', () => {
-    const args = buildCliArgs({ slug: 'mini', themeDir: '/ws/theme/mini', pluginDirs: ['/ws/theme-plugin/mini-blocks', '/ws/theme-plugin/mini-content'], blueprintPath: '/ws/reports/playground/blueprint.json', port: 9400 });
+test('buildCliArgs mounts theme, plugins, the gate mu-plugin, and pins the WP version', () => {
+    const args = buildCliArgs({ slug: 'mini', themeDir: '/ws/theme/mini', pluginDirs: ['/ws/theme-plugin/mini-blocks', '/ws/theme-plugin/mini-content'], blueprintPath: '/ws/reports/playground/blueprint.json', port: 9400, gateFile: '/ws/reports/playground/wbdc-gate.php' });
     assert.ok(args.includes('server'));
     assert.ok(args.includes('--port=9400'));
+    assert.ok(args.some((a) => a.startsWith('--wp=')));
     assert.ok(args.includes('--mount=/ws/theme/mini:/wordpress/wp-content/themes/mini'));
     assert.ok(args.includes('--mount=/ws/theme-plugin/mini-blocks:/wordpress/wp-content/plugins/mini-blocks'));
+    assert.ok(args.includes('--mount=/ws/reports/playground/wbdc-gate.php:/wordpress/wp-content/mu-plugins/wbdc-gate.php'));
     assert.ok(args.includes('--blueprint=/ws/reports/playground/blueprint.json'));
 });
 
