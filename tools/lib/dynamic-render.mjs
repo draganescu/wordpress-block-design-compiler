@@ -107,7 +107,6 @@ function renderNavigation(attrs, innerBlocks) {
 function renderSearch(attrs) {
     const a = attrs || {};
     const label = a.label != null ? a.label : 'Search';
-    const showLabel = !a.showLabel === false ? a.showLabel !== false : true;
     const hideLabel = a.showLabel === false;
     const placeholder = esc(a.placeholder || '');
     const buttonText = esc(a.buttonText || 'Search');

@@ -107,11 +107,16 @@ export async function playgroundRender(args) {
             profile.measure(importTok, { cold });
         }
         const { chromium, PNG, pixelmatch } = await loadCaptureDeps(PLUGIN_ROOT);
-        const browser = await launchBrowser(chromium, { headless: true }, { tool: 'playground_render' });
-        const server = await serveDirectory(workspaceRoot); // mockup screenshots through the same pipeline
         const thresholds = { maxMismatchPercent: args.maxMismatchPercent ?? 1, maxHeightDelta: args.maxHeightDelta ?? 8 };
         const pagesReport = [];
+        // Acquire browser + static server inside the try so the finally closes
+        // the browser even if serveDirectory throws after launch (the outer
+        // finally only kills the Playground CLI, not chromium).
+        let browser;
+        let server;
         try {
+            browser = await launchBrowser(chromium, { headless: true }, { tool: 'playground_render' });
+            server = await serveDirectory(workspaceRoot); // mockup screenshots through the same pipeline
             for (const page of manifest.pages) {
                 const mockupPath = page.mockupPath || inferMockupPath(workspaceRoot, page);
                 const results = [];
@@ -136,8 +141,8 @@ export async function playgroundRender(args) {
             // escaping, content-filter mangling). Zero failures required.
             await profile.span('playground.editorValidation', () => editorValidation(browser, base, manifest.pages, pagesReport), { pages: manifest.pages.length });
         } finally {
-            await browser.close();
-            await server.close?.();
+            await browser?.close();
+            await server?.close?.();
         }
         const report = {
             generatedAt: new Date().toISOString(), thresholds, pages: pagesReport,
