@@ -1,0 +1,12 @@
+{
+    "apiVersion": 3,
+    "name": "mini/badge",
+    "title": "Badge",
+    "category": "design",
+    "editorScript": "file:./index.js",
+    "style": "file:./style.css",
+    "attributes": {
+        "label": { "type": "string", "default": "" }
+    },
+    "supports": { "className": true, "html": false }
+}

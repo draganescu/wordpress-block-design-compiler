@@ -1,0 +1,48 @@
+{
+    "version": 2,
+    "contract": "data-only",
+    "blocks": [
+        {
+            "blockName": "core/group",
+            "attrs": { "tagName": "header", "className": "topbar" },
+            "innerBlocks": [
+                {
+                    "blockName": "core/paragraph",
+                    "attrs": { "className": "topbar__brand", "content": "Mini <b>About</b>" },
+                    "innerBlocks": []
+                }
+            ]
+        },
+        {
+            "blockName": "core/group",
+            "attrs": { "tagName": "section", "className": "story" },
+            "innerBlocks": [
+                {
+                    "blockName": "core/heading",
+                    "attrs": { "level": 1, "content": "About us" },
+                    "innerBlocks": []
+                },
+                {
+                    "blockName": "core/paragraph",
+                    "attrs": { "content": "We are a tiny fixture workspace." },
+                    "innerBlocks": []
+                }
+            ]
+        },
+        {
+            "blockName": "core/group",
+            "attrs": {
+                "tagName": "footer",
+                "className": "sitefoot",
+                "style": { "color": { "background": "#112233" } }
+            },
+            "innerBlocks": [
+                {
+                    "blockName": "core/paragraph",
+                    "attrs": { "content": "© Mini" },
+                    "innerBlocks": []
+                }
+            ]
+        }
+    ]
+}
