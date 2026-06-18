@@ -40,15 +40,18 @@ export async function fetchThemeFonts({ importUrl, sourceCss, targetDir, fetchIm
     fs.mkdirSync(targetDir, { recursive: true });
     const families = new Map();
     const counters = new Map();
+    // Assign every filename first (the counter makes names order-dependent), then
+    // download in parallel — the names are already fixed, so concurrent writes
+    // can't race over the same path. fontFace entries are pushed in face order
+    // here, so the returned theme.json is byte-identical to the serial version.
+    const downloads = [];
     for (const face of faces) {
         const famSlug = slug(face.fontFamily);
         const base = `${famSlug}-${face.fontWeight.replace(/\s+/g, '-')}-${face.fontStyle}`;
         const n = counters.get(base) || 0;
         counters.set(base, n + 1);
         const fileName = `${base}-${n}.woff2`;
-        const res = await fetchImpl(face.url, { headers: { 'User-Agent': WOFF2_UA } });
-        if (!res.ok) throw new Error(`Font file fetch failed: ${face.url} (HTTP ${res.status})`);
-        fs.writeFileSync(path.join(targetDir, fileName), Buffer.from(await res.arrayBuffer()));
+        downloads.push({ url: face.url, fileName });
         const fam = families.get(face.fontFamily) || { name: face.fontFamily, slug: famSlug, fontFamily: `'${face.fontFamily}'`, fontFace: [] };
         fam.fontFace.push({
             fontFamily: face.fontFamily,
@@ -59,5 +62,10 @@ export async function fetchThemeFonts({ importUrl, sourceCss, targetDir, fetchIm
         });
         families.set(face.fontFamily, fam);
     }
+    await Promise.all(downloads.map(async ({ url: fontUrl, fileName }) => {
+        const res = await fetchImpl(fontUrl, { headers: { 'User-Agent': WOFF2_UA } });
+        if (!res.ok) throw new Error(`Font file fetch failed: ${fontUrl} (HTTP ${res.status})`);
+        fs.writeFileSync(path.join(targetDir, fileName), Buffer.from(await res.arrayBuffer()));
+    }));
     return { importUrl: url, fontFamilies: [...families.values()] };
 }
