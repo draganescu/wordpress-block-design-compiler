@@ -105,9 +105,23 @@ export function validateBlockTheme(args) {
     }
     const themeTexts = [['style.css', styleCss], ['theme.json', JSON.stringify(themeJson)]];
     for (const [label, text] of themeTexts) {
-        // www.w3.org appears as the xmlns of inline data-URI SVGs — a namespace
-        // identifier, never fetched
-        const remotes = (text.match(/https?:\/\/[^"')\s]+/g) || []).filter((u) => !u.includes('schemas.wp.org') && !u.includes('gnu.org') && !u.includes('www.w3.org'));
+        // www.w3.org appears as the xmlns of inline data-URI SVGs, gnu.org as the
+        // GPL license link, schemas.wp.org as the theme.json $schema — all
+        // namespace/reference identifiers, never fetched. Match on the parsed
+        // hostname (not a raw substring) so an attacker-controlled host can't
+        // smuggle one of these names elsewhere in the URL to dodge the check.
+        const allowedHosts = ['schemas.wp.org', 'gnu.org', 'www.w3.org'];
+        const isAllowedHost = (hostname) =>
+            allowedHosts.some((host) => hostname === host || hostname.endsWith(`.${host}`));
+        const remotes = (text.match(/https?:\/\/[^"')\s]+/g) || []).filter((u) => {
+            let hostname;
+            try {
+                hostname = new URL(u).hostname;
+            } catch {
+                return true; // unparseable url — surface it as a finding
+            }
+            return !isAllowedHost(hostname);
+        });
         for (const u of remotes) errors.push(`${label}: remote url ${u}`);
     }
 
