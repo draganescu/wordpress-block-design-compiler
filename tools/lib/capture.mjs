@@ -1,6 +1,8 @@
 // tools/lib/capture.mjs — Playwright capture + PNG comparison shared by both skills.
 import fs from 'node:fs';
 import http from 'node:http';
+import os from 'node:os';
+import crypto from 'node:crypto';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { performance } from 'node:perf_hooks';
@@ -173,6 +175,115 @@ export function browserLaunchStats() {
     return { count: _browserLaunchCount, totalMs: _browserLaunchTotalMs };
 }
 
+// Shared chromium reused across tool calls in one process. Each capture tool used
+// to launch + close its own browser, so a repair loop paid the launch tax on
+// every compare_html call. The persistent MCP server keeps this one alive and
+// hands it to every capture; the per-call finally closes pages, not the browser.
+// closeSharedBrowser() runs on server shutdown (stdin end / SIGTERM / SIGINT).
+let _sharedBrowser = null;
+let _sharedBrowserPromise = null;
+
+export async function getSharedBrowser(chromium, options = { headless: true }, meta) {
+    if (_sharedBrowser && _sharedBrowser.isConnected()) return _sharedBrowser;
+    if (_sharedBrowserPromise) return _sharedBrowserPromise;
+    _sharedBrowserPromise = (async () => {
+        const browser = await launchBrowser(chromium, options, meta);
+        // If chromium dies underneath us, drop the handle so the next call relaunches.
+        browser.on('disconnected', () => { if (_sharedBrowser === browser) _sharedBrowser = null; });
+        _sharedBrowser = browser;
+        return browser;
+    })();
+    try {
+        return await _sharedBrowserPromise;
+    } finally {
+        _sharedBrowserPromise = null;
+    }
+}
+
+export async function closeSharedBrowser() {
+    const browser = _sharedBrowser;
+    _sharedBrowser = null;
+    _sharedBrowserPromise = null;
+    if (browser && browser.isConnected()) {
+        try { await browser.close(); } catch { /* best effort on shutdown */ }
+    }
+}
+
+// Run async tasks with a concurrency cap. Captures (one fresh page each) are
+// independent, so several run at once on the shared browser instead of serially;
+// the cap keeps a big pages×viewports set from opening dozens of tabs at once.
+export async function mapLimit(items, limit, fn) {
+    const results = new Array(items.length);
+    let next = 0;
+    const width = Math.max(1, Math.min(limit, items.length));
+    const workers = Array.from({ length: width }, async () => {
+        while (next < items.length) {
+            const index = next;
+            next += 1;
+            results[index] = await fn(items[index], index);
+        }
+    });
+    await Promise.all(workers);
+    return results;
+}
+
+export const CAPTURE_CONCURRENCY = Number(process.env.WBDC_CAPTURE_CONCURRENCY) > 0
+    ? Number(process.env.WBDC_CAPTURE_CONCURRENCY)
+    : 4;
+
+// Disk cache for the WordPress editor's browser assets. The editor preview pulls
+// ~46 scripts + 4 stylesheets from s.w.org on every editor screenshot; the
+// network baseline showed ~100 requests / 2.5 MB per run. This intercepts those
+// requests and serves them from a local cache (fetching + storing once on a
+// cold miss), so warm runs hit the disk instead of the network. Opt out with
+// WBDC_WP_ASSET_CACHE=0. On any cache failure it falls through to the network,
+// so behavior is never worse than before.
+const WP_ASSET_CACHE_DIR = process.env.WBDC_WP_ASSET_DIR || path.join(os.tmpdir(), 'wbdc-wp-assets');
+
+function wpAssetCacheEnabled() {
+    return process.env.WBDC_WP_ASSET_CACHE !== '0';
+}
+
+function _wpAssetFile(url) {
+    const key = crypto.createHash('sha1').update(url).digest('hex');
+    let ext = '';
+    try { ext = path.extname(new URL(url).pathname) || ''; } catch { ext = ''; }
+    return path.join(WP_ASSET_CACHE_DIR, key + ext);
+}
+
+function _writeAtomic(file, buf) {
+    const tmp = `${file}.${process.pid}.${_atomicSeq++}.tmp`;
+    fs.writeFileSync(tmp, buf);
+    fs.renameSync(tmp, file); // atomic on the same filesystem; safe under concurrent cold writes
+}
+let _atomicSeq = 0;
+
+async function installWpAssetCache(page, { cacheDir = WP_ASSET_CACHE_DIR, fetchImpl = fetch } = {}) {
+    if (!wpAssetCacheEnabled()) return;
+    try { fs.mkdirSync(cacheDir, { recursive: true }); } catch { return; /* can't cache; leave network as-is */ }
+    await page.route('**://s.w.org/**', async (route) => {
+        const url = route.request().url();
+        const file = _wpAssetFile(url);
+        try {
+            if (fs.existsSync(file)) {
+                return await route.fulfill({ status: 200, headers: { 'content-type': mimeType(file) }, body: fs.readFileSync(file) });
+            }
+        } catch { /* fall through to a network fetch */ }
+        try {
+            const res = await fetchImpl(url);
+            if (!res || !res.ok) return await route.continue();
+            const body = Buffer.from(await res.arrayBuffer());
+            try { _writeAtomic(file, body); } catch { /* cache write is best effort */ }
+            const contentType = (res.headers && typeof res.headers.get === 'function' && res.headers.get('content-type')) || mimeType(url);
+            return await route.fulfill({ status: 200, headers: { 'content-type': contentType }, body });
+        } catch {
+            try { return await route.continue(); } catch { /* page may be closing */ }
+        }
+    });
+}
+
+export { installWpAssetCache };
+
 export const DEFAULT_VIEWPORTS = [
     { name: 'desktop', width: 1440, height: 1200 },
     { name: 'mobile', width: 390, height: 1200 },
@@ -271,6 +382,8 @@ export async function captureUrl(browser, url, screenshotPath, viewport, { edito
     // P1: attach network capture only when isNet(); detaches in finally.
     const detachNet = _attachNetCapture(page, meta);
     try {
+        // Only the editor preview loads s.w.org assets; serve them from disk cache.
+        if (editor) await installWpAssetCache(page);
         await page.emulateMedia({ reducedMotion: 'reduce' });
         // page.goto with waitUntil:'networkidle' couples navigation and the
         // networkidle settle into one awaited call, so it carries the full

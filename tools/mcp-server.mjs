@@ -17,7 +17,8 @@ import {
 import {
     DEFAULT_VIEWPORTS, loadCaptureDeps, serveDirectory, capture, captureEditor,
     editorComparisonCss, motionFreezeCss, transientOverlayCaptureCss, comparePngs,
-    launchBrowser,
+    getSharedBrowser, closeSharedBrowser, mapLimit, CAPTURE_CONCURRENCY,
+    installWpAssetCache,
 } from './lib/capture.mjs';
 import { serializeBlockTreeWithWordPress, stripBlockComments, ensureBlocksRegistered } from './lib/wp-serialize.mjs';
 import { DEFAULT_PREVIEW_CONTEXT, EDITOR_SHIM_BLOCKS } from './lib/dynamic-render.mjs';
@@ -414,6 +415,21 @@ process.stdin.on('data', (chunk) => {
   buffer = Buffer.concat([buffer, chunk]);
   processIncoming();
 });
+
+// The capture tools reuse one chromium across calls; close it when the client
+// disconnects (stdin end) or the process is asked to stop, so we don't leak a
+// browser between runs. A hard SIGKILL skips this, but chromium self-exits when
+// its parent pipe closes.
+let _shuttingDown = false;
+async function shutdown(code) {
+  if (_shuttingDown) return;
+  _shuttingDown = true;
+  try { await closeSharedBrowser(); } catch { /* ignore */ }
+  process.exit(code);
+}
+process.stdin.on('end', () => { void shutdown(0); });
+process.on('SIGTERM', () => { void shutdown(0); });
+process.on('SIGINT', () => { void shutdown(0); });
 
 function processIncoming() {
   while (buffer.length) {
@@ -1381,45 +1397,57 @@ async function compareHtml(args) {
     workspaceRoot,
     args.tasksPath || (pageSlug === 'index' ? 'reports/repair-tasks.md' : `reports/${pageSlug}.repair-tasks.md`),
   );
-  const browser = await launchBrowser(chromium, { headless: true }, { tool: 'compare_html' });
+  const browser = await getSharedBrowser(chromium, { headless: true }, { tool: 'compare_html' });
   const results = [];
   const server = shouldCompareEditor ? await serveDirectory(workspaceRoot) : null;
 
+  // Plan every shot path up front, then capture them concurrently — each capture
+  // opens its own page, so the mockup/rendered/editor shots across all viewports
+  // are independent. Diffs run after, in viewport order, so the report is stable.
+  const plan = viewports.map((viewport) => ({
+    viewport,
+    mockupShot: path.join(outDir, `${prefix}mockup-${viewport.name}.png`),
+    renderedShot: path.join(outDir, `${prefix}rendered-${viewport.name}.png`),
+    diffShot: path.join(outDir, `${prefix}diff-${viewport.name}.png`),
+    editorShot: shouldCompareEditor ? path.join(outDir, `${prefix}editor-${viewport.name}.png`) : null,
+    editorDiffShot: shouldCompareEditor ? path.join(outDir, `${prefix}diff-editor-${viewport.name}.png`) : null,
+  }));
+
   try {
-    for (const viewport of viewports) {
-      const mockupShot = path.join(outDir, `${prefix}mockup-${viewport.name}.png`);
-      const renderedShot = path.join(outDir, `${prefix}rendered-${viewport.name}.png`);
-      const diffShot = path.join(outDir, `${prefix}diff-${viewport.name}.png`);
-      await capture(browser, mockupPath, mockupShot, viewport);
-      await capture(browser, renderedPath, renderedShot, viewport);
+    const captureTasks = [];
+    for (const item of plan) {
+      captureTasks.push(() => capture(browser, mockupPath, item.mockupShot, item.viewport));
+      captureTasks.push(() => capture(browser, renderedPath, item.renderedShot, item.viewport));
+      if (shouldCompareEditor) {
+        captureTasks.push(() => captureEditor(browser, server.urlFor(editorPath), item.editorShot, item.viewport));
+      }
+    }
+    await mapLimit(captureTasks, CAPTURE_CONCURRENCY, (task) => task());
+
+    for (const item of plan) {
       results.push(comparePngs({
         target: 'rendered',
-        mockupShot,
-        candidateShot: renderedShot,
-        diffShot,
-        viewport,
+        mockupShot: item.mockupShot,
+        candidateShot: item.renderedShot,
+        diffShot: item.diffShot,
+        viewport: item.viewport,
         PNG,
         pixelmatch,
       }));
-
       if (shouldCompareEditor) {
-        const editorShot = path.join(outDir, `${prefix}editor-${viewport.name}.png`);
-        const editorDiffShot = path.join(outDir, `${prefix}diff-editor-${viewport.name}.png`);
-        await captureEditor(browser, server.urlFor(editorPath), editorShot, viewport);
         results.push(comparePngs({
           target: 'editor',
-          mockupShot,
-          candidateShot: editorShot,
-          diffShot: editorDiffShot,
-          viewport,
+          mockupShot: item.mockupShot,
+          candidateShot: item.editorShot,
+          diffShot: item.editorDiffShot,
+          viewport: item.viewport,
           PNG,
           pixelmatch,
         }));
       }
     }
   } finally {
-    await browser.close();
-    if (server) await server.close();
+    if (server) await server.close(); // the shared browser is closed on server shutdown, not here
   }
 
   const thresholds = {
@@ -1482,21 +1510,28 @@ async function measureLayout(args) {
     if (!fs.existsSync(file)) throw new Error(`measure_layout target does not exist: ${file}`);
   }
 
-  const browser = await launchBrowser(chromium, { headless: true }, { tool: 'measure_layout' });
+  const browser = await getSharedBrowser(chromium, { headless: true }, { tool: 'measure_layout' });
   const server = candidateKind === 'editor' ? await serveDirectory(workspaceRoot) : null;
   const measurements = [];
 
   try {
-    for (const viewport of viewports) {
-      const mockup = await measurePageGeometry(browser, { htmlPath: mockupPath, kind: 'html', viewport, selector });
-      const candidate = await measurePageGeometry(browser, {
-        htmlPath: candidatePath,
-        kind: candidateKind,
-        url: server ? server.urlFor(candidatePath) : null,
-        viewport,
-        selector,
-      });
+    // Each viewport's mockup + candidate geometry is independent (own page),
+    // so measure them concurrently across viewports, then build rows in order.
+    const measured = await mapLimit(viewports, CAPTURE_CONCURRENCY, async (viewport) => {
+      const [mockup, candidate] = await Promise.all([
+        measurePageGeometry(browser, { htmlPath: mockupPath, kind: 'html', viewport, selector }),
+        measurePageGeometry(browser, {
+          htmlPath: candidatePath,
+          kind: candidateKind,
+          url: server ? server.urlFor(candidatePath) : null,
+          viewport,
+          selector,
+        }),
+      ]);
+      return { viewport, mockup, candidate };
+    });
 
+    for (const { viewport, mockup, candidate } of measured) {
       const count = Math.max(mockup.elements.length, candidate.elements.length);
       const rows = [];
       for (let index = 0; index < count; index += 1) {
@@ -1523,8 +1558,7 @@ async function measureLayout(args) {
       });
     }
   } finally {
-    await browser.close();
-    if (server) await server.close();
+    if (server) await server.close(); // shared browser closed on server shutdown
   }
 
   return {
@@ -1543,6 +1577,7 @@ async function measurePageGeometry(browser, { htmlPath, kind, url, viewport, sel
     deviceScaleFactor: 1,
   });
   try {
+    if (kind === 'editor') await installWpAssetCache(page);
     await page.emulateMedia({ reducedMotion: 'reduce' });
     if (kind === 'editor') {
       await page.goto(url, { waitUntil: 'networkidle', timeout: 60000 });
@@ -1588,33 +1623,40 @@ async function screenshotHtml(args) {
   const viewports = Array.isArray(args.viewports) && args.viewports.length ? args.viewports : DEFAULT_VIEWPORTS;
   const targets = normalizeScreenshotTargets(workspaceRoot, args.targets);
   const needsServer = targets.some((target) => target.kind === 'editor');
-  const browser = await launchBrowser(chromium, { headless: true }, { tool: 'screenshot_html' });
+  const browser = await getSharedBrowser(chromium, { headless: true }, { tool: 'screenshot_html' });
   const server = needsServer ? await serveDirectory(workspaceRoot) : null;
-  const screenshots = [];
+
+  // Every target × viewport shot is independent (own page, own output file),
+  // so flatten them and capture concurrently; the screenshots list keeps order.
+  const shots = [];
+  for (const target of targets) {
+    for (const viewport of viewports) {
+      shots.push({
+        target,
+        viewport,
+        screenshotPath: path.join(outDir, `${safeFileSegment(target.name)}-${safeFileSegment(viewport.name)}.png`),
+      });
+    }
+  }
 
   try {
-    for (const target of targets) {
-      for (const viewport of viewports) {
-        const screenshotPath = path.join(outDir, `${safeFileSegment(target.name)}-${safeFileSegment(viewport.name)}.png`);
-        if (target.kind === 'editor') {
-          await captureEditor(browser, server.urlFor(target.path), screenshotPath, viewport);
-        } else {
-          await capture(browser, target.path, screenshotPath, viewport);
-        }
-        screenshots.push({
-          target: target.name,
-          kind: target.kind,
-          sourcePath: target.path,
-          viewport: viewport.name,
-          size: `${viewport.width}x${viewport.height}`,
-          screenshotPath,
-        });
-      }
-    }
+    await mapLimit(shots, CAPTURE_CONCURRENCY, (shot) => (
+      shot.target.kind === 'editor'
+        ? captureEditor(browser, server.urlFor(shot.target.path), shot.screenshotPath, shot.viewport)
+        : capture(browser, shot.target.path, shot.screenshotPath, shot.viewport)
+    ));
   } finally {
-    await browser.close();
-    if (server) await server.close();
+    if (server) await server.close(); // shared browser closed on server shutdown
   }
+
+  const screenshots = shots.map((shot) => ({
+    target: shot.target.name,
+    kind: shot.target.kind,
+    sourcePath: shot.target.path,
+    viewport: shot.viewport.name,
+    size: `${shot.viewport.width}x${shot.viewport.height}`,
+    screenshotPath: shot.screenshotPath,
+  }));
 
   return {
     outDir,
