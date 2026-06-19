@@ -111,13 +111,25 @@ spacing attributes, not margins in style.css that fight it.
 `aggregates` + `passed`. Thresholds are the standard ones:
 `maxMismatchPercent <= 1`, `maxHeightDelta <= 8`.
 
-The repair loop's stopping rule is the same as html-to-blocks: passing
-thresholds is the ONLY successful end state. Inspect the `-diff-*.png` images
-even for passing pages (numbers can hide localized but meaningful drift), fix
-the worst page first, re-run `validate_block_theme` after any re-scaffold,
-then re-run `playground_render`. Do not stop at "close" or "structurally
-right"; if the thresholds cannot be met, report the run blocked with the
-metrics and the blocking cause.
+The repair loop is **bounded**, exactly like html-to-blocks
+(`html-to-blocks/references/repair-loop.md`): at most **6 gate iterations**
+(re-scaffold → `validate_block_theme` → `playground_render`), with an early
+**plateau** stop when 2 iterations each improve `maxMismatchPercent` by <0.3%.
+Fix the worst page first; inspect the `-diff-*.png` images even for passing
+pages (numbers can hide localized drift). On cap or plateau without passing,
+STOP and report the run **blocked** with per-page metrics and the worst
+remaining drift — do NOT keep grinding and do NOT relabel a sub-threshold page
+"done", "floor", or "essentially right".
+
+Tell the floor from real drift the same way: a geometry-exact page
+(`heightDelta` ≈ 0) still reads ~1% `mismatchPercent` from webfont antialiasing
+— that is the floor and PASSES. Mismatch well above ~1.5% with small height
+deltas is real drift (theme.json token / block `align`/`layout` / line-height),
+not a floor. The gate boots WordPress with the theme's LOCAL fonts (no `@import`
+race) and the capture waits for `document.fonts.ready`, so font-load reflow is
+not a valid excuse here. Known not-a-defect: the shared header/footer template
+part renders identically on every page even where a source mockup's footer
+differed — expected, not a gate failure.
 
 ## Editor Validation Pass
 

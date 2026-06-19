@@ -32,7 +32,15 @@ Completion requires both comparison aggregates to pass for EVERY page in the run
 
 Comparison reports are per page: `reports/comparison.json` for the index page, `reports/<page>.comparison.json` for the rest. They never overwrite each other; a complete multi-page run leaves one passing report per page.
 
-If these criteria are not met, the skill run is incomplete. Continue repairing. If progress is impossible after concrete repair attempts, report the run as blocked with the current metrics and blocking cause; do not present it as complete.
+Each page's repair loop is **bounded** — see `references/repair-loop.md`: at most
+6 iterations per page, stop early on a plateau (2 iterations each improving
+`maxMismatchPercent` by <0.3%), and on cap/plateau without passing, record that
+page **blocked** with its metrics rather than grinding on. A geometry-exact
+surface still reads ~1% from webfont antialiasing — that is the floor and passes;
+mismatch well above ~1.5% with small height deltas is real line-height drift, not
+a floor (do not relabel it "done"). Report the run with every page's end-state
+(passed / blocked + metrics); do not present a blocked page as complete, and do
+not exceed the per-page cap chasing a sub-threshold number.
 
 ## Multi-Page Exports
 
@@ -52,6 +60,37 @@ Workflow for multi-page runs:
 4. Page-specific CSS goes into clearly labelled sections of `wordpress/style.css` (or block CSS when component-scoped). Keep the shared token/base layer at the top.
 5. Run serialize + compare per page with the manifest paths. The completion gate applies to every page; a run where one page fails is an incomplete run.
 6. Beware margins hidden by layout context: a missing margin can be invisible at desktop (a taller sibling column masks it) and only surface at mobile when columns stack. Always compare both viewports per page.
+
+## Effort Budget and Delegation Limits
+
+A multi-page run is a budget, not an open-ended grind. State the page count and
+plan before building; for large sites, build ONE foundation page fully (it locks
+shared chrome, tokens, and custom blocks), then converge the rest under the cap.
+
+- **Per page:** at most 6 repair iterations (`references/repair-loop.md`), then
+  PASS or report blocked. Retry a page at most ONCE.
+- **Delegating pages to subagents:** give each a tool-call budget (≈30 calls) and
+  a wall-clock timeout; on exceed it stops and reports its partial metrics — it
+  does not keep going. Cap concurrency to a handful. Do not fan out one agent per
+  page across a large site with no budget.
+- **Whole-run stop condition:** every page is PASS or blocked-with-metrics.
+  "Most pages pass, a few blocked at the floor" is a complete, honestly-reported
+  run — not a reason to keep grinding the blocked ones.
+
+## Known Harness Artifacts — Do Not Chase
+
+Not fidelity defects. Recognize them and STOP rather than burning iterations:
+
+- **Webfont-load reflow.** The capture waits for `document.fonts.ready`, but
+  residual sub-pixel antialiasing of identical webfonts across two DOM contexts
+  still costs ~1% mismatch on a geometry-exact surface. That ~1% is the floor.
+- **Shared template parts.** Nav and footer become ONE template part in the
+  theme. When page mockups carry slightly different footer copy/links, reuse the
+  shared chrome — the per-page difference is expected and resolved at the theme
+  stage. Never fork shared chrome per page to win a diff.
+- **Editor-only canvas quirks.** The no-build editor preview adds wrappers/inline
+  styles the frontend lacks; normalize via editor-scoped CSS, do not restructure
+  blocks to match the canvas.
 
 ## Hard Gates
 

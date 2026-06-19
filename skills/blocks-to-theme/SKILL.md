@@ -66,10 +66,14 @@ into the theme.
 The run is complete only when `validate_block_theme` reports zero errors AND
 `reports/theme-comparison.json` shows every page within thresholds
 (`maxMismatchPercent <= 1`, `maxHeightDelta <= 8`) at both viewports AND
-every page's `editorValidation.failures` is zero (the gate opens each page
-in the real editor and collects block-validation console errors). Quote
-both in the final response. Otherwise keep repairing or report the run blocked
-with the metrics and the blocking cause.
+every page's `editorValidation.failures` is zero (the gate reads each page's
+stored content back from the booted WordPress and runs the same
+`@wordpress/blocks` validator headlessly — see `references/playground-gate.md`).
+Quote both in the final response. The repair loop is **bounded**
+(`references/playground-gate.md`): at most 6 gate iterations with a plateau
+early-stop. On cap/plateau without passing, report the run blocked with
+per-page metrics and the worst remaining drift — do not grind past the cap or
+relabel a sub-threshold page "done".
 
 ### Timing Gate
 

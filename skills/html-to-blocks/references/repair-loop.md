@@ -35,17 +35,56 @@ The editor preview demotes all WordPress editor CSS into a cascade layer, so unl
 - Editor wrappers (`.block-editor-block-list__block`) ARE the block elements for apiVersion 3 blocks; selectors composed as `tag.block-editor-block-list__block.your-class` are the standard way to write editor-only overrides next to their base rules.
 - The cascade-layer demotion does NOT beat editor inline styles. RichText sets `white-space: pre-wrap; min-width: 1px` as inline styles on editable elements, so text the mockup lets overflow on one line can letter-wrap in the canvas; only `!important` author rules win against inline styles (e.g. `white-space: nowrap !important` on oversized display words). Unlayered CSS beats editor *stylesheets*; `!important` beats editor *inline styles*.
 
-Stopping rule:
+## Bounded repair loop (cap + plateau)
 
-- Passing thresholds is the only successful end state.
-- Do not stop because the result is visually close, structurally close, or because further CSS tweaks feel like overfitting.
-- If a repair improves one surface and regresses another, revert that repair and choose another task.
-- If repeated concrete repairs cannot reduce the metrics, mark the run blocked and name the blocker. Do not call it done.
+The loop is bounded. Track an iteration count PER PAGE. One iteration = one
+serialize → compare → repair cycle. Exit on the FIRST of these and record the
+page's end-state:
 
-Default thresholds:
+1. **PASS** — both surfaces meet the thresholds below.
+2. **PLATEAU** — the last 2 iterations each improved `maxMismatchPercent` by less
+   than 0.3 (absolute). You are at the harness floor; stop.
+3. **CAP** — 6 iterations on this page without PASS. Stop.
 
-- `maxMismatchPercent <= 1`
-- `maxHeightDelta <= 8`
+On PLATEAU or CAP without PASS, STOP this page and record it **blocked**: current
+per-surface metrics, the single worst remaining drift, and the end-state hit. Do
+NOT keep iterating. Do NOT relabel a blocked page "done", "floor", or "essentially
+exact". If a repair improves one surface and regresses another, revert it and pick
+another task.
+
+Default thresholds: `maxMismatchPercent <= 1`, `maxHeightDelta <= 8`. Geometry is
+the primary gate — `maxHeightDelta` passing means the structure is right.
+
+### Is the residual the floor, or real drift?
+
+A geometry-exact surface (heightDelta ≈ 0) still reads ~1% `maxMismatchPercent`
+from cross-DOM webfont antialiasing alone — that ~1% IS the floor and PASSES.
+
+- heightDelta ≈ pass AND mismatch ≈ 1% → **floor. PASS.**
+- heightDelta small but mismatch well above ~1.5% → **NOT antialiasing.** It is
+  sub-pixel line-height/font-size drift shifting every text line so glyphs miss.
+  Real, fixable (pin prose `line-height`/`font-size` so lines align <1px) — but
+  still stop at the CAP and report blocked if 6 iterations don't land it.
+- heightDelta large → **real layout drift.** Fix it (measurement-first, above).
+
+### Rationalizations — STOP
+
+| Excuse | Reality |
+|--------|---------|
+| "It's just the antialiasing floor" (with heightDelta drift or mismatch ≫1.5%) | The floor is geometry-exact AND ~1%. Higher = real drift. Report blocked; don't relabel as done. |
+| "One more iteration will get it" (past the cap) | The cap is the cap. Stop, report blocked with metrics. |
+| "Geometry is essentially exact, call it done" (sub-threshold) | Sub-threshold is blocked, not done. State the number. |
+| "Tweaks feel like overfitting, so it's fine" | Improving >0.3%/iter under the cap → continue. Otherwise stop as PLATEAU and report. Neither is "done." |
+
+### Red flags — you are grinding
+- Iteration 7+ on one page.
+- Two iterations in a row that barely moved the number.
+- The words "floor" / "essentially exact" / "good enough" about a sub-threshold result.
+
+All mean: STOP, record the end-state, report the page's metrics honestly. Do not
+chase residual that the **harness artifacts** list (in SKILL.md) names as
+not-a-defect — webfont-load reflow, shared-template-part divergence, editor-only
+canvas quirks.
 
 Completion criteria:
 

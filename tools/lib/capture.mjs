@@ -297,6 +297,19 @@ export async function captureUrl(browser, url, screenshotPath, viewport, { edito
         } else {
             await page.addStyleTag({ content: `${motionFreezeCss()}\n${transientOverlayCaptureCss()}` });
         }
+        // Wait for webfonts to finish loading before the screenshot. An @import
+        // or late <link> font can swap in AFTER networkidle settles, reflowing
+        // text and shifting below-the-fold content — phantom mismatch/height
+        // drift that reads like a fidelity defect but is only a font-load race.
+        // Capped so a blocked/missing font can never hang the capture.
+        await profile.span(
+            'capture.wait.fonts',
+            () => page.evaluate(() => Promise.race([
+                (document.fonts && document.fonts.ready) || Promise.resolve(),
+                new Promise((resolve) => setTimeout(resolve, 3000)),
+            ])).catch(() => {}),
+            meta,
+        );
         await page.waitForTimeout(150);
         await profile.span(
             'capture.screenshot',
