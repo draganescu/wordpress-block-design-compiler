@@ -135,8 +135,19 @@ export function scaffoldBlockTheme(args) {
     // Default block-gap to 0 when the agent ships component CSS that owns vertical
     // rhythm — otherwise WordPress's layout layer adds margin between every stacked
     // block and inflates page height (a large, avoidable first-gate drift).
+    // customCss defaults to the workspace's shared stylesheet so the design system
+    // ALWAYS ships even when the caller omits the arg (forgetting it renders every
+    // page unstyled — a silent, catastrophic footgun) and so the large file need not
+    // be passed inline. Pass customCss:'' to ship a theme with no shared CSS on purpose.
+    let customCss = args.customCss;
+    if (customCss === undefined || customCss === null) {
+        const sharedCssPath = path.join(workspaceRoot, 'wordpress/style.css');
+        customCss = fs.existsSync(sharedCssPath)
+            ? fs.readFileSync(sharedCssPath, 'utf8').replace(/@import\s+url\([^)]*\)\s*;?/g, '/* fonts bundled locally via theme.json */')
+            : '';
+    }
     const themeStyles = args.themeStyles || {};
-    if (args.customCss && (!themeStyles.spacing || themeStyles.spacing.blockGap === undefined)) {
+    if (customCss && (!themeStyles.spacing || themeStyles.spacing.blockGap === undefined)) {
         themeStyles.spacing = { ...(themeStyles.spacing || {}), blockGap: '0px' };
     }
     const themeJson = buildThemeJson({
@@ -152,7 +163,7 @@ export function scaffoldBlockTheme(args) {
     // B6: fold per-page CSS files (wordpress/pages/<page>.css) into the theme
     // stylesheet so parallel page agents can each own a separate file instead of
     // contending on one shared wordpress/style.css.
-    const css = rewriteMediaUrls(rewriteCssVars((args.customCss || '') + pageCssBundle(workspaceRoot), customRenames), mediaMap, '..');
+    const css = rewriteMediaUrls(rewriteCssVars(customCss + pageCssBundle(workspaceRoot), customRenames), mediaMap, '..');
     writeFile(path.join(themeDir, 'style.css'), styleCss({ name, slug, description: args.description }, css));
     const blocksResult = writeBlocksPlugin({
         workspaceRoot, slug, themeName: name,

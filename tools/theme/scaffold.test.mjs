@@ -79,3 +79,19 @@ test('scaffoldBlockTheme defaults blockGap to 0 (component CSS) and rewrites orp
     assert.match(payload, /href="\/"/);
     fs.rmSync(ws, { recursive: true, force: true });
 });
+
+test('scaffoldBlockTheme auto-reads wordpress/style.css as customCss when the arg is omitted', () => {
+    const ws = path.join(path.dirname(fileURLToPath(import.meta.url)), 'fixtures/mini-autocss');
+    fs.rmSync(ws, { recursive: true, force: true });
+    fs.cpSync(path.join(MINI, 'wordpress'), path.join(ws, 'wordpress'), { recursive: true });
+    // a distinctive shared stylesheet with a remote @import that must be stripped
+    fs.writeFileSync(path.join(ws, 'wordpress/style.css'),
+        "@import url('https://fonts.example/x.css');\n.autocss-marker { color: #112233 }");
+    const args = miniScaffoldArgs(ws);
+    delete args.customCss; // omitted -> scaffold must fall back to wordpress/style.css
+    scaffoldBlockTheme(args);
+    const css = fs.readFileSync(path.join(ws, 'theme/mini/style.css'), 'utf8');
+    assert.match(css, /\.autocss-marker/);   // the shared design system shipped, not an empty theme
+    assert.ok(!/@import\s+url\(/.test(css));  // remote @import stripped (theme must have no remote URLs)
+    fs.rmSync(ws, { recursive: true, force: true });
+});

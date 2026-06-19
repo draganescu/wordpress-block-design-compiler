@@ -25,6 +25,19 @@ test('rewriteTreePresets converts exact color/fontSize/spacing matches to preset
     assert.equal(out.innerBlocks[0].attrs.style?.typography, undefined); // empty style object is dropped entirely
 });
 
+test('rewriteTreePresets tolerates a partial tokenMap (only colors) without throwing', () => {
+    const block = {
+        blockName: 'core/group',
+        attrs: { style: { color: { background: '#112233' }, spacing: { padding: { top: '0.6rem' } }, typography: { fontSize: '1rem' } } },
+        innerBlocks: [],
+    };
+    // fontSizes/spacing maps absent — must default to {} rather than crash on lookup
+    const out = rewriteTreePresets(block, { colors: { '#112233': 'brand' } });
+    assert.equal(out.attrs.backgroundColor, 'brand');
+    assert.equal(out.attrs.style.spacing.padding.top, '0.6rem'); // untouched (no spacing map)
+    assert.equal(out.attrs.style.typography.fontSize, '1rem');   // untouched (no fontSizes map)
+});
+
 test('rewriteCssVars renames mapped custom properties and drops their :root defs', () => {
     const css = `:root{--pad:10px;--keep:1}.x{padding:var(--pad);margin:var(--keep)}`;
     const out = rewriteCssVars(css, MAP.custom);

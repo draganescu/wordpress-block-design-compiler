@@ -33,8 +33,15 @@ auto-apply the mechanical fixes so you do not round-trip for them.
    page height — the largest avoidable first-gate drift); **rewrites links to pages
    outside the manifest** to the front page and returns them as `orphanLinks` (a
    single-page subset no longer fatals validate); **folds `wordpress/pages/<page>.css`**
-   into the theme stylesheet; and **omits the blocks-plugin dependency** for a
-   core-only theme.
+   into the theme stylesheet; **omits the blocks-plugin dependency** for a
+   core-only theme; and **reads `wordpress/style.css` as `customCss`** when you omit
+   that arg, so the shared design system always ships (do not hand-pass the large
+   file inline; pass `customCss: ''` only to deliberately ship no shared CSS).
+
+   The content-model plugin's `plugin.slug` must NOT equal `<theme-slug>-content`
+   (the theme's own page-import plugin) — `playground_render` now errors early on
+   that collision instead of crashing the boot with an opaque "exited before
+   becoming ready". Use e.g. `<theme-slug>-cpts`.
 4. `validate_block_theme` → fix until zero errors → `playground_render`. The gate
    loop is bounded; fix the worst page first.
 

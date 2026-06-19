@@ -2,19 +2,24 @@
 const norm = (v) => String(v ?? '').trim().toLowerCase();
 
 export function rewriteTreePresets(block, map) {
+    // A partial tokenMap (e.g. only `colors`) must not crash: default every
+    // sub-map so an absent fontSizes/spacing/colors key cannot throw on lookup.
+    const colors = (map && map.colors) || {};
+    const fontSizes = (map && map.fontSizes) || {};
+    const spacingMap = (map && map.spacing) || {};
     const out = { ...block, attrs: structuredClone(block.attrs || {}), innerBlocks: (block.innerBlocks || []).map((b) => rewriteTreePresets(b, map)) };
     const style = out.attrs.style || {};
     if (style.color) {
-        if (map.colors[norm(style.color.background)]) { out.attrs.backgroundColor = map.colors[norm(style.color.background)]; delete style.color.background; }
-        if (map.colors[norm(style.color.text)]) { out.attrs.textColor = map.colors[norm(style.color.text)]; delete style.color.text; }
+        if (colors[norm(style.color.background)]) { out.attrs.backgroundColor = colors[norm(style.color.background)]; delete style.color.background; }
+        if (colors[norm(style.color.text)]) { out.attrs.textColor = colors[norm(style.color.text)]; delete style.color.text; }
         if (Object.keys(style.color).length === 0) delete style.color;
     }
-    if (style.typography?.fontSize && map.fontSizes[norm(style.typography.fontSize)]) {
-        out.attrs.fontSize = map.fontSizes[norm(style.typography.fontSize)];
+    if (style.typography?.fontSize && fontSizes[norm(style.typography.fontSize)]) {
+        out.attrs.fontSize = fontSizes[norm(style.typography.fontSize)];
         delete style.typography.fontSize;
         if (Object.keys(style.typography).length === 0) delete style.typography;
     }
-    if (style.spacing) rewriteSpacing(style.spacing, map.spacing);
+    if (style.spacing) rewriteSpacing(style.spacing, spacingMap);
     if (Object.keys(style).length === 0) delete out.attrs.style;
     return out;
 }

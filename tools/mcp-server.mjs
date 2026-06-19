@@ -823,12 +823,22 @@ async function analyzeMockup(args) {
     },
   };
 
+  // Per-page output keyed off the mockup filename so PARALLEL page agents can each
+  // call analyze_mockup without clobbering one shared file. The default (unkeyed)
+  // files remain for single-page/back-compat; multi-page callers read the per-page
+  // paths returned below.
+  const page = path.basename(args.htmlPath || 'mockup/index.html').replace(/\.html?$/i, '') || 'index';
+  const inventoryPath = path.join(workspaceRoot, `analysis/${page}.content-inventory.json`);
+  const analysisPath = path.join(workspaceRoot, `analysis/${page}.analysis.json`);
+  writeJson(inventoryPath, inventory);
+  writeJson(analysisPath, analysis);
   writeJson(path.join(workspaceRoot, 'analysis/content-inventory.json'), inventory);
   writeJson(path.join(workspaceRoot, 'analysis/analysis.json'), analysis);
 
   return {
-    analysisPath: path.join(workspaceRoot, 'analysis/analysis.json'),
-    inventoryPath: path.join(workspaceRoot, 'analysis/content-inventory.json'),
+    page,
+    analysisPath,
+    inventoryPath,
     sections: analysis.sections.length,
     forms: inventory.forms.length,
     links: inventory.links.length,

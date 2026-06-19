@@ -86,6 +86,16 @@ export async function playgroundRender(args) {
     const manifest = readJson(path.join(contentDir, 'content/manifest.json'));
     const hasBlocksPlugin = fs.existsSync(blocksDir);
     const contentModel = resolveContentModelPlugin(workspaceRoot);
+    // The theme ships <slug>-blocks and <slug>-content plugins, mounted into
+    // Playground by basename. A content-model plugin whose slug collides with
+    // either mounts to the SAME /wp-content/plugins path, clobbers it, and the
+    // boot dies with an opaque "exited before becoming ready". Fail early instead.
+    if (contentModel) {
+        const cmName = path.basename(contentModel.dir);
+        if (cmName === `${slug}-blocks` || cmName === `${slug}-content`) {
+            throw new Error(`Content-model plugin slug "${cmName}" collides with the theme's generated "${cmName}" plugin — both mount to /wp-content/plugins/${cmName} and crash the Playground boot. Rename plugin.slug in content-model/content-model.json (e.g. "${slug}-cpts") and re-run scaffold_content_model_plugin.`);
+        }
+    }
     const contentPrefix = slug.replace(/-/g, '_') + '_content';
     const outDir = path.join(workspaceRoot, 'reports/playground');
     fs.mkdirSync(outDir, { recursive: true });
@@ -158,6 +168,11 @@ export async function playgroundRender(args) {
         try {
             browser = await launchBrowser(chromium, { headless: true }, { tool: 'playground_render' });
             server = await serveDirectory(workspaceRoot); // mockup screenshots through the same pipeline
+            // WordPress serves a 503 "scheduled maintenance" page while a seed/page
+            // import runs; boot, reboot, and the warm-server gate reimport can all
+            // return before that window closes, so capturing immediately screenshots
+            // the maintenance page as a bogus multi-thousand-px diff. Wait it out.
+            await waitForNoMaintenance(base, 60000, () => entry.proc.exitCode);
             for (const page of manifest.pages) {
                 const mockupPath = page.mockupPath || inferMockupPath(workspaceRoot, page);
                 const results = [];
@@ -288,6 +303,25 @@ async function waitForImport(url, timeoutMs, exited) {
         await new Promise((r) => setTimeout(r, 1000));
     }
     throw new Error(`content import did not complete within ${timeoutMs}ms (${url} never returned 200)`);
+}
+
+// WordPress puts the site behind a 503 "scheduled maintenance" page while an
+// import runs. Poll the front page until that window closes so the gate never
+// screenshots the maintenance page (a huge bogus height diff). Best-effort: on
+// timeout, proceed — a genuinely stuck maintenance state surfaces as a diff.
+async function waitForNoMaintenance(base, timeoutMs, exited) {
+    const start = Date.now();
+    while (Date.now() - start < timeoutMs) {
+        if (exited && exited() !== null) return;
+        try {
+            const res = await fetch(base, { redirect: 'manual' });
+            if (res.status !== 503) {
+                const body = res.status === 200 ? await res.text().catch(() => '') : '';
+                if (!/scheduled maintenance/i.test(body)) return;
+            }
+        } catch { /* transient — server momentarily unreachable */ }
+        await new Promise((r) => setTimeout(r, 500));
+    }
 }
 
 function inferMockupPath(workspaceRoot, page) {
