@@ -4,7 +4,7 @@ import path from 'node:path';
 import { resolvePath, writeFile, writeJson } from '../lib/workspace.mjs';
 import { ensureBlocksRegistered, serializeBlocks } from '../lib/wp-serialize.mjs';
 import { loadPageTrees } from './evidence.mjs';
-import { rewriteTreePresets, rewriteCssVars, rewriteLinks, rewriteMediaUrls } from './rewrites.mjs';
+import { rewriteTreePresets, rewriteCssVars, rewriteLinks, rewriteMediaUrls, rewriteOrphanHtmlLinks } from './rewrites.mjs';
 import { styleCss, functionsPhp, buildThemeJson, templateMarkup, DEFAULT_TEMPLATES } from './generate/theme-files.mjs';
 import { writeBlocksPlugin } from './generate/blocks-plugin.mjs';
 import { writeContentPlugin } from './generate/content-plugin.mjs';
@@ -79,10 +79,16 @@ export function scaffoldBlockTheme(args) {
     ensureBlocksRegistered(workspaceRoot);
     const pages = new Map(loadPageTrees(workspaceRoot).map((p) => [p.page, p.tree]));
     const linkMap = buildLinkMap(args.pages, workspaceRoot);
+    // Links to pages outside the manifest (a single-page subset of a multi-page
+    // site) would otherwise survive the rewrite and fail validate_block_theme.
+    // Rewrite them to the front page and record them for a warning, not a fatal.
+    const orphanLinks = new Set();
+    const frontPage = args.pages.find((p) => p.front);
+    const frontPermalink = frontPage ? '/' : (args.pages[0] ? `/${args.pages[0].slug}/` : '/');
 
     const transformTree = (blocks) => blocks
         .map((b) => rewriteTreePresets(b, tokenMap))
-        .map((b) => deepMapStrings(b, (s) => rewriteCssVars(rewriteMediaUrls(rewriteLinks(s, linkMap), mediaMap, '{{THEME_URI}}'), customRenames)));
+        .map((b) => deepMapStrings(b, (s) => rewriteCssVars(rewriteMediaUrls(rewriteOrphanHtmlLinks(rewriteLinks(s, linkMap), frontPermalink, orphanLinks), mediaMap, '{{THEME_URI}}'), customRenames)));
 
     // parts
     for (const part of args.parts) {
@@ -126,9 +132,16 @@ export function scaffoldBlockTheme(args) {
     });
 
     // theme.json / style.css / functions.php
+    // Default block-gap to 0 when the agent ships component CSS that owns vertical
+    // rhythm — otherwise WordPress's layout layer adds margin between every stacked
+    // block and inflates page height (a large, avoidable first-gate drift).
+    const themeStyles = args.themeStyles || {};
+    if (args.customCss && (!themeStyles.spacing || themeStyles.spacing.blockGap === undefined)) {
+        themeStyles.spacing = { ...(themeStyles.spacing || {}), blockGap: '0px' };
+    }
     const themeJson = buildThemeJson({
         settings: args.themeSettings,
-        styles: deepMapStrings(args.themeStyles || {}, (s) => rewriteCssVars(s, customRenames)),
+        styles: deepMapStrings(themeStyles, (s) => rewriteCssVars(s, customRenames)),
         fontFamilies: args.fontFamilies || [],
         // theme.json schema: templateParts items allow only name/title/area (name = parts/<name>.html).
         templateParts: args.parts.map(({ slug: s, area }) => ({ name: s, area })),
@@ -136,7 +149,10 @@ export function scaffoldBlockTheme(args) {
             .map((t) => ({ name: t, title: t, postTypes: ['page'] })),
     });
     writeJson(path.join(themeDir, 'theme.json'), themeJson);
-    const css = rewriteMediaUrls(rewriteCssVars(args.customCss || '', customRenames), mediaMap, '..');
+    // B6: fold per-page CSS files (wordpress/pages/<page>.css) into the theme
+    // stylesheet so parallel page agents can each own a separate file instead of
+    // contending on one shared wordpress/style.css.
+    const css = rewriteMediaUrls(rewriteCssVars((args.customCss || '') + pageCssBundle(workspaceRoot), customRenames), mediaMap, '..');
     writeFile(path.join(themeDir, 'style.css'), styleCss({ name, slug, description: args.description }, css));
     const blocksResult = writeBlocksPlugin({
         workspaceRoot, slug, themeName: name,
@@ -162,15 +178,29 @@ export function scaffoldBlockTheme(args) {
         files.push(to);
     }
 
-    const contentResult = writeContentPlugin({ slug, themeName: name, outDir: path.join(workspaceRoot, 'theme-plugin', `${slug}-content`), pages: contentPages });
+    const contentResult = writeContentPlugin({ slug, themeName: name, outDir: path.join(workspaceRoot, 'theme-plugin', `${slug}-content`), pages: contentPages, hasBlocksPlugin: blocksResult.blocks.length > 0 });
     return {
         themeDir, files,
         blocksPlugin: blocksResult.blocks.length ? `theme-plugin/${slug}-blocks` : null,
         contentPlugin: `theme-plugin/${slug}-content`,
         pages: contentPages.map(({ markup, ...p }) => p),
         skippedMedia,
-        next: 'Run validate_block_theme, then playground_render.',
+        orphanLinks: [...orphanLinks],
+        next: orphanLinks.size
+            ? `Run validate_block_theme, then playground_render. NOTE: ${orphanLinks.size} link(s) to pages not in the manifest were rewritten to the front page (${[...orphanLinks].slice(0, 5).join(', ')}${orphanLinks.size > 5 ? '…' : ''}). Add those pages to the run to build the full site.`
+            : 'Run validate_block_theme, then playground_render.',
     };
+}
+
+// Concatenate any per-page stylesheets (wordpress/pages/<page>.css) so per-page
+// CSS ships in the theme. Lets parallel page agents own separate files instead of
+// all editing wordpress/style.css.
+function pageCssBundle(workspaceRoot) {
+    const dir = path.join(workspaceRoot, 'wordpress/pages');
+    if (!fs.existsSync(dir)) return '';
+    const parts = fs.readdirSync(dir).filter((f) => f.endsWith('.css')).sort()
+        .map((f) => `\n/* --- ${f} --- */\n${fs.readFileSync(path.join(dir, f), 'utf8')}`);
+    return parts.join('');
 }
 
 function buildLinkMap(pages, workspaceRoot) {

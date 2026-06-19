@@ -47,6 +47,18 @@ export function rewriteLinks(value, linkMap) {
     return out;
 }
 
+// After the manifest rewrite, any remaining internal *.html href points at a page
+// the theme does not build (a single-page subset of a multi-page site). Left
+// alone it survives into the payload and fails validate_block_theme. Rewrite each
+// to the front page and record it so the scaffold can warn instead of fatal.
+export function rewriteOrphanHtmlLinks(value, frontPermalink, collected) {
+    return String(value).replace(/href="([^"]*\.html(?:[?#][^"]*)?)"/gi, (full, href) => {
+        if (/^(?:[a-z][a-z0-9+.-]*:)?\/\//i.test(href) || href.startsWith('/')) return full; // external/absolute: leave
+        if (collected) collected.add(href);
+        return `href="${frontPermalink}"`;
+    });
+}
+
 export function rewriteMediaUrls(value, mediaMap, base) {
     let out = String(value);
     for (const [from, to] of Object.entries(mediaMap)) {

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { rewriteTreePresets, rewriteCssVars, rewriteLinks, rewriteMediaUrls } from './rewrites.mjs';
+import { rewriteTreePresets, rewriteCssVars, rewriteLinks, rewriteMediaUrls, rewriteOrphanHtmlLinks } from './rewrites.mjs';
 
 const MAP = {
     colors: { '#112233': 'brand' },
@@ -50,4 +50,17 @@ test('rewriteMediaUrls swaps workspace asset paths for the THEME_URI placeholder
         rewriteMediaUrls('<img src="mockup/assets/cat.jpg">', mediaMap, '{{THEME_URI}}'),
         '<img src="{{THEME_URI}}/assets/media/cat.jpg">'
     );
+});
+
+test('rewriteOrphanHtmlLinks sends unbuilt-page links to the front page and records them', () => {
+    const orphans = new Set();
+    const out = rewriteOrphanHtmlLinks(
+        '<a href="/judges/">kept</a> <a href="about.html">o1</a> <a href="resources.html?x=1">o2</a> <a href="https://ext.com/a.html">ext</a> <a href="#frag">f</a>',
+        '/', orphans,
+    );
+    assert.ok(out.includes('<a href="/judges/">'));               // already-rewritten absolute untouched
+    assert.ok(out.includes('<a href="https://ext.com/a.html">')); // external untouched
+    assert.ok(out.includes('<a href="#frag">'));                  // fragment untouched
+    assert.equal((out.match(/href="\/"/g) || []).length, 2);      // both orphans -> front page
+    assert.deepEqual([...orphans].sort(), ['about.html', 'resources.html?x=1']);
 });

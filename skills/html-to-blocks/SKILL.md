@@ -7,6 +7,48 @@ description: Use when a user asks to transform designed or provided HTML/CSS/JS 
 
 Use this skill when the user wants an HTML/CSS/JS design or provided markup transformed into editable WordPress blocks. The agent remains responsible for design judgment and code edits. The tools provide workspace setup, mockup analysis, custom-block scaffolding, preview wrapping, screenshot comparison, and DOM geometry measurement (`measure_layout`).
 
+## Fast Path — minimum turns
+
+This skill is turn-bound: each page is **author once → `build_page` → repair →
+`build_page`**, not a five-tool round-trip per iteration. Follow the recipe; do
+not re-plan between calls.
+
+1. **One `build_page` call replaces** serialize → create_block_editor_preview →
+   screenshot_html → compare_html → measure_layout. It returns ONE report:
+   per-surface metrics, per-section height deltas (`driftedSections`), localized
+   `tasks`, `diffImages` paths, and the style audit. Act on `driftedSections`
+   (largest `|deltaHeight|` first) and `tasks` in **one** edit pass, then call
+   `build_page` again. Open a `diffImages` path only when the numbers are
+   ambiguous — do not read screenshots every turn.
+2. **Author the whole page tree in one write.** Never section-by-section.
+3. **Read budget:** work from tool output, not raw files. Do not read the mockup
+   stylesheet or `content-inventory.json` wholesale — `analyze_mockup` is
+   exhaustive (every band, including non-semantic `<div>` bands, flagged
+   `structural` when it has no heading/card/form) and `build_page` localizes drift
+   for you.
+4. **The capture self-heals mockup load/scroll animations** (the body load-fade and
+   `.reveal`/AOS/WOW scroll-reveal are forced visible for the screenshot). Do NOT
+   hand-patch the mockup CSS to un-blank a shot — that is handled in the tool.
+
+### Multi-page protocol (declare all → foundation → fan out)
+
+1. `import_provided_markup` once; read the `pages` manifest and **declare all pages
+   up front**.
+2. Build the **foundation page** (usually index) fully with the loop above — it
+   locks the shared chrome, design tokens, and reusable components.
+3. **Fan the remaining pages out to parallel subagents**, dispatched in one
+   message, each owning ONE page, with a tool-call budget (~30) and a wall-clock
+   cap. On exceed a subagent reports partial metrics and stops; it does not grind.
+   Cap concurrency to a handful.
+4. **Per-page CSS goes to `wordpress/pages/<page>.css`**, not the shared
+   `wordpress/style.css`, so parallel agents never clobber one file — `build_page`
+   and the theme scaffold pick those up automatically.
+5. Each page is PASS or blocked-with-metrics under its cap. "Most pass, a few
+   blocked at the floor" is a complete run.
+
+The numbered workflow below is the underlying contract; the Fast Path is how to
+execute it in the fewest turns.
+
 ## Required Workflow
 
 1. Create an artifact workspace with `create_workspace`.

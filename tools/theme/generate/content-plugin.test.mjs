@@ -8,7 +8,7 @@ import { writeContentPlugin } from './content-plugin.mjs';
 test('writeContentPlugin writes manifest, payload and admin plugin', () => {
     const out = fs.mkdtempSync(path.join(os.tmpdir(), 'cp-'));
     writeContentPlugin({
-        slug: 'mini', themeName: 'Mini', outDir: out,
+        slug: 'mini', themeName: 'Mini', outDir: out, hasBlocksPlugin: true,
         pages: [
             { slug: 'home', title: 'Home', front: true, template: '', markup: '<!-- wp:paragraph --><p>hi</p><!-- /wp:paragraph -->' },
             { slug: 'about', title: 'About', front: false, template: 'page-about', markup: '<!-- wp:paragraph --><p>about</p><!-- /wp:paragraph -->' },
@@ -46,4 +46,20 @@ test('writeContentPlugin manifest carries through extra page fields like sourceF
     assert.equal(manifest.pages[0].sourceFile, 'wordpress/pages/home.content.html');
     assert.equal(manifest.pages[0].mockupPath, 'mockups/home.png');
     assert.equal(manifest.pages[0].markup, undefined);
+});
+
+test('writeContentPlugin omits the blocks-plugin dependency for a core-only theme', () => {
+    const out = fs.mkdtempSync(path.join(os.tmpdir(), 'cp-'));
+    writeContentPlugin({
+        slug: 'mini', themeName: 'Mini', outDir: out, hasBlocksPlugin: false,
+        pages: [
+            { slug: 'home', title: 'Home', front: true, template: '', markup: '<!-- wp:paragraph --><p>hi</p><!-- /wp:paragraph -->' },
+        ],
+    });
+    const php = fs.readFileSync(path.join(out, 'mini-content.php'), 'utf8');
+    // No companion blocks plugin exists, so the content plugin must NOT declare a
+    // hard dependency on it — otherwise WordPress refuses to activate it and the
+    // Playground import step fatals on an undefined function.
+    assert.doesNotMatch(php, /Requires Plugins/);
+    assert.match(php, /function mini_content_import_pages/);
 });
