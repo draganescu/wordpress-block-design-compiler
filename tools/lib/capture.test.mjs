@@ -2,10 +2,14 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { motionFreezeCss, revealNeutralizeCss } from './capture.mjs';
 
-test('motionFreezeCss disables animation/transition/scroll', () => {
+test('motionFreezeCss fast-forwards animation and disables transition/scroll', () => {
     const css = motionFreezeCss();
-    assert.match(css, /animation:none!important/);
+    // Entrance animations are snapped to their final (visible) keyframe instead
+    // of being frozen hidden at frame 0.
+    assert.match(css, /animation-duration:1ms!important/);
+    assert.match(css, /animation-fill-mode:forwards!important/);
     assert.match(css, /transition:none!important/);
+    assert.match(css, /scroll-behavior:auto!important/);
 });
 
 test('revealNeutralizeCss forces reveal/fade bands and the body fade visible', () => {

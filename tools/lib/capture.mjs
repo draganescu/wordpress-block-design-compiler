@@ -360,8 +360,17 @@ export function editorComparisonCss() {
     `;
 }
 
+// Fast-forward every animation to its final keyframe rather than disabling it.
+// `animation:none` freezes hand-rolled entrance animations (an element set
+// `opacity:0` that fades in via `@keyframes ... forwards`, e.g. a hero eyebrow/
+// title/CTA) at their HIDDEN first frame, blanking the shot exactly like an
+// un-fired scroll-reveal — and Playwright's `animations:'disabled'` can't
+// fast-forward an animation that no longer exists. A negative-delay 1ms run with
+// `forwards` fill and a single iteration snaps finite entrance animations to
+// their visible end state and settles looping animations (marquees, spinners)
+// deterministically, while transitions and smooth scroll are still killed.
 export function motionFreezeCss() {
-    return '*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}';
+    return '*,*::before,*::after{animation-duration:1ms!important;animation-delay:-1ms!important;animation-iteration-count:1!important;animation-fill-mode:forwards!important;transition:none!important;scroll-behavior:auto!important}';
 }
 
 // Mockups routinely hide content behind a JS scroll-reveal (an IntersectionObserver
