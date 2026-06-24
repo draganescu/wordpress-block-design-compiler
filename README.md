@@ -1,173 +1,113 @@
 # HTML to WordPress Blocks
 
-This repository is a local agent plugin plus MCP server for transforming designed or provided HTML/CSS/JS into editable WordPress block content.
+This repo turns a designed HTML/CSS page into editable WordPress block content, and then into an installable block theme. It runs as an MCP server: an agent (Claude Code, Codex, or any MCP-capable client) calls the tools, and a set of skills tells the agent how to use them.
 
-The workflow is intentionally staged. The HTML mockup stays the visual source of truth, while the WordPress output is built as a data-only block tree, rendered through WordPress block packages, inspected in a no-build block editor preview, and repaired from screenshot diffs.
+For the full picture — directory map, the workspace layout, the fidelity gates, how the deterministic tools and the skills divide the work — read [`docs/architecture.md`](docs/architecture.md).
 
-## What Is Included
+## The problem
 
-- `skills/content-modeling/SKILL.md` - the content architecture skill for posts, CPTs, taxonomies, meta, submissions, seed data, and model plugins.
-- `skills/content-modeling/references/` - content modeling and plugin-contract guidance.
-- `skills/html-to-blocks/SKILL.md` - the HTML-to-editable-blocks skill an agent should follow.
-- `skills/html-to-blocks/references/` - design, planning, core-block, custom-block, and repair-loop guidance.
-- `skills/blocks-to-theme/SKILL.md` - the stage-2 skill that turns a completed run into an installable block theme.
-- `skills/blocks-to-theme/references/` - theme.json mapping, part inference, template planning, fonts/media, and Playground-gate guidance.
-- `tools/mcp-server.mjs` - deterministic workspace, analysis, serialization, editor preview, screenshot, and comparison tools.
-- `.codex-plugin/plugin.json` - Codex plugin manifest.
-- `.mcp.json` - MCP server config for agents that can load MCP servers.
-- `claude/` - Claude-oriented instructions and config example.
-- `spec.md` - historical grounding/specification for the approach.
+Ask an LLM to "rebuild this design as WordPress blocks" and the result usually looks flatter than the design it started from. Direct block generation drops layout, rhythm, and typography even when the model can see the original. The hard part is design transfer: keeping a page's visual language while ending up with content a person can still edit in the block editor.
 
-Generated runs should live outside the repository, or under ignored local folders such as `examples/`.
+This repo splits that work into stages. The HTML mockup stays the visual source of truth. Deterministic tools do the mechanical parts — analysis, serialization, preview, screenshot diffing, validation. The LLM does the judgment — which blocks to use, when a custom block earns its keep, which controls keep the content editable. Every stage leaves files on disk you can open and check.
 
-## Workflow
+## How it is put together
 
-1. Create a workspace with `create_workspace`.
-2. Generate `mockup/index.html` and `mockup/style.css` from the user brief, or import existing markup with `import_provided_markup`.
-3. Analyze the mockup with `analyze_mockup`.
-4. If the brief/design contains dynamic content collections, run the `content-modeling` skill: write `content-model/content-model.json`, validate it, and scaffold the installable content-model plugin.
-5. Write a core-first block plan in `plan/block-plan.md` and `plan/block-plan.json`.
-6. Generate custom blocks only when core blocks and block supports cannot preserve both fidelity and editability.
-7. Assemble `wordpress/block-tree.json` as data only: block names, attributes, supports/style attrs, classes, and inner blocks.
-8. Run `serialize_wordpress_blocks` to produce canonical block markup, rendered preview HTML, editor preview HTML, and a style audit.
-9. Run `compare_html` against both the saved frontend render and the editable editor preview.
-10. Localize failures with `measure_layout` (per-element geometry drift between mockup and rendered/editor pages), then repair from explicit tasks until rendered and editor mismatch thresholds pass.
+Two pieces:
 
-## Stage 0: content-modeling
+- **MCP tools** (`tools/`) do the deterministic work. Given files in a workspace, they produce more files: analysis JSON, serialized block markup, rendered previews, screenshots, pixel diffs, scaffolded plugins, a booted Playground comparison. Same input, same output. They never call a model.
+- **Skills** (`skills/`) are the playbooks the agent follows. Each `SKILL.md` plus its `references/` is the contract for one stage: what to look at, which decision to make, which tool to call next, when the stage is done. The judgment lives here; the tools enforce the facts.
 
-Use `skills/content-modeling/SKILL.md` when the site needs durable data architecture: custom post types, taxonomies, structured meta, submission storage, or sample data. This stage looks at the design and brief before blocks are assembled and decides what should remain page content versus what belongs in WordPress admin as posts, CPTs, taxonomy terms, or form submissions.
+There is no CLI and no hosted backend. The server speaks JSON-RPC over stdio, and an agent drives it.
 
-Stage-0 tools:
+## The three stages
 
-- `validate_content_model`
-- `scaffold_content_model_plugin`
+A run moves through up to three stages. Many pages only need the middle one.
 
-The canonical model is `content-model/content-model.json`. The generated installable plugin is written to `content-model/plugin/<plugin-slug>/` and registers CPTs, taxonomies, post meta, and submission REST routes while active. Like the theme page-content importer, seed records are explicit: manifests describe records, seed post markup is moved to `content/seeds/...` payload files, and the plugin adds a Tools screen to import generated seed content, report slug collisions/modified imports, and remove generated seed content.
+**Stage 0 — content modeling** (`skills/content-modeling`). Decide what is page content and what belongs in WordPress admin as data: custom post types, taxonomies, post meta, form submissions, seed records. The output is `content-model/content-model.json` and an installable plugin that registers all of it. Skip this stage for static pages.
 
-## Multi-Page Exports
+**Stage 1 — html-to-blocks** (`skills/html-to-blocks`). The core. Analyze the mockup, plan a core-first block tree, build it as data (`wordpress/block-tree.json` — block names, attributes, supports, classes, inner blocks, no raw HTML), serialize it through WordPress packages, and diff the result against the mockup until both the rendered page and the editor preview match within threshold. When the design has dynamic collections, mark those regions as stand-ins during the visual pass, then hydrate them into real `core/query` / `core/comments` blocks once the layout is locked.
 
-`import_provided_markup` returns a `pages` manifest when the source root contains sibling `.html` pages. Use the suggested paths for every page (including the primary one):
+**Stage 2 — blocks-to-theme** (`skills/blocks-to-theme`). Turn a passed run into an installable block theme. Read style evidence across pages, lift recurring tokens into `theme.json`, infer template parts from what actually repeats across pages, scaffold the theme plus a blocks plugin and a content plugin, validate it statically, then boot it in WordPress Playground and screenshot-diff every page against the original mockups.
 
-- `wordpress/pages/<page>.block-tree.json` + `wordpress/pages/<page>.content.html`
-- `rendered/<page>.html` + `editor/<page>.html`
-- `reports/<page>.comparison.json` (compare_html derives this from the mockup filename, so per-page reports never overwrite each other)
+## The data-only rule
 
-Plan shared blocks once, pass the first page fully, then iterate the rest. The run is complete only when every page's comparison passes both surfaces.
+The block tree is data, never markup. It carries block names, attributes, supports, style attributes, classes, and inner blocks. It must not contain raw-markup escape hatches such as `htmlLines`, `innerHTML`, `innerContent`, `markup`, or `sourceHtml`. Canonical markup comes out of `serialize_wordpress_blocks` (and `fix_block_markup` for anything hand-edited), so the editor never sees block-validation errors.
 
-The block tree must not contain raw markup escape hatches such as `htmlLines`, `innerHTML`, `innerContent`, `markup`, or `sourceHtml`.
+## MCP tools
 
-## Core-First Rule
+Workspace and html-to-blocks:
 
-Use WordPress core blocks and design supports before custom blocks:
+- `create_workspace` — make a workspace with mockup, plan, wordpress, rendered, editor, and report folders.
+- `import_provided_markup` — pull an existing HTML/CSS export into the workspace instead of generating a mockup. Returns a `pages` manifest for multi-page sources.
+- `analyze_mockup` — content inventory and CSS selector summaries from the mockup.
+- `scaffold_custom_block` — a vanilla-JS custom block baseline (`block.json`, `index.js`, `style.css`).
+- `serialize_wordpress_blocks` — turn `block-tree.json` into canonical content markup, a frontend render, an editor preview, and CSS reports.
+- `create_block_editor_preview` — a no-build editor preview that loads the block tree, custom blocks, and CSS.
+- `screenshot_html` — screenshots for mockup / rendered / editor pages, no diff.
+- `compare_html` — screenshots plus pixel diffs plus a per-page comparison report and repair tasks.
+- `measure_layout` — per-element geometry drift between mockup and rendered/editor, to localize where a height delta comes from.
+- `build_page` — one call that serializes, writes both previews, pixel-diffs both surfaces at both viewports, and measures geometry, returning a single report. One repair iteration in one tool call.
+- `fix_block_markup` — canonicalize markup so it byte-matches `save()` output.
 
-- Use `core/group`, `core/columns`, `core/cover`, `core/image`, `core/heading`, `core/paragraph`, `core/buttons`, `core/list`, and related core blocks when they express the structure.
-- Put color, spacing, typography, dimensions, border, layout, alignment, media, and overlay styling into block attributes/supports wherever possible.
-- Keep `wordpress/style.css` small and explainable.
-- Create custom blocks for real forms, search/booking/subscription widgets, reusable typed components, semantic data structures, or UI that core blocks cannot model editably.
+Content modeling and stand-ins:
 
-Custom block `edit()` output should visually mirror `save()` and use inline `RichText` for visible copy, with InspectorControls or BlockControls for non-inline settings.
+- `validate_content_model` — check a content-model JSON for CPT, taxonomy, meta, REST, and seed consistency.
+- `scaffold_content_model_plugin` — generate the installable plugin from the content model, with a Tools screen to import and remove seed content.
+- `audit_standins` — list every stand-in mark across the page trees and validate them against the content model.
+- `hydrate_standins` — swap marked stand-ins into real dynamic blocks (`core/query` + `core/post-template`, `core/comments`) once the visual gate has passed.
 
-## Stage 2: blocks-to-theme
+Blocks-to-theme:
 
-Once an html-to-blocks run has passed its comparison gates, the `blocks-to-theme` skill (`skills/blocks-to-theme/SKILL.md`) extracts an installable WordPress block theme from the workspace: theme.json built from style evidence (presets first, residual CSS only with a documented reason), template parts inferred from cross-page repetition instead of header/footer assumptions, an `index` template plus generic `archive`/`single`/`404` defaults, bundled fonts and media with zero remote URLs, a companion blocks plugin, and a content plugin that imports (and can remove) the generated pages. The theme is verified statically and then booted in WordPress Playground and screenshot-diffed against the original mockups.
+- `analyze_theme_evidence` — recurring colors, fonts, spacing, custom properties, and per-rule lift buckets across pages.
+- `infer_template_parts` — group repeated cross-page subtrees into template-part candidates from evidence.
+- `fetch_theme_fonts` — resolve the mockup's Google Fonts import into local woff2 files and `theme.json` fontFace entries.
+- `scaffold_block_theme` — write the theme, blocks plugin, and content plugin from the agent's decisions.
+- `validate_block_theme` — static gate: schema, template/part parse, file/ref/font/remote-url/payload checks.
+- `playground_render` — boot the theme and plugins in WordPress Playground, import the pages, screenshot every page, and diff against the mockups.
+- `playground_stop` — stop the warm Playground server held for a workspace.
 
-Stage-2 tools:
+## Running it
 
-- `analyze_theme_evidence`
-- `infer_template_parts`
-- `fetch_theme_fonts`
-- `scaffold_block_theme`
-- `validate_block_theme`
-- `playground_render`
-- `fix_block_markup` — canonicalize any block markup (parse → recreate from
-  attributes → re-serialize) so it byte-matches `save()` output; fixes editor
-  block-validation errors in hand-written or AI-generated templates. Theme
-  files generated by `scaffold_block_theme` are canonical by construction
-  (everything serializes from data-only block trees), so this tool is for
-  ingested or hand-edited markup.
-
-Workflow, compressed (the skill and its `references/` docs are the contract):
-
-1. Run `analyze_theme_evidence`; read `reports/theme-evidence.json`.
-2. Run `infer_template_parts`; read `reports/template-parts.json`.
-3. Write `plan/theme-plan.md`: token map, lift ledger, a decision for every part-evidence group, template plan, page manifest, media map.
-4. Run `fetch_theme_fonts` to bundle Google Fonts locally as theme.json fontFace entries.
-5. Run `scaffold_block_theme` with the plan's decisions as data.
-6. Run `validate_block_theme`; fix and re-scaffold until `errors` is empty.
-7. Run `playground_render`; repair (theme.json or theme style.css, never the content payloads) until every page passes both viewports.
-8. Quote `reports/theme-validation.json` and the `reports/theme-comparison.json` aggregates in the final response.
-
-## Timing Runs
-
-Timing reports must name what clock they measured:
-
-- **Agent wall-clock** is the elapsed time from the user request to completion. It includes reading context, LLM planning and generation, repair iterations, debugging, tests, commits, pushes, and any blocked or failed attempts.
-- **Deterministic tool time** is only the runtime of MCP/tool calls such as analysis, serialization, theme scaffolding, font fetching, and static validation. It does not include agent thinking, LLM edits, screenshot inspection, or manual repair.
-- **Playground verification time** is separate because it boots WordPress, imports content, captures pages, and may dominate or block the run.
-
-A reused workspace must be reported as a partial-stage timing. For example, running `blocks-to-theme` on an already completed html-to-blocks workspace is not an HTML-to-theme timing; it is a static theme scaffold timing from existing block trees.
-
-## MCP Tools
-
-The server exposes these tools:
-
-- `create_workspace`
-- `import_provided_markup`
-- `analyze_mockup`
-- `scaffold_custom_block`
-- `serialize_wordpress_blocks`
-- `create_block_editor_preview`
-- `screenshot_html`
-- `compare_html`
-- `measure_layout`
-- `validate_content_model`
-- `scaffold_content_model_plugin`
-- `analyze_theme_evidence`
-- `infer_template_parts`
-- `fetch_theme_fonts`
-- `scaffold_block_theme`
-- `validate_block_theme`
-- `playground_render`
-- `fix_block_markup`
-
-Run the syntax check with:
-
-```bash
-npm run check
-```
-
-## Codex
-
-Use the repository as a Codex plugin. The manifest is at:
-
-```text
-.codex-plugin/plugin.json
-```
-
-The skill names are `content-modeling`, `html-to-blocks`, and `blocks-to-theme`.
-
-## Claude / MCP
-
-Install dependencies, then point Claude or another MCP-capable agent at the server:
+Install dependencies, then point an MCP-capable agent at the server:
 
 ```bash
 npm install
 node tools/mcp-server.mjs
 ```
 
-Example Claude Desktop server entry:
+Example Claude Desktop entry (there is a ready copy in `claude/claude_desktop_config.example.json` and an `.mcp.json` for Claude Code):
 
 ```json
 {
-  "mcpServers": {
-    "html-to-blocks": {
-      "command": "node",
-      "args": ["/absolute/path/to/html-to-blocks/tools/mcp-server.mjs"]
+    "mcpServers": {
+        "html-to-blocks": {
+            "command": "node",
+            "args": ["/absolute/path/to/html-to-blocks/tools/mcp-server.mjs"]
+        }
     }
-  }
 }
 ```
 
-Agents should read `claude/CLAUDE.md` or `skills/html-to-blocks/SKILL.md` before calling the tools.
+The server speaks JSON-RPC and matches whichever framing the client uses — newline-delimited JSON (the MCP stdio default, what Claude Code uses) or `Content-Length` (LSP-style). It accepts both on input and replies in kind.
 
-Note for stdio clients: the server speaks JSON-RPC and replies in whichever framing the client uses — newline-delimited JSON by default (the MCP stdio transport spec, used by Claude Code), or `Content-Length` (LSP-style) if the client frames its requests that way. It accepts both framings on input and matches them on output.
+Before calling the tools, an agent should read `claude/CLAUDE.md` or the relevant `skills/*/SKILL.md`.
+
+## Codex
+
+Use the repo as a Codex plugin. The manifest is at `.codex-plugin/plugin.json`, and the skill names are `content-modeling`, `html-to-blocks`, and `blocks-to-theme`.
+
+## Checks, tests, profiling
+
+```bash
+npm run check     # syntax-check the server and library entrypoints
+npm test          # node --test across tools/lib, tools/theme, tools/content, tools/profile
+npm run profile   # timing harness — see docs/profiling-plan.md
+```
+
+`npm run profile` measures tool runtime, not output quality. There is no automated fidelity eval; quality is gated per run by `compare_html` / `build_page` thresholds and `playground_render`.
+
+## Where to read next
+
+- [`docs/architecture.md`](docs/architecture.md) — the repo-wide guide.
+- `skills/*/SKILL.md` — the stage contracts the agent follows.
+- `spec.md` — the original grounding spec. It predates the current shape; `docs/architecture.md` notes where the build diverged.
