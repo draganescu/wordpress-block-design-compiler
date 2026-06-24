@@ -50,10 +50,38 @@ export function firstMatch(value, pattern, group = 1) {
     return match ? match[group] : '';
 }
 
+// Remove an element together with its inner content (e.g. <script>…</script>)
+// using a linear scan instead of a regex. Regex-based tag filtering is brittle
+// against whitespace/newlines in the closing tag and re-exposed openers, so we
+// walk the string, drop everything from each opener through the end of its
+// matching closer, and discard a trailing unterminated opener entirely.
+function stripElement(input, tag) {
+    const opener = `<${tag}`;
+    const closer = `</${tag}`;
+    let output = '';
+    let rest = input;
+    for (;;) {
+        const lower = rest.toLowerCase();
+        const open = lower.indexOf(opener);
+        if (open === -1) {
+            return output + rest;
+        }
+        output += rest.slice(0, open);
+        const close = lower.indexOf(closer, open + opener.length);
+        if (close === -1) {
+            return output; // no closing tag: drop the remainder
+        }
+        const closeEnd = rest.indexOf('>', close);
+        if (closeEnd === -1) {
+            return output;
+        }
+        rest = rest.slice(closeEnd + 1);
+    }
+}
+
 export function cleanText(value) {
-    return String(value || '')
-        .replace(/<script[\s\S]*?<\/script>/gi, '')
-        .replace(/<style[\s\S]*?<\/style>/gi, '')
+    const withoutCode = stripElement(stripElement(String(value || ''), 'script'), 'style');
+    return withoutCode
         .replace(/<[^>]+>/g, ' ')
         .replace(/\s+/g, ' ')
         .trim();
