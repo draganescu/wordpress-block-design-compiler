@@ -1,17 +1,29 @@
 // tools/theme/playground.mjs
 import fs from 'node:fs';
+import net from 'node:net';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
 import { performance } from 'node:perf_hooks';
+import { randomUUID } from 'node:crypto';
 import { resolvePath, readJson, writeJson } from '../lib/workspace.mjs';
 import { loadCaptureDeps, serveDirectory, captureUrl, comparePngs, DEFAULT_VIEWPORTS, launchBrowser } from '../lib/capture.mjs';
 import { PLUGIN_ROOT } from '../lib/workspace.mjs';
+import { writeGateMuPlugin } from './generate/gate-muplugin.mjs';
+import { makeKey, getOrBoot, stop, setHashes } from './playground-server.mjs';
+import { hashInputs, classifyChange } from './playground-changes.mjs';
+import { validateStoredContent } from './editor-validate.mjs';
 import * as profile from '../lib/profile.mjs';
 
 // Above this many ms, the server-ready wait almost certainly included a cold
 // WordPress build download (first run); below it the Playground CLI hit its
 // cache. Used to infer and tag the run's cold/warm state for the profiler.
 const COLD_SERVER_WAIT_MS = 20000;
+
+// Pin the WordPress version so a warm-then-reboot cycle (and reruns weeks apart)
+// boots byte-identical core, keeping the visual gate's diffs attributable to the
+// theme rather than a silently bumped "latest". The CLI cleanly supports --wp
+// (server --help: --wp [default: "latest"]), so pinning never risks the boot.
+const WP_VERSION = '6.8';
 
 export function buildBlueprint({ slug, hasBlocksPlugin, contentModel }) {
     const prefix = slug.replace(/-/g, '_') + '_content';
@@ -34,13 +46,17 @@ export function buildBlueprint({ slug, hasBlocksPlugin, contentModel }) {
     };
 }
 
-export function buildCliArgs({ slug, themeDir, pluginDirs, blueprintPath, port }) {
+export function buildCliArgs({ slug, themeDir, pluginDirs, blueprintPath, port, gateFile }) {
     return [
         'server',
         `--port=${port}`,
+        `--wp=${WP_VERSION}`,
         `--blueprint=${blueprintPath}`,
         `--mount=${themeDir}:/wordpress/wp-content/themes/${slug}`,
         ...pluginDirs.map((dir) => `--mount=${dir}:/wordpress/wp-content/plugins/${path.basename(dir)}`),
+        // The gate mu-plugin is mounted, never shipped in the theme; it exposes
+        // the localhost dump/flush/reimport endpoints the Node gate calls.
+        `--mount=${gateFile}:/wordpress/wp-content/mu-plugins/wbdc-gate.php`,
     ];
 }
 
@@ -70,53 +86,93 @@ export async function playgroundRender(args) {
     const manifest = readJson(path.join(contentDir, 'content/manifest.json'));
     const hasBlocksPlugin = fs.existsSync(blocksDir);
     const contentModel = resolveContentModelPlugin(workspaceRoot);
-    const port = args.port || 9400;
-    const base = `http://127.0.0.1:${port}`;
+    // The theme ships <slug>-blocks and <slug>-content plugins, mounted into
+    // Playground by basename. A content-model plugin whose slug collides with
+    // either mounts to the SAME /wp-content/plugins path, clobbers it, and the
+    // boot dies with an opaque "exited before becoming ready". Fail early instead.
+    if (contentModel) {
+        const cmName = path.basename(contentModel.dir);
+        if (cmName === `${slug}-blocks` || cmName === `${slug}-content`) {
+            throw new Error(`Content-model plugin slug "${cmName}" collides with the theme's generated "${cmName}" plugin — both mount to /wp-content/plugins/${cmName} and crash the Playground boot. Rename plugin.slug in content-model/content-model.json (e.g. "${slug}-cpts") and re-run scaffold_content_model_plugin.`);
+        }
+    }
+    const contentPrefix = slug.replace(/-/g, '_') + '_content';
     const outDir = path.join(workspaceRoot, 'reports/playground');
     fs.mkdirSync(outDir, { recursive: true });
 
     const blueprintPath = path.join(outDir, 'blueprint.json');
     writeJson(blueprintPath, buildBlueprint({ slug, hasBlocksPlugin, contentModel }));
     profile.setRunMeta({ tool: 'playground_render', slug });
-    const proc = profile.span('playground.cli.spawn', () => spawn('npx', ['@wp-playground/cli', ...buildCliArgs({
-        slug, themeDir, blueprintPath, port,
-        pluginDirs: [blocksDir, contentDir, contentModel && contentModel.dir].filter((d) => d && fs.existsSync(d)),
-    })], { cwd: PLUGIN_ROOT, stdio: ['ignore', 'pipe', 'pipe'] }));
-    let logs = '';
-    proc.stdout.on('data', (d) => { logs += d; });
-    proc.stderr.on('data', (d) => { logs += d; });
 
+    // Boot the warm-registry's WordPress: generate a fresh gate token, write the
+    // gate mu-plugin, spawn the CLI with it mounted, then wait for server+import.
+    // Returns the registry entry shape; the registry owns the proc lifetime.
+    const bootFn = async () => {
+        const gateToken = randomUUID();
+        const gateFile = path.join(outDir, 'wbdc-gate.php');
+        writeGateMuPlugin(gateFile, { token: gateToken, contentPrefix, contentModelPrefix: contentModel?.prefix });
+        // A free port per boot, never a shared default: two warm servers from
+        // different workspaces on a fixed 9400 would answer each other's health
+        // probe and cross-contaminate. A reboot also gets a fresh port, so it
+        // never races the old server still releasing the previous one.
+        const port = args.port || await getFreePort();
+        // detached:true makes the child a process-group leader so the registry
+        // can kill the real @wp-playground/cli process, not just the npx wrapper.
+        const proc = profile.span('playground.cli.spawn', () => spawn('npx', ['@wp-playground/cli', ...buildCliArgs({
+            slug, themeDir, blueprintPath, port, gateFile,
+            pluginDirs: [blocksDir, contentDir, contentModel && contentModel.dir].filter((d) => d && fs.existsSync(d)),
+        })], { cwd: PLUGIN_ROOT, stdio: ['ignore', 'pipe', 'pipe'], detached: true }));
+        let logs = '';
+        proc.stdout.on('data', (d) => { logs += d; });
+        proc.stderr.on('data', (d) => { logs += d; });
+        proc.__logs = () => logs;
+        const base = `http://127.0.0.1:${port}`;
+        await bootWait({ proc, base, manifest });
+        return { proc, port, base, gateToken, hashes: hashInputs(workspaceRoot, slug) };
+    };
+
+    const key = makeKey(workspaceRoot, slug);
+    let acquired = await getOrBoot(key, bootFn);
+    // Pillar 3: hash the inputs and decide the cheapest re-check. A structural
+    // (plugin code) or first-seen change can only be trusted after a cold boot;
+    // a content edit reimports; a theme edit just flushes the style caches; an
+    // unchanged workspace needs nothing. Cold boot only when we reused a warm one.
+    const next = hashInputs(workspaceRoot, slug);
+    const kind = classifyChange(acquired.entry.hashes, next);
     try {
-        // The server-ready wait subsumes the cold WordPress build download on a
-        // first run; timing it (and whether it crossed the cold threshold or the
-        // CLI logged a download) is how we infer and tag cold vs warm.
-        const serverWaitTok = profile.mark('playground.wait.server');
-        const serverWaitStart = performance.now();
-        await waitForServer(base, 120000, () => proc.exitCode);
-        const serverWaitMs = performance.now() - serverWaitStart;
-        const cold = serverWaitMs > COLD_SERVER_WAIT_MS || /\b(download|fetch)ing wordpress/i.test(logs);
-        profile.measure(serverWaitTok, { cold, waitMs: serverWaitMs });
-        profile.setRunMeta({ cold });
-        // the server answers before the blueprint's runPHP import step finishes;
-        // capturing early races the import (front page = blog index). The last
-        // manifest page resolving proves the import ran to completion.
-        const lastPage = manifest.pages[manifest.pages.length - 1];
-        if (lastPage) {
-            const importTok = profile.mark('playground.wait.import');
-            await waitForImport(pageUrl(base, { ...lastPage, front: false }), 120000, () => proc.exitCode);
-            profile.measure(importTok, { cold });
+        if (acquired.reused && (kind === 'structural' || kind === 'first')) {
+            await stop(key);
+            acquired = await getOrBoot(key, bootFn);
+        } else if (kind === 'content') {
+            await gateFetch(acquired.entry.base + '/?wbdc_gate=reimport&token=' + acquired.entry.gateToken);
+        } else if (kind === 'theme-only') {
+            await gateFetch(acquired.entry.base + '/?wbdc_gate=flush&token=' + acquired.entry.gateToken);
         }
+        setHashes(key, next);
+    } catch (error) {
+        await stop(key);
+        throw new Error(`playground_render failed: ${error.message}\n--- playground logs (tail) ---\n${acquired.entry.proc.__logs?.().slice(-2000) ?? ''}`);
+    }
+
+    const entry = acquired.entry;
+    const base = entry.base;
+    try {
         const { chromium, PNG, pixelmatch } = await loadCaptureDeps(PLUGIN_ROOT);
         const thresholds = { maxMismatchPercent: args.maxMismatchPercent ?? 1, maxHeightDelta: args.maxHeightDelta ?? 8 };
         const pagesReport = [];
         // Acquire browser + static server inside the try so the finally closes
-        // the browser even if serveDirectory throws after launch (the outer
-        // finally only kills the Playground CLI, not chromium).
+        // the browser even if serveDirectory throws after launch. The Playground
+        // proc is owned by the registry and is NOT killed here.
         let browser;
         let server;
         try {
             browser = await launchBrowser(chromium, { headless: true }, { tool: 'playground_render' });
             server = await serveDirectory(workspaceRoot); // mockup screenshots through the same pipeline
+            // WordPress serves a 503 "scheduled maintenance" page while a seed/page
+            // import runs; boot, reboot, and the warm-server gate reimport can all
+            // return before that window closes, so capturing immediately screenshots
+            // the maintenance page as a bogus multi-thousand-px diff. Wait it out.
+            await waitForNoMaintenance(base, 60000, () => entry.proc.exitCode);
             for (const page of manifest.pages) {
                 const mockupPath = page.mockupPath || inferMockupPath(workspaceRoot, page);
                 const results = [];
@@ -136,13 +192,26 @@ export async function playgroundRender(args) {
                 pagesReport.push({ page: page.slug, mockupPath, results, aggregate,
                     passed: aggregate.maxMismatchPercent <= thresholds.maxMismatchPercent && aggregate.maxHeightDelta <= thresholds.maxHeightDelta });
             }
-            // editor validation: the real editor recomputes save() in the
-            // browser and flags drift our Node round-trip cannot see (kses
-            // escaping, content-filter mangling). Zero failures required.
-            await profile.span('playground.editorValidation', () => editorValidation(browser, base, manifest.pages, pagesReport), { pages: manifest.pages.length });
         } finally {
             await browser?.close();
             await server?.close?.();
+        }
+        // Headless editor validation: read each page's stored post_content back
+        // from the warm WordPress via the gate dump endpoint and run the same
+        // @wordpress/blocks parse() the editor runs, in Node. A block whose
+        // isValid===false is a validation failure — no per-page editor boot.
+        const validation = await profile.span('playground.editorValidation',
+            () => validateStoredContent({ base, gateToken: entry.gateToken, workspaceRoot, slug }),
+            { pages: manifest.pages.length });
+        for (const entryReport of pagesReport) {
+            // A page absent from the dump never got validated — it may have
+            // failed to import (slug collision / error) or WordPress sanitized
+            // its post_name away from the manifest slug. Treat that as a hard
+            // failure rather than a clean zero, so the gate can never green a
+            // page it never actually saw.
+            entryReport.editorValidation = validation.get(entryReport.page)
+                ?? { failures: 1, samples: [`page "${entryReport.page}" not found in stored content dump (import may have failed)`] };
+            if ((entryReport.editorValidation.failures ?? 0) > 0) entryReport.passed = false;
         }
         const report = {
             generatedAt: new Date().toISOString(), thresholds, pages: pagesReport,
@@ -155,50 +224,59 @@ export async function playgroundRender(args) {
         writeJson(path.join(workspaceRoot, 'reports/theme-comparison.json'), report);
         return report;
     } catch (error) {
-        throw new Error(`playground_render failed: ${error.message}\n--- playground logs (tail) ---\n${logs.slice(-2000)}`);
-    } finally {
-        proc.kill('SIGTERM');
+        // A hard error may mean the server is wedged; stop it so a broken boot
+        // does not persist in the registry. The registry, not this finally,
+        // owns the proc lifetime on the happy path.
+        await stop(key);
+        throw new Error(`playground_render failed: ${error.message}\n--- playground logs (tail) ---\n${entry.proc.__logs?.().slice(-2000) ?? ''}`);
     }
 }
 
-async function editorValidation(browser, base, pages, pagesReport) {
-    const context = await browser.newContext();
-    const page = await context.newPage();
-    try {
-        await page.goto(`${base}/wp-login.php`);
-        await page.fill('#user_login', 'admin');
-        await page.fill('#user_pass', 'password');
-        await page.click('#wp-submit');
-        await page.waitForLoadState('networkidle');
-        for (const manifestPage of pages) {
-            const entry = pagesReport.find((p) => p.page === manifestPage.slug);
-            if (!entry) continue;
-            const failures = [];
-            const onConsole = (msg) => {
-                const text = msg.text();
-                if (/Block validation failed/i.test(text)) {
-                    failures.push(text.slice(0, 300));
-                }
-            };
-            page.on('console', onConsole);
-            // resolve the post id from the editor list is brittle; the edit
-            // link on the frontend admin bar is too — use post slug query
-            await page.goto(`${base}/wp-admin/edit.php?post_type=page&s=${encodeURIComponent(manifestPage.title)}`);
-            const editHref = await page.getAttribute('.row-title >> nth=0', 'href').catch(() => null);
-            if (editHref) {
-                await page.goto(editHref);
-                await page.waitForSelector('.block-editor-block-list__layout', { timeout: 60000 }).catch(() => {});
-                await page.waitForTimeout(2000);
-            } else {
-                failures.push(`could not locate the page "${manifestPage.title}" in wp-admin`);
-            }
-            page.off('console', onConsole);
-            entry.editorValidation = { failures: failures.length, samples: failures.slice(0, 3) };
-            if (failures.length > 0) entry.passed = false;
-        }
-    } finally {
-        await context.close();
+// Wait for the spawned server, then for the content import to finish. Split out
+// of playgroundRender so bootFn (and a reboot) reuse the exact same readiness +
+// cold-detection logic the original inline path used.
+async function bootWait({ proc, base, manifest }) {
+    // The server-ready wait subsumes the cold WordPress build download on a
+    // first run; timing it (and whether it crossed the cold threshold or the
+    // CLI logged a download) is how we infer and tag cold vs warm.
+    const serverWaitTok = profile.mark('playground.wait.server');
+    const serverWaitStart = performance.now();
+    await waitForServer(base, 120000, () => proc.exitCode);
+    const serverWaitMs = performance.now() - serverWaitStart;
+    const cold = serverWaitMs > COLD_SERVER_WAIT_MS || /\b(download|fetch)ing wordpress/i.test(proc.__logs?.() ?? '');
+    profile.measure(serverWaitTok, { cold, waitMs: serverWaitMs });
+    profile.setRunMeta({ cold });
+    // the server answers before the blueprint's runPHP import step finishes;
+    // capturing early races the import (front page = blog index). The last
+    // manifest page resolving proves the import ran to completion.
+    const lastPage = manifest.pages[manifest.pages.length - 1];
+    if (lastPage) {
+        const importTok = profile.mark('playground.wait.import');
+        await waitForImport(pageUrl(base, { ...lastPage, front: false }), 120000, () => proc.exitCode);
+        profile.measure(importTok, { cold });
     }
+}
+
+// Ask the OS for an unused loopback port. A tiny TOCTOU window exists between
+// close and the CLI binding it, acceptable for a local single-user gate and far
+// safer than a fixed port shared across workspaces.
+function getFreePort() {
+    return new Promise((resolve, reject) => {
+        const srv = net.createServer();
+        srv.once('error', reject);
+        srv.listen(0, '127.0.0.1', () => {
+            const { port } = srv.address();
+            srv.close(() => resolve(port));
+        });
+    });
+}
+
+// Fetch a gate endpoint (reimport/flush) and surface a non-2xx as an error so a
+// silently-failing re-check never reads as a clean incremental update.
+async function gateFetch(url) {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`gate request ${url} returned ${res.status} ${res.statusText}`);
+    return res.json().catch(() => ({}));
 }
 
 async function waitForServer(base, timeoutMs, exited) {
@@ -225,6 +303,25 @@ async function waitForImport(url, timeoutMs, exited) {
         await new Promise((r) => setTimeout(r, 1000));
     }
     throw new Error(`content import did not complete within ${timeoutMs}ms (${url} never returned 200)`);
+}
+
+// WordPress puts the site behind a 503 "scheduled maintenance" page while an
+// import runs. Poll the front page until that window closes so the gate never
+// screenshots the maintenance page (a huge bogus height diff). Best-effort: on
+// timeout, proceed — a genuinely stuck maintenance state surfaces as a diff.
+async function waitForNoMaintenance(base, timeoutMs, exited) {
+    const start = Date.now();
+    while (Date.now() - start < timeoutMs) {
+        if (exited && exited() !== null) return;
+        try {
+            const res = await fetch(base, { redirect: 'manual' });
+            if (res.status !== 503) {
+                const body = res.status === 200 ? await res.text().catch(() => '') : '';
+                if (!/scheduled maintenance/i.test(body)) return;
+            }
+        } catch { /* transient — server momentarily unreachable */ }
+        await new Promise((r) => setTimeout(r, 500));
+    }
 }
 
 function inferMockupPath(workspaceRoot, page) {

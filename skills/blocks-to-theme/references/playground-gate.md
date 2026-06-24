@@ -111,20 +111,61 @@ spacing attributes, not margins in style.css that fight it.
 `aggregates` + `passed`. Thresholds are the standard ones:
 `maxMismatchPercent <= 1`, `maxHeightDelta <= 8`.
 
-The repair loop's stopping rule is the same as html-to-blocks: passing
-thresholds is the ONLY successful end state. Inspect the `-diff-*.png` images
-even for passing pages (numbers can hide localized but meaningful drift), fix
-the worst page first, re-run `validate_block_theme` after any re-scaffold,
-then re-run `playground_render`. Do not stop at "close" or "structurally
-right"; if the thresholds cannot be met, report the run blocked with the
-metrics and the blocking cause.
+The repair loop is **bounded**, exactly like html-to-blocks
+(`html-to-blocks/references/repair-loop.md`): at most **6 gate iterations**
+(re-scaffold → `validate_block_theme` → `playground_render`), with an early
+**plateau** stop when 2 iterations each improve `maxMismatchPercent` by <0.3%.
+Fix the worst page first; inspect the `-diff-*.png` images even for passing
+pages (numbers can hide localized drift). On cap or plateau without passing,
+STOP and report the run **blocked** with per-page metrics and the worst
+remaining drift — do NOT keep grinding and do NOT relabel a sub-threshold page
+"done", "floor", or "essentially right".
+
+Tell the floor from real drift the same way: a geometry-exact page
+(`heightDelta` ≈ 0) still reads ~1% `mismatchPercent` from webfont antialiasing
+— that is the floor and PASSES. Mismatch well above ~1.5% with small height
+deltas is real drift (theme.json token / block `align`/`layout` / line-height),
+not a floor. The gate boots WordPress with the theme's LOCAL fonts (no `@import`
+race) and the capture waits for `document.fonts.ready`, so font-load reflow is
+not a valid excuse here. Known not-a-defect: the shared header/footer template
+part renders identically on every page even where a source mockup's footer
+differed — expected, not a gate failure.
 
 ## Editor Validation Pass
 
-After the frontend captures, the gate logs into wp-admin and opens every
-imported page in the block editor, collecting `Block validation failed`
-console messages. The run fails on ANY such message — the editor recomputes
-save() in the browser and catches drift no Node-side round trip can see
-(kses `--` escaping in style attributes, content-filter mangling of empty
-inline elements, unslashed comment-JSON escapes). The per-page counts land in
-`reports/theme-comparison.json` under `editorValidation`.
+After the frontend captures, the gate runs block validation **headlessly** — it
+no longer boots the wp-admin block editor per page (that was ~66s/page and
+dominated the stage). Instead it reads each page's stored `post_content` back
+from the already-booted WordPress (the gate mu-plugin's `dump` endpoint) and
+runs the same `@wordpress/blocks` `parse()` the editor runs, in Node. A block
+whose `isValid === false` is a validation failure. Because the content is read
+*after* WordPress stored it, this still catches the drift a plain Node round
+trip cannot (kses `--` escaping in style attributes, content-filter mangling of
+empty inline elements, unslashed comment-JSON escapes). The run fails on ANY
+failure; per-page counts land in `reports/theme-comparison.json` under
+`editorValidation`. A page missing from the dump (failed import, or a
+WordPress-sanitized `post_name` that no longer matches the manifest slug) is
+itself a failure, not a silent pass.
+
+Two fidelity notes:
+
+- Custom blocks are validated against the **mounted** copy
+  (`theme-plugin/<slug>-blocks/blocks`), the same one Playground renders, using
+  the `createBlockEditorShim` `save()` approximation. Core blocks validate
+  against real `save()`; custom-block fidelity is bounded by that shim (the same
+  dependency stage-1 serialization already carries). If you suspect a shim/real
+  divergence on a custom block, spot-check that one page in a real editor.
+- The headless validator uses the npm `@wordpress/*` packages; the WordPress
+  version Playground boots is pinned (`--wp`) so the two stay aligned.
+
+## Warm Server and Incremental Re-Checks
+
+The gate keeps **one** WordPress warm across a repair loop instead of
+cold-booting every call. The first `playground_render` boots it; subsequent
+calls reuse it and do only the cheapest re-check the change warrants: a
+theme.json/style.css edit flushes the global-styles cache and re-screenshots; a
+content/block-tree edit reimports and re-validates; a plugin-code edit (blocks
+plugin or content-model plugin) forces a cold reboot. So the second and later
+iterations of a repair loop are seconds, not minutes. The warm server is reaped
+after idle and on server shutdown; call `playground_stop` (workspaceRoot + slug)
+to release it explicitly.

@@ -76,6 +76,18 @@ text-wrap: wrap; max-width: none; }` scoped to the quote context.
 must target the actual control (`.wp-block-button.btn .wp-block-button__link`)
 and never the wrapper, or borders/padding double up.
 
+**Button base vs variant specificity.** If the base rule is written
+`.wp-block-button.btn .wp-block-button__link` (three classes) but the size/colour
+variants as `.btn-lg .wp-block-button__link` (two), the base OUTRANKS every
+variant and `btn-lg` padding / `btn-primary` colour silently never apply — every
+button renders at the base size. Author base and variants at the SAME specificity
+(`.btn .wp-block-button__link` + `.btn-lg .wp-block-button__link`) so source order
+decides. Also give each button the base class in the tree (`"btn btn-primary"`,
+not just `"btn-primary"`) or the base rule matches nothing. And match the mockup's
+line-height: a `core/button` link inherits the body line-height, so a stray
+`line-height: 1.2` shortens every button by several px — multiplied across stacked
+buttons it reads as real card-height drift.
+
 ## Text rendering
 
 **`text-wrap: pretty` changes line counts.** If the mockup applies it via a

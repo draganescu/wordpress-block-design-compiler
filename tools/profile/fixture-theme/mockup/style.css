@@ -1,0 +1,6 @@
+/* Minimal mockup styles for the theme-stage profiler fixture. The theme stage
+   captures mockup-vs-WordPress per page; these just need to render. */
+body { font-family: Georgia, serif; margin: 0; }
+main { max-width: 960px; margin: 0 auto; padding: 2rem; }
+header, footer { padding: 1rem 0; }
+h1 { font-size: 2rem; }

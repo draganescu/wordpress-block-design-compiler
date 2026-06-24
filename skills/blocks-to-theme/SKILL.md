@@ -18,6 +18,37 @@ and should be fixed in html-to-blocks, not papered over in the theme. If a
 activates, and seeds that plugin automatically so the hydrated query loops
 render real entries in the gate.
 
+## Fast Path — minimum turns
+
+Run on a COMPLETED html-to-blocks workspace. The recipe is linear; the tools
+auto-apply the mechanical fixes so you do not round-trip for them.
+
+1. `analyze_theme_evidence` returns a **compact** ranked summary (top colors /
+   fonts / spacing + a `reportPath`). Build the token map from that — read
+   `reports/theme-evidence.json` only for rule-level (`cssRules`/`supportUsage`)
+   detail.
+2. `infer_template_parts`, then `fetch_theme_fonts`.
+3. `scaffold_block_theme` with your decisions. It now: **defaults `blockGap` to 0**
+   when you ship component `customCss` (so WordPress's layout layer does not inflate
+   page height — the largest avoidable first-gate drift); **rewrites links to pages
+   outside the manifest** to the front page and returns them as `orphanLinks` (a
+   single-page subset no longer fatals validate); **folds `wordpress/pages/<page>.css`**
+   into the theme stylesheet; **omits the blocks-plugin dependency** for a
+   core-only theme; and **reads `wordpress/style.css` as `customCss`** when you omit
+   that arg, so the shared design system always ships (do not hand-pass the large
+   file inline; pass `customCss: ''` only to deliberately ship no shared CSS).
+
+   The content-model plugin's `plugin.slug` must NOT equal `<theme-slug>-content`
+   (the theme's own page-import plugin) — `playground_render` now errors early on
+   that collision instead of crashing the boot with an opaque "exited before
+   becoming ready". Use e.g. `<theme-slug>-cpts`.
+4. `validate_block_theme` → fix until zero errors → `playground_render`. The gate
+   loop is bounded; fix the worst page first.
+
+For the full-bleed cascade, set `align: "full"` on banded sections in the stage-1
+tree (their background spans the viewport) and re-serialize — width is a block
+attribute, not a `style.css` override.
+
 ## Required Workflow
 
 1. Run `analyze_theme_evidence`; read `reports/theme-evidence.json`.
@@ -66,10 +97,14 @@ into the theme.
 The run is complete only when `validate_block_theme` reports zero errors AND
 `reports/theme-comparison.json` shows every page within thresholds
 (`maxMismatchPercent <= 1`, `maxHeightDelta <= 8`) at both viewports AND
-every page's `editorValidation.failures` is zero (the gate opens each page
-in the real editor and collects block-validation console errors). Quote
-both in the final response. Otherwise keep repairing or report the run blocked
-with the metrics and the blocking cause.
+every page's `editorValidation.failures` is zero (the gate reads each page's
+stored content back from the booted WordPress and runs the same
+`@wordpress/blocks` validator headlessly — see `references/playground-gate.md`).
+Quote both in the final response. The repair loop is **bounded**
+(`references/playground-gate.md`): at most 6 gate iterations with a plateau
+early-stop. On cap/plateau without passing, report the run blocked with
+per-page metrics and the worst remaining drift — do not grind past the cap or
+relabel a sub-threshold page "done".
 
 ### Timing Gate
 

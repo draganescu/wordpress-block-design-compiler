@@ -32,6 +32,10 @@ import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 import { toSpeedscope } from '../lib/profile.mjs';
+// Reuse the mini test fixture's scaffold plan so the theme-stage sequence drives
+// scaffold_block_theme with the same agent-authored decisions the scaffold/validate
+// tests cover, instead of duplicating a plan that could drift out of sync.
+import { miniScaffoldArgs } from '../theme/fixtures/mini/scaffold-args.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(__dirname, '..', '..');
@@ -40,14 +44,15 @@ const SERVER = path.join(REPO_ROOT, 'tools', 'mcp-server.mjs');
 // --- CLI parsing -------------------------------------------------------------
 
 function parseArgs(argv) {
-    const opts = { mode: 'interactive', net: false, keep: false, timeout: 120000, fixture: path.join(__dirname, 'fixture') };
+    const opts = { mode: 'interactive', stage: 'html', net: false, keep: false, timeout: null, fixture: null };
     for (let i = 0; i < argv.length; i += 1) {
         const arg = argv[i];
         if (arg === '--mode') opts.mode = argv[++i];
+        else if (arg === '--stage') opts.stage = argv[++i];
         else if (arg === '--net') opts.net = true;
         else if (arg === '--keep') opts.keep = true;
         else if (arg === '--fixture') opts.fixture = path.resolve(argv[++i]);
-        else if (arg === '--timeout') opts.timeout = Number(argv[++i]) || opts.timeout;
+        else if (arg === '--timeout') opts.timeout = Number(argv[++i]) || null;
         else if (arg === '--help' || arg === '-h') opts.help = true;
         else logErr(`Ignoring unknown flag: ${arg}`);
     }
@@ -55,6 +60,14 @@ function parseArgs(argv) {
         logErr(`Unknown --mode '${opts.mode}', falling back to interactive.`);
         opts.mode = 'interactive';
     }
+    if (opts.stage !== 'html' && opts.stage !== 'theme') {
+        logErr(`Unknown --stage '${opts.stage}', falling back to html.`);
+        opts.stage = 'html';
+    }
+    // Stage picks the default fixture and a default timeout: the theme stage's
+    // playground_render can take ~150s on a cold WordPress download.
+    if (!opts.fixture) opts.fixture = path.join(__dirname, opts.stage === 'theme' ? 'fixture-theme' : 'fixture');
+    if (opts.timeout == null) opts.timeout = opts.stage === 'theme' ? 300000 : 120000;
     return opts;
 }
 
@@ -68,9 +81,15 @@ Options:
   --mode <interactive|batch>  interactive: one persistent server reused for all
                               calls (default). batch: fresh server per call,
                               like artifacts/mcp-call.sh.
+  --stage <html|theme>        html (default): the html-to-blocks capture path
+                              (serialize, preview, screenshot, compare). theme:
+                              the blocks-to-theme path (evidence, parts, scaffold,
+                              validate, playground_render — boots WordPress).
   --net                       set WBDC_PROFILE_NET=1 to capture per-host network.
-  --fixture <dir>             workspace to drive (default tools/profile/fixture).
-  --timeout <ms>              per-call response timeout (default 120000).
+  --fixture <dir>             workspace to drive. Default depends on stage:
+                              tools/profile/fixture (html) or fixture-theme (theme).
+  --timeout <ms>              per-call response timeout. Default 120000 (html) or
+                              300000 (theme — cold WordPress download is slow).
   --keep                      keep the spans-*.jsonl files (default: kept anyway;
                               this only suppresses the pre-run clean of stale ones).
   -h, --help                  print this help.
@@ -114,6 +133,22 @@ function buildSequence(workspaceRoot) {
                 viewports: [{ name: 'desktop', width: 1280, height: 900, fullPage: true }],
             },
         },
+    ];
+}
+
+// The theme/Playground stage: read evidence + parts, scaffold the theme from the
+// mini plan, validate it, then boot it in WordPress Playground and screenshot
+// every page. playground_render is the heaviest step in the whole pipeline (WP
+// download on a cold run, server boot, content import, per-page editor
+// validation) — this is what the html-stage fixture never exercised.
+function buildThemeSequence(workspaceRoot) {
+    const slug = 'mini';
+    return [
+        { tool: 'analyze_theme_evidence', args: { workspaceRoot } },
+        { tool: 'infer_template_parts', args: { workspaceRoot } },
+        { tool: 'scaffold_block_theme', args: miniScaffoldArgs(workspaceRoot) },
+        { tool: 'validate_block_theme', args: { workspaceRoot, slug } },
+        { tool: 'playground_render', args: { workspaceRoot, slug } },
     ];
 }
 
@@ -349,6 +384,10 @@ function layerOf(label) {
     if (label.startsWith('capture.')) return 'subprocess';
     if (label.startsWith('playground.')) {
         if (label.includes('cli.spawn') || label.includes('wait.server') || label.includes('wait.import')) return 'subprocess';
+        // editorValidation drives the WordPress editor itself (its own page.goto +
+        // waitForSelector), not the instrumented capture.* helpers, so its time is
+        // real and uncounted elsewhere — attribute it instead of dropping it.
+        if (label.includes('editorValidation')) return 'subprocess';
         // playground.capture.* / playground.compare wrap the instrumented
         // capture.* helpers, whose inner spans already carry the layer time —
         // exclude the wrappers so their duration is not double-counted.
@@ -562,8 +601,11 @@ async function main() {
     }
 
     const workspaceRoot = opts.fixture;
-    if (!fs.existsSync(path.join(workspaceRoot, 'wordpress', 'block-tree.json'))) {
-        logErr(`Fixture missing wordpress/block-tree.json under ${workspaceRoot}`);
+    const requiredInput = opts.stage === 'theme'
+        ? path.join(workspaceRoot, 'wordpress', 'pages')
+        : path.join(workspaceRoot, 'wordpress', 'block-tree.json');
+    if (!fs.existsSync(requiredInput)) {
+        logErr(`Fixture missing ${path.relative(workspaceRoot, requiredInput)} under ${workspaceRoot}`);
         return 1;
     }
 
@@ -584,9 +626,9 @@ async function main() {
     };
     if (opts.net) env.WBDC_PROFILE_NET = '1';
 
-    const sequence = buildSequence(workspaceRoot);
+    const sequence = opts.stage === 'theme' ? buildThemeSequence(workspaceRoot) : buildSequence(workspaceRoot);
 
-    logErr(`mode=${opts.mode} net=${opts.net} fixture=${workspaceRoot}`);
+    logErr(`stage=${opts.stage} mode=${opts.mode} net=${opts.net} fixture=${workspaceRoot}`);
     logErr(`driving ${sequence.length} tool calls…`);
 
     const driveStart = Date.now();
@@ -603,6 +645,7 @@ async function main() {
     // Aggregate whatever spans landed (robust to partial runs).
     const { spans, files } = readSpans(profileDir);
     const meta = {
+        stage: opts.stage,
         mode: opts.mode,
         net: opts.net,
         fixture: workspaceRoot,

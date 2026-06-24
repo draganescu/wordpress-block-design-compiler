@@ -1,5 +1,7 @@
 #!/usr/bin/env node
-// stdout carries the Content-Length-framed MCP protocol; library logging
+// stdout carries the JSON-RPC MCP protocol, framed to match the client:
+// newline-delimited JSON by default (MCP stdio spec / Claude Code), or
+// Content-Length (LSP-style) if the client uses it. Library logging
 // (e.g. @wordpress/blocks block-validation diffs) must go to stderr or it
 // corrupts the stream.
 for (const method of ['log', 'info', 'warn', 'debug']) {
@@ -28,9 +30,13 @@ import { fetchThemeFonts } from './theme/fonts.mjs';
 import { scaffoldBlockTheme } from './theme/scaffold.mjs';
 import { validateBlockTheme } from './theme/validate.mjs';
 import { playgroundRender } from './theme/playground.mjs';
+import { makeKey, stop as stopPlayground, stopAll as stopAllPlayground, stopAllSync as stopAllPlaygroundSync, startReaper as startPlaygroundReaper } from './theme/playground-server.mjs';
 import { validateContentModel, scaffoldContentModelPlugin } from './content/model.mjs';
 import { auditStandins, checkStandins, hydrateStandins } from './content/standins.mjs';
 import * as profile from './lib/profile.mjs';
+import { createRequire } from 'node:module';
+
+const require = createRequire(import.meta.url);
 
 const TOOLS = [
   {
@@ -251,6 +257,42 @@ const TOOLS = [
     },
   },
   {
+    name: 'build_page',
+    description: 'One-call per-page build + verify: serialize the block tree, write the rendered and editor previews, screenshot and pixel-diff against the mockup (both surfaces, both viewports), and measure per-section geometry — returning ONE structured report (per-surface metrics, per-section height deltas, localized repair tasks, diff image paths, style audit). Replaces the serialize -> create_block_editor_preview -> screenshot_html -> compare_html -> measure_layout round-trip so a repair iteration is a single tool call. Pass `page` to derive the standard multi-page paths.',
+    inputSchema: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['workspaceRoot'],
+      properties: {
+        workspaceRoot: { type: 'string' },
+        page: { type: 'string', default: 'index', description: 'Page slug. Derives tree/content/rendered/editor/mockup paths from the multi-page convention when wordpress/pages/<page>.block-tree.json exists, else the single-page defaults. Any explicit *Path below overrides the derivation.' },
+        treePath: { type: 'string' },
+        contentPath: { type: 'string' },
+        renderedPath: { type: 'string' },
+        editorPath: { type: 'string' },
+        mockupPath: { type: 'string' },
+        compareEditor: { type: 'boolean', default: true },
+        measure: { type: 'boolean', default: true },
+        selector: { type: 'string', description: 'measure_layout selector. Default localizes the shared section + footer geometry.' },
+        maxMismatchPercent: { type: 'number', default: 1 },
+        maxHeightDelta: { type: 'number', default: 8 },
+        viewports: {
+          type: 'array',
+          items: {
+            type: 'object',
+            required: ['name', 'width', 'height'],
+            properties: {
+              name: { type: 'string' },
+              width: { type: 'number' },
+              height: { type: 'number' },
+              fullPage: { type: 'boolean', default: true },
+            },
+          },
+        },
+      },
+    },
+  },
+  {
     name: 'validate_content_model',
     description: 'Validate an agent-authored WordPress content model JSON for CPT, taxonomy, meta, REST, and seed-content consistency. Writes reports/content-model-validation.json.',
     inputSchema: {
@@ -347,6 +389,11 @@ const TOOLS = [
     inputSchema: { type: 'object', additionalProperties: false, required: ['workspaceRoot', 'slug'], properties: { workspaceRoot: { type: 'string' }, slug: { type: 'string' }, port: { type: 'number' }, maxMismatchPercent: { type: 'number' }, maxHeightDelta: { type: 'number' } } },
   },
   {
+    name: 'playground_stop',
+    description: 'Stop the warm WordPress Playground server held for this workspace+slug (if any), releasing its process. Returns { stopped: boolean } indicating whether a warm server was running.',
+    inputSchema: { type: 'object', additionalProperties: false, required: ['workspaceRoot', 'slug'], properties: { workspaceRoot: { type: 'string' }, slug: { type: 'string' } } },
+  },
+  {
     name: 'fix_block_markup',
     description: 'Canonicalize block markup: parse, recreate every block from its attributes, and re-serialize so the markup byte-matches save() output, eliminating editor block-validation errors. Pass raw markup, or workspace-relative file paths to fix in place. Registers the workspace custom blocks before parsing.',
     inputSchema: {
@@ -372,11 +419,31 @@ const handlers = {
   screenshot_html: screenshotHtml,
   compare_html: compareHtml,
   measure_layout: measureLayout,
+  build_page: buildPage,
   validate_content_model: (args) => validateContentModel(args),
   scaffold_content_model_plugin: (args) => scaffoldContentModelPlugin(args),
   audit_standins: (args) => auditStandinsHandler(args),
   hydrate_standins: (args) => hydrateStandinsHandler(args),
-  analyze_theme_evidence: (args) => analyzeThemeEvidence(args),
+  analyze_theme_evidence: (args) => {
+      // The full evidence report (per-ref cssRules + supportUsage) runs to ~100KB
+      // and bloats the agent context on every later turn. Write it to file (the
+      // analyzer already does) and return only the ranked summary the token map is
+      // built from; the agent reads the file for rule-level detail when needed.
+      const report = analyzeThemeEvidence(args);
+      const top = (arr, n) => (arr || []).slice(0, n).map((e) => ({ value: e.value, count: e.count }));
+      return {
+          reportPath: path.join(resolvePath(args.workspaceRoot), 'reports/theme-evidence.json'),
+          pages: report.pages,
+          summary: report.summary,
+          customProperties: Object.keys(report.customProperties || {}),
+          topColors: top(report.colors, 24),
+          topFontFamilies: top(report.fontFamilies, 8),
+          topFontSizes: top(report.fontSizes, 16),
+          topSpacing: top(report.spacing, 16),
+          cssRuleCount: (report.cssRules || []).length,
+          next: 'Build the token map from topColors/topFontFamilies/topSpacing. Read reports/theme-evidence.json only for rule-level (cssRules/supportUsage) detail.',
+      };
+  },
   infer_template_parts: (args) => inferTemplateParts(args),
   fetch_theme_fonts: (args) => {
       const workspaceRoot = resolvePath(args.workspaceRoot);
@@ -389,6 +456,10 @@ const handlers = {
   scaffold_block_theme: (args) => scaffoldBlockTheme(args),
   validate_block_theme: (args) => validateBlockTheme(args),
   playground_render: (args) => playgroundRender(args),
+  playground_stop: async (args) => {
+      const stopped = await stopPlayground(makeKey(resolvePath(args.workspaceRoot), args.slug));
+      return { stopped };
+  },
   fix_block_markup: (args) => {
       const workspaceRoot = resolvePath(args.workspaceRoot);
       ensureBlocksRegistered(workspaceRoot);
@@ -410,15 +481,47 @@ const handlers = {
 
 let buffer = Buffer.alloc(0);
 
+// Reap warm Playground servers idle longer than 10 minutes so a repair loop that
+// goes quiet does not pin a WordPress process indefinitely. The registry owns the
+// proc lifetime; the reaper's timer is unref'd so it never keeps Node alive.
+startPlaygroundReaper(10 * 60 * 1000);
+
+// Tear down every warm Playground server when this MCP process exits, so no
+// orphaned @wp-playground/cli child outlives us. 'exit' is sync-only (its async
+// stopAll cannot await), so SIGTERM/SIGINT do the graceful teardown and then
+// re-exit; 'exit' is the last-resort best-effort kill.
+let shuttingDown = false;
+async function shutdown(signal) {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  await stopAllPlayground();
+  process.exit(signal === 'SIGINT' ? 130 : 0);
+}
+process.on('SIGTERM', () => { void shutdown('SIGTERM'); });
+process.on('SIGINT', () => { void shutdown('SIGINT'); });
+// 'exit' runs synchronously — an async stopAll would only kill the first server
+// before the handler returns. stopAllSync SIGKILLs every warm process inline.
+process.on('exit', () => { stopAllPlaygroundSync(); });
+
 process.stdin.on('data', (chunk) => {
   buffer = Buffer.concat([buffer, chunk]);
   processIncoming();
 });
 
+// Track the framing the client uses so responses reply in kind. The MCP stdio
+// transport spec (and Claude Code) uses newline-delimited JSON; LSP-style
+// Content-Length is only used by some clients. Default to newline-delimited.
+let clientFraming = 'ndjson';
+
 function processIncoming() {
   while (buffer.length) {
+    // Only treat the buffer as Content-Length-framed when a header block
+    // actually precedes the JSON body. A bare NDJSON object can contain
+    // "\r\n\r\n" only inside escaped strings, never before the opening brace,
+    // so require the header to start with "Content-Length:".
     const headerEnd = buffer.indexOf('\r\n\r\n');
-    if (headerEnd >= 0) {
+    const looksFramed = headerEnd >= 0 && /^\s*Content-Length:/i.test(buffer.slice(0, headerEnd).toString('utf8'));
+    if (looksFramed) {
       const header = buffer.slice(0, headerEnd).toString('utf8');
       const match = header.match(/Content-Length:\s*(\d+)/i);
       if (!match) throw new Error('Missing Content-Length header.');
@@ -427,6 +530,7 @@ function processIncoming() {
       if (buffer.length < messageStart + length) return;
       const raw = buffer.slice(messageStart, messageStart + length).toString('utf8');
       buffer = buffer.slice(messageStart + length);
+      clientFraming = 'lsp';
       void handleMessage(JSON.parse(raw));
       continue;
     }
@@ -435,7 +539,10 @@ function processIncoming() {
     if (newline < 0) return;
     const line = buffer.slice(0, newline).toString('utf8').trim();
     buffer = buffer.slice(newline + 1);
-    if (line) void handleMessage(JSON.parse(line));
+    if (line) {
+      clientFraming = 'ndjson';
+      void handleMessage(JSON.parse(line));
+    }
   }
 }
 
@@ -507,8 +614,14 @@ async function handleMessage(message) {
 }
 
 function send(payload) {
+  // JSON.stringify (no indentation) never emits a literal newline outside of
+  // escaped string contents, so newline-delimited framing is safe here.
   const body = JSON.stringify(payload);
-  process.stdout.write(`Content-Length: ${Buffer.byteLength(body, 'utf8')}\r\n\r\n${body}`);
+  if (clientFraming === 'lsp') {
+    process.stdout.write(`Content-Length: ${Buffer.byteLength(body, 'utf8')}\r\n\r\n${body}`);
+  } else {
+    process.stdout.write(`${body}\n`);
+  }
 }
 
 async function createWorkspace(args) {
@@ -710,12 +823,22 @@ async function analyzeMockup(args) {
     },
   };
 
+  // Per-page output keyed off the mockup filename so PARALLEL page agents can each
+  // call analyze_mockup without clobbering one shared file. The default (unkeyed)
+  // files remain for single-page/back-compat; multi-page callers read the per-page
+  // paths returned below.
+  const page = path.basename(args.htmlPath || 'mockup/index.html').replace(/\.html?$/i, '') || 'index';
+  const inventoryPath = path.join(workspaceRoot, `analysis/${page}.content-inventory.json`);
+  const analysisPath = path.join(workspaceRoot, `analysis/${page}.analysis.json`);
+  writeJson(inventoryPath, inventory);
+  writeJson(analysisPath, analysis);
   writeJson(path.join(workspaceRoot, 'analysis/content-inventory.json'), inventory);
   writeJson(path.join(workspaceRoot, 'analysis/analysis.json'), analysis);
 
   return {
-    analysisPath: path.join(workspaceRoot, 'analysis/analysis.json'),
-    inventoryPath: path.join(workspaceRoot, 'analysis/content-inventory.json'),
+    page,
+    analysisPath,
+    inventoryPath,
     sections: analysis.sections.length,
     forms: inventory.forms.length,
     links: inventory.links.length,
@@ -893,12 +1016,21 @@ function workspaceCssSources(workspaceRoot, args = {}) {
     : [
         ...(args.includeMockupCss ? [path.join(workspaceRoot, 'mockup/style.css')] : []),
         path.join(workspaceRoot, 'wordpress/style.css'),
+        // B6: per-page stylesheets so a page's own CSS shows in its preview without
+        // every page agent editing the shared wordpress/style.css.
+        ...pageCssPaths(workspaceRoot),
         ...findFiles(path.join(workspaceRoot, 'wordpress/blocks'), 'style.css'),
       ];
 
   return cssPaths
     .map((file) => cssSource(workspaceRoot, file))
     .filter((source) => source.css);
+}
+
+function pageCssPaths(workspaceRoot) {
+  const dir = path.join(workspaceRoot, 'wordpress/pages');
+  if (!fs.existsSync(dir)) return [];
+  return fs.readdirSync(dir).filter((f) => f.endsWith('.css')).sort().map((f) => path.join(dir, f));
 }
 
 function cssSource(workspaceRoot, filePath) {
@@ -1537,6 +1669,83 @@ async function measureLayout(args) {
   };
 }
 
+// build_page — one-call per-page build + verify. Composes serialize + compare +
+// measure so a repair iteration is a single tool round-trip instead of five. The
+// returned report is structured for action without a separate image read: act on
+// driftedSections + tasks, re-call build_page; only open a diffImages path when the
+// numbers are ambiguous.
+async function buildPage(args) {
+  const workspaceRoot = resolvePath(args.workspaceRoot);
+  const page = args.page || 'index';
+  const hasPageTree = fs.existsSync(path.join(workspaceRoot, `wordpress/pages/${page}.block-tree.json`));
+  const treePath = args.treePath || (hasPageTree ? `wordpress/pages/${page}.block-tree.json` : 'wordpress/block-tree.json');
+  const contentPath = args.contentPath || (hasPageTree ? `wordpress/pages/${page}.content.html` : 'wordpress/content.html');
+  const renderedPath = args.renderedPath || (hasPageTree ? `rendered/${page}.html` : 'rendered/rendered-blocks.html');
+  const editorPath = args.editorPath || (hasPageTree ? `editor/${page}.html` : 'editor/block-editor.html');
+  const mockupPath = args.mockupPath || (fs.existsSync(path.join(workspaceRoot, `mockup/${page}.html`)) ? `mockup/${page}.html` : 'mockup/index.html');
+  const viewports = Array.isArray(args.viewports) && args.viewports.length ? args.viewports : DEFAULT_VIEWPORTS;
+  const wsRaw = args.workspaceRoot;
+
+  // 1) serialize — writes content.html, the rendered preview, the editor preview, and the style audit.
+  const serialized = await serializeWordPressBlocks({ workspaceRoot: wsRaw, treePath, contentPath, outPath: renderedPath, editorPath });
+
+  // 2) compare both surfaces at every viewport.
+  const compared = await compareHtml({
+    workspaceRoot: wsRaw, mockupPath, renderedPath, editorPath,
+    compareEditor: args.compareEditor !== false, viewports,
+    maxMismatchPercent: args.maxMismatchPercent, maxHeightDelta: args.maxHeightDelta,
+  });
+  const report = readJson(compared.reportPath);
+
+  // 3) measure per-section geometry (rendered vs mockup) — folds measure_layout in
+  // so the agent never needs a second turn to find WHERE the drift is.
+  let bodyHeight = null;
+  let driftedSections = [];
+  if (args.measure !== false) {
+    try {
+      const measured = await measureLayout({ workspaceRoot: wsRaw, mockupPath, candidatePath: renderedPath, selector: args.selector, viewports });
+      bodyHeight = measured.measurements.map((v) => ({ viewport: v.viewport, mockup: v.bodyHeight.mockup, candidate: v.bodyHeight.candidate, delta: v.bodyHeight.delta }));
+      const firstVp = measured.measurements[0];
+      if (firstVp) {
+        driftedSections = firstVp.rows
+          .filter((r) => r.mockup && r.candidate && r.drifted)
+          .map((r) => ({ key: r.key, deltaTop: r.deltaTop, deltaHeight: r.deltaHeight }))
+          .sort((a, b) => Math.abs(b.deltaHeight) - Math.abs(a.deltaHeight))
+          .slice(0, 12);
+      }
+    } catch (error) {
+      driftedSections = [{ error: error.message }];
+    }
+  }
+
+  // Diff image paths, keyed by surface+viewport, pulled from the repair tasks.
+  const diffImages = {};
+  for (const task of report.tasks || []) {
+    if (task.images && task.images.diff) diffImages[`${task.surface}-${task.viewport}`] = task.images.diff;
+  }
+
+  const audit = serialized.styleAudit;
+  return {
+    page,
+    passed: compared.passed,
+    metrics: { rendered: report.aggregates.rendered, editor: report.aggregates.editor },
+    bodyHeight,
+    driftedSections,
+    tasks: compared.tasks,
+    diffImages,
+    style: audit ? {
+      blocks: audit.blockCount,
+      customBlocks: audit.customBlockCount,
+      supportStyledPercent: audit.supportStyledPercent,
+      pageCssBytes: audit.css && audit.css.pageCssBytes,
+    } : null,
+    reportPath: compared.reportPath,
+    next: compared.passed
+      ? 'Both surfaces within thresholds. For a multi-page run build the next page; otherwise run audit_standins, then blocks-to-theme.'
+      : 'Act on driftedSections (largest |deltaHeight| first) and tasks in ONE edit pass, then call build_page again. Open a diffImages path only when the numbers are ambiguous.',
+  };
+}
+
 async function measurePageGeometry(browser, { htmlPath, kind, url, viewport, selector }) {
   const page = await browser.newPage({
     viewport: { width: Number(viewport.width), height: Number(viewport.height) },
@@ -1737,6 +1946,78 @@ function renderRepairTasks(tasks, report) {
 }
 
 function extractInventory(html) {
+  let sections;
+  try {
+    sections = extractSectionsDom(html);
+  } catch {
+    sections = extractSectionsRegex(html);
+  }
+  return {
+    sections,
+    headings: extractHeadings(html),
+    paragraphs: extractParagraphs(html),
+    links: extractLinks(html),
+    forms: extractForms(html),
+    cards: extractCards(html),
+  };
+}
+
+// Exhaustive section detection: enumerate the page's top-level structural bands
+// via the DOM so a non-semantic band — a <div class="stats-bar"> between two
+// <section>s — is never silently dropped the way the tag-only regex was. jsdom
+// sees every element regardless of CSS opacity/visibility, so scroll-revealed and
+// load-faded bands are captured too. Unwraps a single dominant wrapper (a <main>
+// or page <div>) to list the real bands, not the wrapper. `structural: true`
+// flags a band with no heading/card/form rather than omitting it.
+function extractSectionsDom(html) {
+  const { JSDOM } = require('jsdom');
+  const doc = new JSDOM(html).window.document;
+  let container = doc.body;
+  if (!container) throw new Error('no body element');
+  for (let guard = 0; guard < 4; guard += 1) {
+    const kids = [...container.children].filter((el) => !/^(script|style|link|template|noscript)$/i.test(el.tagName));
+    const main = kids.find((el) => el.tagName.toLowerCase() === 'main');
+    if (main) { container = main; continue; }
+    if (kids.length === 1 && /^(div|main)$/i.test(kids[0].tagName) && kids[0].children.length > 1) { container = kids[0]; continue; }
+    break;
+  }
+  const sections = [];
+  let index = 0;
+  for (const el of container.children) {
+    const tagName = el.tagName.toLowerCase();
+    if (/^(script|style|link|template|noscript)$/.test(tagName)) continue;
+    const inner = el.innerHTML;
+    const text = cleanText(inner);
+    const hasMedia = /<(img|svg|video|picture|canvas)\b/i.test(inner);
+    if (!text && !hasMedia) continue; // genuinely empty band
+    index += 1;
+    const className = el.getAttribute('class') || '';
+    const idAttr = el.getAttribute('id') || '';
+    const id = el.getAttribute('data-section') || idAttr || className || `${tagName}-${index}`;
+    const headings = extractHeadings(inner);
+    const forms = extractForms(inner);
+    const cards = extractCards(inner);
+    sections.push({
+      id: slug(id) || `${tagName}-${index}`,
+      selector: idAttr ? `#${idAttr}` : className ? `.${className.split(/\s+/)[0]}` : tagName,
+      tagName,
+      className,
+      text,
+      headings,
+      paragraphs: extractParagraphs(inner),
+      links: extractLinks(inner),
+      forms,
+      cards,
+      structural: headings.length === 0 && forms.length === 0 && cards.length === 0,
+      html: el.outerHTML,
+    });
+  }
+  return sections;
+}
+
+// Legacy semantic-tag regex. Kept as the fallback when jsdom is unavailable;
+// misses non-semantic <div> bands, which is the gap extractSectionsDom closes.
+function extractSectionsRegex(html) {
   const sections = [];
   const sectionPattern = /<(header|section|footer|main|aside|article|nav)\b([^>]*)>([\s\S]*?)<\/\1>/gi;
   let match;
@@ -1761,14 +2042,7 @@ function extractInventory(html) {
       html: match[0],
     });
   }
-  return {
-    sections,
-    headings: extractHeadings(html),
-    paragraphs: extractParagraphs(html),
-    links: extractLinks(html),
-    forms: extractForms(html),
-    cards: extractCards(html),
-  };
+  return sections;
 }
 
 function extractHeadings(html) {

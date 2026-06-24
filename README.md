@@ -170,4 +170,4 @@ Example Claude Desktop server entry:
 
 Agents should read `claude/CLAUDE.md` or `skills/html-to-blocks/SKILL.md` before calling the tools.
 
-Note for stdio clients: the server speaks JSON-RPC with `Content-Length` framing (LSP-style), not newline-delimited JSON. It accepts both framings on input but always frames its responses.
+Note for stdio clients: the server speaks JSON-RPC and replies in whichever framing the client uses — newline-delimited JSON by default (the MCP stdio transport spec, used by Claude Code), or `Content-Length` (LSP-style) if the client frames its requests that way. It accepts both framings on input and matches them on output.

@@ -7,6 +7,48 @@ description: Use when a user asks to transform designed or provided HTML/CSS/JS 
 
 Use this skill when the user wants an HTML/CSS/JS design or provided markup transformed into editable WordPress blocks. The agent remains responsible for design judgment and code edits. The tools provide workspace setup, mockup analysis, custom-block scaffolding, preview wrapping, screenshot comparison, and DOM geometry measurement (`measure_layout`).
 
+## Fast Path — minimum turns
+
+This skill is turn-bound: each page is **author once → `build_page` → repair →
+`build_page`**, not a five-tool round-trip per iteration. Follow the recipe; do
+not re-plan between calls.
+
+1. **One `build_page` call replaces** serialize → create_block_editor_preview →
+   screenshot_html → compare_html → measure_layout. It returns ONE report:
+   per-surface metrics, per-section height deltas (`driftedSections`), localized
+   `tasks`, `diffImages` paths, and the style audit. Act on `driftedSections`
+   (largest `|deltaHeight|` first) and `tasks` in **one** edit pass, then call
+   `build_page` again. Open a `diffImages` path only when the numbers are
+   ambiguous — do not read screenshots every turn.
+2. **Author the whole page tree in one write.** Never section-by-section.
+3. **Read budget:** work from tool output, not raw files. Do not read the mockup
+   stylesheet or `content-inventory.json` wholesale — `analyze_mockup` is
+   exhaustive (every band, including non-semantic `<div>` bands, flagged
+   `structural` when it has no heading/card/form) and `build_page` localizes drift
+   for you.
+4. **The capture self-heals mockup load/scroll animations** (the body load-fade and
+   `.reveal`/AOS/WOW scroll-reveal are forced visible for the screenshot). Do NOT
+   hand-patch the mockup CSS to un-blank a shot — that is handled in the tool.
+
+### Multi-page protocol (declare all → foundation → fan out)
+
+1. `import_provided_markup` once; read the `pages` manifest and **declare all pages
+   up front**.
+2. Build the **foundation page** (usually index) fully with the loop above — it
+   locks the shared chrome, design tokens, and reusable components.
+3. **Fan the remaining pages out to parallel subagents**, dispatched in one
+   message, each owning ONE page, with a tool-call budget (~30) and a wall-clock
+   cap. On exceed a subagent reports partial metrics and stops; it does not grind.
+   Cap concurrency to a handful.
+4. **Per-page CSS goes to `wordpress/pages/<page>.css`**, not the shared
+   `wordpress/style.css`, so parallel agents never clobber one file — `build_page`
+   and the theme scaffold pick those up automatically.
+5. Each page is PASS or blocked-with-metrics under its cap. "Most pass, a few
+   blocked at the floor" is a complete run.
+
+The numbered workflow below is the underlying contract; the Fast Path is how to
+execute it in the fewest turns.
+
 ## Required Workflow
 
 1. Create an artifact workspace with `create_workspace`.
@@ -32,7 +74,15 @@ Completion requires both comparison aggregates to pass for EVERY page in the run
 
 Comparison reports are per page: `reports/comparison.json` for the index page, `reports/<page>.comparison.json` for the rest. They never overwrite each other; a complete multi-page run leaves one passing report per page.
 
-If these criteria are not met, the skill run is incomplete. Continue repairing. If progress is impossible after concrete repair attempts, report the run as blocked with the current metrics and blocking cause; do not present it as complete.
+Each page's repair loop is **bounded** — see `references/repair-loop.md`: at most
+6 iterations per page, stop early on a plateau (2 iterations each improving
+`maxMismatchPercent` by <0.3%), and on cap/plateau without passing, record that
+page **blocked** with its metrics rather than grinding on. A geometry-exact
+surface still reads ~1% from webfont antialiasing — that is the floor and passes;
+mismatch well above ~1.5% with small height deltas is real line-height drift, not
+a floor (do not relabel it "done"). Report the run with every page's end-state
+(passed / blocked + metrics); do not present a blocked page as complete, and do
+not exceed the per-page cap chasing a sub-threshold number.
 
 ## Multi-Page Exports
 
@@ -52,6 +102,37 @@ Workflow for multi-page runs:
 4. Page-specific CSS goes into clearly labelled sections of `wordpress/style.css` (or block CSS when component-scoped). Keep the shared token/base layer at the top.
 5. Run serialize + compare per page with the manifest paths. The completion gate applies to every page; a run where one page fails is an incomplete run.
 6. Beware margins hidden by layout context: a missing margin can be invisible at desktop (a taller sibling column masks it) and only surface at mobile when columns stack. Always compare both viewports per page.
+
+## Effort Budget and Delegation Limits
+
+A multi-page run is a budget, not an open-ended grind. State the page count and
+plan before building; for large sites, build ONE foundation page fully (it locks
+shared chrome, tokens, and custom blocks), then converge the rest under the cap.
+
+- **Per page:** at most 6 repair iterations (`references/repair-loop.md`), then
+  PASS or report blocked. Retry a page at most ONCE.
+- **Delegating pages to subagents:** give each a tool-call budget (≈30 calls) and
+  a wall-clock timeout; on exceed it stops and reports its partial metrics — it
+  does not keep going. Cap concurrency to a handful. Do not fan out one agent per
+  page across a large site with no budget.
+- **Whole-run stop condition:** every page is PASS or blocked-with-metrics.
+  "Most pages pass, a few blocked at the floor" is a complete, honestly-reported
+  run — not a reason to keep grinding the blocked ones.
+
+## Known Harness Artifacts — Do Not Chase
+
+Not fidelity defects. Recognize them and STOP rather than burning iterations:
+
+- **Webfont-load reflow.** The capture waits for `document.fonts.ready`, but
+  residual sub-pixel antialiasing of identical webfonts across two DOM contexts
+  still costs ~1% mismatch on a geometry-exact surface. That ~1% is the floor.
+- **Shared template parts.** Nav and footer become ONE template part in the
+  theme. When page mockups carry slightly different footer copy/links, reuse the
+  shared chrome — the per-page difference is expected and resolved at the theme
+  stage. Never fork shared chrome per page to win a diff.
+- **Editor-only canvas quirks.** The no-build editor preview adds wrappers/inline
+  styles the frontend lacks; normalize via editor-scoped CSS, do not restructure
+  blocks to match the canvas.
 
 ## Hard Gates
 

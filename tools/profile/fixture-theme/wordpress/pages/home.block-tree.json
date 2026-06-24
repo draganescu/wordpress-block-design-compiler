@@ -1,0 +1,62 @@
+{
+    "version": 2,
+    "contract": "data-only",
+    "blocks": [
+        {
+            "blockName": "core/group",
+            "attrs": { "tagName": "header", "className": "topbar" },
+            "innerBlocks": [
+                {
+                    "blockName": "core/paragraph",
+                    "attrs": { "className": "topbar__brand", "content": "Mini <b>Home</b>" },
+                    "innerBlocks": []
+                }
+            ]
+        },
+        {
+            "blockName": "core/group",
+            "attrs": {
+                "tagName": "section",
+                "className": "intro",
+                "style": {
+                    "color": { "background": "#112233", "text": "#FFEEDD" },
+                    "spacing": {
+                        "padding": {
+                            "top": "clamp(10px,2vh,20px)",
+                            "bottom": "clamp(10px,2vh,20px)",
+                            "left": "0",
+                            "right": "0"
+                        }
+                    }
+                }
+            },
+            "innerBlocks": [
+                {
+                    "blockName": "core/heading",
+                    "attrs": { "level": 1, "content": "Welcome" },
+                    "innerBlocks": []
+                },
+                {
+                    "blockName": "mini/badge",
+                    "attrs": { "label": "New" },
+                    "innerBlocks": []
+                }
+            ]
+        },
+        {
+            "blockName": "core/group",
+            "attrs": {
+                "tagName": "footer",
+                "className": "sitefoot",
+                "style": { "color": { "background": "#112233" } }
+            },
+            "innerBlocks": [
+                {
+                    "blockName": "core/paragraph",
+                    "attrs": { "content": "© Mini" },
+                    "innerBlocks": []
+                }
+            ]
+        }
+    ]
+}

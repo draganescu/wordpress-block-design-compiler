@@ -54,3 +54,44 @@ test('scaffoldBlockTheme keeps {{THEME_URI}} placeholders in part markup', () =>
     assert.match(php, /str_replace\('\{\{THEME_URI\}\}', get_stylesheet_directory_uri\(\)/);
     fs.rmSync(ws, { recursive: true, force: true });
 });
+
+test('scaffoldBlockTheme defaults blockGap to 0 (component CSS) and rewrites orphan links', () => {
+    const ws = path.join(path.dirname(fileURLToPath(import.meta.url)), 'fixtures/mini-orphan');
+    fs.rmSync(ws, { recursive: true, force: true });
+    fs.cpSync(path.join(MINI, 'wordpress'), path.join(ws, 'wordpress'), { recursive: true });
+    // Add a link to a page that is NOT in the manifest, in a kept (non-stripped) block.
+    const treePath = path.join(ws, 'wordpress/pages/home.block-tree.json');
+    const home = JSON.parse(fs.readFileSync(treePath, 'utf8'));
+    home.blocks[1].innerBlocks = home.blocks[1].innerBlocks || [];
+    home.blocks[1].innerBlocks.push({ blockName: 'core/paragraph', attrs: { content: '<a href="nowhere.html">gone</a>' }, innerBlocks: [] });
+    fs.writeFileSync(treePath, JSON.stringify(home, null, 4));
+
+    const result = scaffoldBlockTheme(miniScaffoldArgs(ws));
+
+    // C10: the mini fixture ships component customCss, so block-gap is defaulted to 0.
+    const themeJson = JSON.parse(fs.readFileSync(path.join(ws, 'theme/mini/theme.json'), 'utf8'));
+    assert.equal(themeJson.styles?.spacing?.blockGap, '0px');
+
+    // C9: the orphan link is recorded and rewritten to the front page, not left to fatal validate.
+    assert.deepEqual(result.orphanLinks, ['nowhere.html']);
+    const payload = fs.readFileSync(path.join(ws, 'theme-plugin/mini-content/content/home.html'), 'utf8');
+    assert.ok(!payload.includes('nowhere.html'));
+    assert.match(payload, /href="\/"/);
+    fs.rmSync(ws, { recursive: true, force: true });
+});
+
+test('scaffoldBlockTheme auto-reads wordpress/style.css as customCss when the arg is omitted', () => {
+    const ws = path.join(path.dirname(fileURLToPath(import.meta.url)), 'fixtures/mini-autocss');
+    fs.rmSync(ws, { recursive: true, force: true });
+    fs.cpSync(path.join(MINI, 'wordpress'), path.join(ws, 'wordpress'), { recursive: true });
+    // a distinctive shared stylesheet with a remote @import that must be stripped
+    fs.writeFileSync(path.join(ws, 'wordpress/style.css'),
+        "@import url('https://fonts.example/x.css');\n.autocss-marker { color: #112233 }");
+    const args = miniScaffoldArgs(ws);
+    delete args.customCss; // omitted -> scaffold must fall back to wordpress/style.css
+    scaffoldBlockTheme(args);
+    const css = fs.readFileSync(path.join(ws, 'theme/mini/style.css'), 'utf8');
+    assert.match(css, /\.autocss-marker/);   // the shared design system shipped, not an empty theme
+    assert.ok(!/@import\s+url\(/.test(css));  // remote @import stripped (theme must have no remote URLs)
+    fs.rmSync(ws, { recursive: true, force: true });
+});

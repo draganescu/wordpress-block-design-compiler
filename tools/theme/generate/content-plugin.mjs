@@ -2,7 +2,7 @@
 import path from 'node:path';
 import { writeFile, writeJson } from '../../lib/workspace.mjs';
 
-export function writeContentPlugin({ slug, themeName, outDir, pages }) {
+export function writeContentPlugin({ slug, themeName, outDir, pages, hasBlocksPlugin = false }) {
     const prefix = slug.replace(/-/g, '_') + '_content';
     writeJson(path.join(outDir, 'content/manifest.json'), {
         theme: slug,
@@ -11,11 +11,17 @@ export function writeContentPlugin({ slug, themeName, outDir, pages }) {
     for (const page of pages) {
         writeFile(path.join(outDir, `content/${page.slug}.html`), `${page.markup.trim()}\n`);
     }
-    writeFile(path.join(outDir, `${slug}-content.php`), contentPluginPhp({ slug, themeName, prefix }));
+    writeFile(path.join(outDir, `${slug}-content.php`), contentPluginPhp({ slug, themeName, prefix, hasBlocksPlugin }));
     return { prefix, pageCount: pages.length };
 }
 
-function contentPluginPhp({ slug, themeName, prefix }) {
+function contentPluginPhp({ slug, themeName, prefix, hasBlocksPlugin = false }) {
+    // Only declare the companion blocks plugin as a hard dependency when one is
+    // actually generated (i.e. the theme has custom blocks). A core-only theme
+    // ships no <slug>-blocks plugin, so an unconditional "Requires Plugins" line
+    // makes WordPress refuse to activate this content plugin and the import step
+    // fatals on an undefined function.
+    const requiresPlugins = hasBlocksPlugin ? ` * Requires Plugins: ${slug}-blocks\n` : '';
     return `<?php
 /**
  * Plugin Name: ${themeName} Content
@@ -23,8 +29,7 @@ function contentPluginPhp({ slug, themeName, prefix }) {
  * Version: 1.0.0
  * Requires at least: 6.6
  * Requires PHP: 7.4
- * Requires Plugins: ${slug}-blocks
- * License: GPL-2.0-or-later
+${requiresPlugins} * License: GPL-2.0-or-later
  * Text Domain: ${slug}-content
  */
 

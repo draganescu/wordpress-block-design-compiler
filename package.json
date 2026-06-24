@@ -8,7 +8,7 @@
     "html-to-blocks-mcp": "./tools/mcp-server.mjs"
   },
   "scripts": {
-    "check": "node --check tools/mcp-server.mjs && node --check tools/lib/workspace.mjs && node --check tools/lib/capture.mjs && node --check tools/lib/wp-serialize.mjs && node --check tools/lib/dynamic-render.mjs && node --check tools/content/model.mjs && node --check tools/lib/profile.mjs && node --check tools/profile/transcript.mjs && node --check tools/profile/run-profile.mjs",
+    "check": "node --check tools/mcp-server.mjs && node --check tools/lib/workspace.mjs && node --check tools/lib/capture.mjs && node --check tools/lib/wp-serialize.mjs && node --check tools/lib/dynamic-render.mjs && node --check tools/content/model.mjs && node --check tools/lib/profile.mjs && node --check tools/profile/transcript.mjs && node --check tools/profile/run-profile.mjs && node --check tools/theme/generate/gate-muplugin.mjs && node --check tools/theme/playground-server.mjs && node --check tools/theme/playground-changes.mjs && node --check tools/theme/editor-validate.mjs",
     "test": "node --test 'tools/lib/**/*.test.mjs' 'tools/theme/**/*.test.mjs' 'tools/content/**/*.test.mjs' 'tools/profile/**/*.test.mjs'",
     "profile": "node tools/profile/run-profile.mjs"
   },

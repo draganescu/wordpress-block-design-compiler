@@ -295,8 +295,21 @@ export async function captureUrl(browser, url, screenshotPath, viewport, { edito
             }
             await page.addStyleTag({ content: editorComparisonCss() });
         } else {
-            await page.addStyleTag({ content: `${motionFreezeCss()}\n${transientOverlayCaptureCss()}` });
+            await page.addStyleTag({ content: `${motionFreezeCss()}\n${revealNeutralizeCss()}\n${transientOverlayCaptureCss()}` });
         }
+        // Wait for webfonts to finish loading before the screenshot. An @import
+        // or late <link> font can swap in AFTER networkidle settles, reflowing
+        // text and shifting below-the-fold content — phantom mismatch/height
+        // drift that reads like a fidelity defect but is only a font-load race.
+        // Capped so a blocked/missing font can never hang the capture.
+        await profile.span(
+            'capture.wait.fonts',
+            () => page.evaluate(() => Promise.race([
+                (document.fonts && document.fonts.ready) || Promise.resolve(),
+                new Promise((resolve) => setTimeout(resolve, 3000)),
+            ])).catch(() => {}),
+            meta,
+        );
         await page.waitForTimeout(150);
         await profile.span(
             'capture.screenshot',
@@ -347,8 +360,37 @@ export function editorComparisonCss() {
     `;
 }
 
+// Fast-forward every animation to its final keyframe rather than disabling it.
+// `animation:none` freezes hand-rolled entrance animations (an element set
+// `opacity:0` that fades in via `@keyframes ... forwards`, e.g. a hero eyebrow/
+// title/CTA) at their HIDDEN first frame, blanking the shot exactly like an
+// un-fired scroll-reveal — and Playwright's `animations:'disabled'` can't
+// fast-forward an animation that no longer exists. A negative-delay 1ms run with
+// `forwards` fill and a single iteration snaps finite entrance animations to
+// their visible end state and settles looping animations (marquees, spinners)
+// deterministically, while transitions and smooth scroll are still killed.
 export function motionFreezeCss() {
-    return '*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}';
+    return '*,*::before,*::after{animation-duration:1ms!important;animation-delay:-1ms!important;animation-iteration-count:1!important;animation-fill-mode:forwards!important;transition:none!important;scroll-behavior:auto!important}';
+}
+
+// Mockups routinely hide content behind a JS scroll-reveal (an IntersectionObserver
+// adds a class on scroll) and a body load-fade (body opacity 0 until a `loaded`
+// class lands). A full-page screenshot never scrolls, so below-the-fold reveal
+// elements stay opacity:0 and the mockup captures BLANK — an un-fired entrance
+// animation read as missing content. Force the post-animation state for the
+// well-known reveal class/attribute conventions (AOS, WOW.js, and the common
+// hand-rolled names) plus the body fade. Scoped to reveal/fade/animate/scroll
+// names so genuinely-hidden UI (.modal/.drawer/.menu) is left alone.
+export function revealNeutralizeCss() {
+    return `
+        body{opacity:1!important}
+        .reveal,.reveal-up,.reveal-left,.reveal-right,.fade,.fade-in,.fade-up,
+        .fade-in-up,.fade-in-down,.animate-in,.animate-on-scroll,.scroll-reveal,
+        .on-scroll,.wow,.aos-init,.will-reveal,.js-reveal,
+        [data-reveal],[data-aos],[data-animate],[data-scroll],[data-sr]{
+            opacity:1!important;transform:none!important;visibility:visible!important;
+        }
+    `;
 }
 
 export function transientOverlayCaptureCss() {
