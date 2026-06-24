@@ -30,26 +30,62 @@ Do not use custom blocks for:
 - Static text that core Heading/Paragraph/List/Button can edit.
 - A disguised HTML blob.
 - Decorative wrappers that could be a core Group with classes.
+- Anything a dynamic core block already covers because the static serializer
+  shows it blank. Navigation, search, comments, comment form, pagination,
+  prev/next, site title/logo, and post fields are real core blocks that the
+  pipeline now renders in both previews. "Doesn't preview statically" is a
+  harness limitation, not a core-rejection reason.
+- A repeated content card. Repeated records (products, objects, posts, events)
+  are a `core/query` over a post type, built first as a marked core-block
+  stand-in (see "Stand-ins" below). A `variant` enum (featured/row/grid) that
+  only changes placement is layout, expressed by the container class and CSS,
+  not a content model — never an attribute.
+- Images. Use `core/image`; a missing photo is a `data:` SVG placeholder in the
+  `url` at the right aspect ratio. Never hide a media URL in InspectorControls.
 
-Use custom blocks for:
+Use custom blocks ONLY for:
 
-- Semantic forms/search/subscription/booking/contact UI.
-- Marquees, sliders, accordions, tabs, or repeated widgets that need structured item data.
-- Repeated cards where each item needs a coherent editing model.
-- Components where save markup must be very specific and core block nesting would be brittle.
+- A real submission form WordPress has no core block for (contact, newsletter,
+  subscription, booking, sourcing request) that must save semantic `<form>`
+  markup and POST somewhere.
+- A genuinely bespoke interactive widget (a configurator, a typed data
+  visualization) with an editing model no core block expresses.
+- A component whose exact save markup core block nesting genuinely cannot
+  produce — proven, after trying the core assembly, not assumed.
 
-Custom block examples that are usually valid:
+Map the named element to its core block before considering custom:
 
-- Product/object/event card with structured metadata and a reusable embed model.
-- Newsletter/contact/search form that must save real form controls.
-- Bespoke navigation when `core/navigation` is dynamic or unsuitable for the static serializer.
+| Design element | Core block |
+|---|---|
+| Primary/footer nav, menu | `core/navigation` + `core/navigation-link`/`-submenu` |
+| Search field | `core/search` |
+| Wordmark / logo | `core/site-title` (+ tagline) / `core/site-logo` |
+| Comment list / comment form | `core/comments` / `core/post-comments-form` |
+| Pagination, prev/next | `core/query-pagination` / `core/post-navigation-link` |
+| Post/product grid, index | `core/query` + `core/post-template` (stand-in first) |
+| Category eyebrow, date, title, excerpt, featured image | `core/post-terms` / `core/post-date` / `core/post-title` / `core/post-excerpt` / `core/post-featured-image` |
 
-Custom block examples that are usually invalid:
+Custom block examples that are usually INVALID (use the core block / stand-in):
 
-- Hero section containing only heading, paragraph, and buttons.
-- Editorial story section containing only text and decorative layout.
-- Footer containing ordinary copy and links.
-- Journal teaser row that can be `core/group`/`core/columns`/`core/heading`/`core/paragraph`.
+- A "site-nav" / "search-form" / "pagination" / "comment-form" block.
+- A "post-card" / "product-card" block with a `variant` enum.
+- A "post-meta" block that exists only to carry an inline SVG icon (the icon is
+  CSS decoration on a core composition).
+- Hero, editorial, footer sections of heading + paragraph + buttons + image.
+
+### Stand-ins for data-driven regions
+
+A grid/index of records is a query with no data yet. Build it from real core
+blocks (`core/group` + `core/image` + `core/heading` + `core/paragraph`) seeded
+with representative content so the visual gate can style it, and mark it:
+
+- the repeating container: `attrs.metadata.standin = { "for": "core/query", "postType": "objet", "taxonomy": "objet_cat", "query": { "perPage": 4, "orderBy": "date", "order": "desc" } }`. Its first child is the item template.
+- each per-item field in the template: `attrs.metadata.standin = { "for": "core/post-title" }` (or `core/post-featured-image`, `core/post-terms`, `core/post-excerpt`, `core/post-date`).
+- a comment thread: `attrs.metadata.standin = { "for": "core/comments" }`.
+
+Keep stable classNames on the card and its fields; the lifted theme CSS targets
+them after `hydrate_standins` swaps the marked blocks into `core/query` /
+`core/post-*` / `core/comments`. Run `audit_standins` to verify the marks.
 
 Use `core/html` only for the smallest non-editable fragment that cannot reasonably become core or custom static blocks. Give a concrete reason each time.
 

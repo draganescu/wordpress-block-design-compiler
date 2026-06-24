@@ -21,6 +21,7 @@ Use this skill when the user wants an HTML/CSS/JS design or provided markup tran
 10. Run `compare_html`.
 11. When a comparison fails, run `measure_layout` BEFORE staring at pixel diffs: it returns per-element top/height deltas between the mockup and the rendered or editor page (`candidateKind: "editor"`), aligned by selector order. Drill from sections to children with narrower selectors until the drift names a specific element, then fix that. Pixel diffs localize; measurements identify.
 12. Inspect rendered frontend screenshots, editable editor screenshots, and diffs. Write the repair-tasks file, fix each task as an agent, then repeat preview/compare until both saved frontend and editor-preview thresholds are met. Do not stop at "close", "structurally close", or "good enough".
+13. Run `audit_standins` and read `reports/standins.json`. Confirm every data-driven region is a marked core-block stand-in (not a custom block), and that no stand-in references a postType/taxonomy the content model will not provide. Stand-ins stay static until the content-modeling skill runs `hydrate_standins`.
 
 Default thresholds: `maxMismatchPercent <= 1` and `maxHeightDelta <= 8`.
 
@@ -61,10 +62,39 @@ Before generating custom blocks or `wordpress/block-tree.json`, write a core-fir
 - For every mockup section, list the candidate core block assembly first.
 - For every chosen core block, list the native attributes/support props that will carry the visual styling before writing CSS.
 - Only then list any custom block and the specific reason core blocks fail.
-- A custom block that replaces a whole section is rejected unless the section itself is a semantic widget, form, query/data component, navigation component, or reusable component with a typed editing model.
+- A custom block that replaces a whole section is rejected unless the section itself is a real submission form (contact/newsletter/booking) or a genuinely bespoke interactive widget with a typed editing model that no core block expresses. Navigation, search, site identity, comments, pagination, and post fields are NOT custom-block reasons — they are real core blocks (see "The serializer is not the design" below).
 - Complex layout is not a sufficient reason for a custom block. Use `core/group`, `core/columns`, `core/column`, `core/heading`, `core/paragraph`, `core/buttons`, `core/button`, `core/list`, `core/details`, `core/image`, `core/media-text`, `core/spacer`, and supports/classes first.
-- The final tree should normally contain more core blocks than custom blocks. If custom blocks are equal to or more than core blocks, treat the plan as failed unless the user explicitly asked for mostly custom blocks.
+- The final tree should normally contain far more core blocks than custom blocks. If custom blocks approach the core-block count, treat the plan as failed unless the user explicitly asked for mostly custom blocks.
 - If the editable preview drifts because WordPress editor wrappers, RichText sizing, placeholders, or editor chrome alter layout, fix the editor harness, custom block `edit()`, or editor-scoped CSS. Do not replace core assemblies with custom section blocks to make editor comparison easier.
+
+### The serializer is not the design
+
+"It doesn't render in the static preview" is a HARNESS fact, never a design fact, and never a valid core-rejection reason. WordPress server-renders its dynamic blocks; the pipeline renders them too, via `tools/lib/dynamic-render.mjs`, so they now appear on both preview surfaces. Use the real core block and prepopulate it:
+
+- Navigation → `core/navigation` with `core/navigation-link` / `core/navigation-submenu` inner blocks (prepopulated, it serializes and previews as a real menu). Never a custom "site-nav" block.
+- Search → `core/search` (label, placeholder, buttonText, buttonPosition). Never a custom "search-form".
+- Site identity → `core/site-title`, `core/site-tagline`, `core/site-logo`. A text wordmark is `core/site-title` (+ a tagline/paragraph), not an image and not a custom block.
+- Comments → `core/comments`; comment form → `core/post-comments-form`. Never a custom "comment-form".
+- Pagination → `core/query-pagination` (+ `-previous`/`-numbers`/`-next`). Prev/next post → `core/post-navigation-link`. Never a custom "pagination" block.
+- Images → `core/image`. Missing media is a `data:` SVG placeholder at the right aspect ratio in the `url`, NOT an image URL hidden in InspectorControls and NOT a custom media block.
+
+If a dynamic core block genuinely cannot preview after prepopulation, that is a renderer-shim gap to report and fix in `dynamic-render.mjs`, not a licence to invent a custom block.
+
+Supply `wordpress/preview-context.json` (`{ "siteTitle": "...", "siteLogoUrl": "...", "homeUrl": "...", "postDate": "...", "postTerms": "..." }`) so the entity-backed blocks (site title/logo, post date/terms) render with real-looking values on both surfaces.
+
+### Provided markup is binding
+
+When the source export annotates intended blocks — `<!-- core/navigation -->`, `<!-- core/search -->`, a handoff table that maps components to blocks, a data file shaped like a CPT — those are requirements, not hints. Use the named block. Deviating needs an explicit design-level reason written in the plan, never "the serializer/editor preview is easier this way".
+
+### Stand-ins for data-driven regions
+
+Some regions are real queries/comments with no data yet (object/product grids, post indexes, comment threads). Build them as a static core-block composition seeded with representative content so the visual gate can style them, and MARK the region with `attrs.metadata.standin`:
+
+- repeating container → `{ "for": "core/query", "postType": "...", "taxonomy": "...", "query": { "perPage": N, "orderBy": "date", "order": "desc" } }`; the container's FIRST child is the item template.
+- each per-item field inside that template → `{ "for": "core/post-title" | "core/post-featured-image" | "core/post-terms" | "core/post-excerpt" | "core/post-date" }`.
+- comment thread → `{ "for": "core/comments" }`.
+
+The card itself stays real core blocks (`core/group` + `core/image` + `core/heading` + `core/paragraph`), with stable classNames the CSS targets — never a custom "post-card" block, and never a `variant` enum encoding placement (featured/row/grid is layout, expressed by the container's class/CSS, not the content model). Run `audit_standins` before completion; the content-modeling skill later runs `hydrate_standins` to swap these into `core/query`/`core/comments` against real seed content.
 
 ### Completion Gate
 
@@ -91,7 +121,7 @@ The plan must answer:
 - How each core assembly or custom block will keep the editable editor canvas visually aligned with the saved frontend.
 - Which parts may use `core/html`, with explicit reasons.
 
-Prefer core blocks, block supports, and style variations before custom blocks. Use custom blocks for reusable data models, real forms/search/booking widgets, nontrivial repeated components, or semantic save contracts. Do not create a custom block just to make a section easier to render or repair.
+Prefer core blocks, block supports, and style variations before custom blocks. The legitimate custom-block cases are narrow: a real submission form WordPress has no core block for (contact, newsletter, booking, sourcing request) that must save semantic `<form>` markup, or a genuinely bespoke interactive widget with a typed editing model. Repeated content cards are NOT a custom-block case — they are core-block stand-ins for a `core/query` (see the Core-First Gate). Search, navigation, comments, pagination, site identity, and post fields are NOT custom-block cases — they are real dynamic core blocks. Do not create a custom block to make a section easier to render or repair.
 
 Styling priority is strict:
 

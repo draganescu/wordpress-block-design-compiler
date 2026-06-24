@@ -2,6 +2,28 @@
 
 Generate vanilla JavaScript WordPress blocks. Assume no build step and no JSX.
 
+## Before writing one: is it actually custom?
+
+Most "custom block" instincts are a core block the static serializer happens to
+render blank. Re-read the Core-First Gate. A custom block is justified only for a
+real submission form with no core equivalent, or a genuinely bespoke interactive
+widget. If you are about to build a navigation, search, comments, pagination,
+site-identity, card, or post-field block, stop — use the core block (or a marked
+`core/query` stand-in).
+
+Scope discipline for the blocks that ARE custom:
+
+- Visible content lives in the canvas, including media. An image is a `core/image`
+  child or an in-canvas `MediaUpload`/`RichText` field — never a URL typed into
+  InspectorControls. Inspector is for behavior and settings (action, method,
+  required, options), not for content the visitor sees.
+- No placement-variant attribute. `variant: featured | row | grid` encodes where
+  the block sits, which is the parent's layout/CSS job. If two usages differ only
+  in arrangement, they are the same block in different containers.
+- An inline SVG icon never justifies a block. Icons are CSS decoration (a
+  background or pseudo-element on a core composition), not a content model.
+- A custom block's attributes are a typed editing model, never a raw HTML blob.
+
 Use:
 
 - `wp.blocks.registerBlockType`

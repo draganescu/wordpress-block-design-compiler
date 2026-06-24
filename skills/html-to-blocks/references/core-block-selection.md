@@ -16,8 +16,8 @@ Prefer the most specific static core block that expresses the source structure:
 - Use `core/list` and `core/list-item` for real ordered/unordered lists. Do not use paragraphs with line breaks for list data.
 - Use `core/details` for disclosure content that should remain editable and semantic.
 - Use `core/separator` and `core/spacer` sparingly for real editorial dividers or rhythm that should be visible/editable as block content.
-- Use `core/navigation` only when its dynamic/static behavior is acceptable in the target preview and editor setup. For static link rows in this compiler, `core/buttons` or a focused custom navigation block may be more predictable.
-- Use dynamic core blocks such as query/post blocks only when the final WordPress context will provide the data. They may not produce useful local static preview output.
+- Use `core/navigation` for menus and link rows, prepopulated with `core/navigation-link` / `core/navigation-submenu` inner blocks. The pipeline renders it in both previews (`tools/lib/dynamic-render.mjs`); it is the correct block for navigation. Do not substitute `core/buttons` or a custom navigation block.
+- Use dynamic core blocks (`core/search`, `core/site-title`, `core/site-logo`, `core/post-comments-form`, `core/query-pagination`, `core/post-navigation-link`, `core/post-date`, `core/post-terms`) directly: the shim renders their frontend HTML in the preview, so they show and style like any other block. For a grid/index of records that needs real data, build a marked stand-in (a real core-block card) for `core/query`/`core/post-template`; the content-modeling skill hydrates it. Never reach for a custom block because a dynamic block "previews blank" — that is fixed.
 
 ## Native Props First
 
@@ -90,8 +90,7 @@ Forms and search:
 
 Navigation:
 
-- For simple static link rows, prefer `core/buttons`/`core/button` or a custom static navigation block when exact saved markup matters.
-- Use `core/navigation` when the WordPress navigation entity behavior is desired and local static preview limitations are acceptable.
+- Use `core/navigation` with `core/navigation-link` / `core/navigation-submenu` inner blocks for every site menu and link row. The shim renders it in both previews, so there is no static-serializer reason to avoid it. `core/buttons` is for call-to-action button groups, not navigation, and a custom navigation block is never the answer.
 
 Decorative-only elements:
 

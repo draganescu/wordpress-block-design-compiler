@@ -13,3 +13,14 @@ coverage/
 **/llm-repair-request.md
 **/llm-repair-response.json
 **/llm-repair-proposal.json
+
+# editor vaults
+.obsidian/
+
+# profiling run output
+reports/profile/
+tools/profile/fixture/reports/
+tools/profile/fixture/rendered/
+tools/profile/fixture/editor/
+tools/profile/fixture/visual/
+tools/profile/fixture/wordpress/content.html

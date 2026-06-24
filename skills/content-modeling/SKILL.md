@@ -21,9 +21,12 @@ The agent owns the modeling judgment. The tools only validate the model and gene
 4. Write `content-model/content-model.json` using `references/plugin-contract.md`.
 5. Run `validate_content_model`. Fix every `errors[]`; read warnings and either fix them or explain why they are acceptable in `content-model/content-model.md`.
 6. Run `scaffold_content_model_plugin`. This writes an installable WordPress plugin under `content-model/plugin/<plugin-slug>/`.
-7. Feed the model back into later stages:
-   - html-to-blocks: repeated dynamic lists should be represented as query-ready structures, not hard-coded forever.
-   - blocks-to-theme: content CPTs need archive/single template plans; submission CPTs need paired form blocks and REST endpoints.
+7. Hydrate the html-to-blocks stand-ins against the model (read `references/hydration.md`):
+   - Run `audit_standins` and read `reports/standins.json`. Every stand-in's `postType`/`taxonomy` must exist in the model; if one does not, fix the model or the stand-in mark (the block plan) before continuing.
+   - Run `hydrate_standins` AFTER the html-to-blocks visual gate has passed. It swaps each marked `core/query` stand-in into `core/query` + `core/post-template` (field marks become `core/post-*`), and each `core/comments` stand-in into `core/comments`, writing the hydrated page trees in place (originals backed up under `wordpress/standin-backup/`).
+   - The hydrated trees now feed blocks-to-theme. The seed entries this skill imports give those query loops real content to render against in the playground gate.
+8. Inform later stages:
+   - blocks-to-theme: content CPTs need archive/single template plans; submission CPTs need paired form blocks and REST endpoints. The hydrated query loops are evaluated against the seeded site, not the static preview.
 
 ## Gates
 
@@ -57,5 +60,6 @@ A content-modeling run is complete only when:
 - `content-model/content-model.json` is the canonical model
 - `content-model/content-model.md` explains each modeling decision
 - `scaffold_content_model_plugin` has produced a plugin folder
+- if html-to-blocks stand-ins exist, `audit_standins` reports zero unresolved marks and `hydrate_standins` has swapped them (or the run explicitly defers hydration because the block trees do not exist yet)
 
-Final response should name the plugin folder, post types, taxonomies, seed count, and validation status.
+Final response should name the plugin folder, post types, taxonomies, seed count, stand-ins hydrated, and validation status.
