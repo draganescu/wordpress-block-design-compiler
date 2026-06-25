@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "description": "Codex/Claude plugin tools for transforming designed HTML into editable WordPress blocks.",
+  "license": "GPL-2.0-or-later",
   "bin": {
     "html-to-blocks-mcp": "./tools/mcp-server.mjs"
   },
