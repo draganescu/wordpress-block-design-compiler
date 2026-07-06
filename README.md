@@ -92,6 +92,18 @@ The server speaks JSON-RPC and matches whichever framing the client uses — new
 
 Before calling the tools, an agent should read `claude/CLAUDE.md` or the relevant `skills/*/SKILL.md`.
 
+## Running it as a CLI
+
+There is a second surface that runs the whole workflow without an agent: the `wbdc` CLI. It owns the step order in code — deterministic steps call the tools directly, and the judgment steps (plan, author the block tree, repair) each become one non-interactive `claude -p` call that returns structured JSON. The repair loops that an agent would run open-ended become bounded loops the CLI drives. This trades the agent's many decision turns for a fixed, scripted sequence.
+
+```bash
+node cli/index.mjs doctor                                   # verify/install setup (exits if `claude` is missing)
+node cli/index.mjs run --source ./site-export --workspace ./runs/acme
+node cli/index.mjs run --brief @brief.md --workspace ./runs/acme --stages 1
+```
+
+It needs the `claude` CLI on PATH (and `claude login`); it provisions the rest (Playwright Chromium, WordPress Playground) itself. See `docs/cli.md` for all options and the architecture, including how to add a non-Claude harness.
+
 ## Codex
 
 Use the repo as a Codex plugin. The manifest is at `.codex-plugin/plugin.json`, and the skill names are `content-modeling`, `html-to-blocks`, and `blocks-to-theme`.

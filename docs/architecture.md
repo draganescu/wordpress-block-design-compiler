@@ -4,7 +4,9 @@ This is the repo-wide guide. It explains what the project does, how the pieces f
 
 ## What this repo is
 
-A staged compiler that takes a designed HTML/CSS page and produces editable WordPress block content, and then an installable block theme. It ships as an MCP server. An agent — Claude Code, Codex, or any MCP-capable client — calls the tools; a set of skills tells the agent how and in what order. There is no standalone CLI and no server to host. The whole thing is a toolbox plus the playbooks for using it.
+A staged compiler that takes a designed HTML/CSS page and produces editable WordPress block content, and then an installable block theme. It ships as an MCP server. An agent — Claude Code, Codex, or any MCP-capable client — calls the tools; a set of skills tells the agent how and in what order. The whole thing is a toolbox plus the playbooks for using it.
+
+There is also a second, non-agent surface: the `wbdc` CLI (`cli/`, `docs/cli.md`). It runs the same workflow as a fixed program — deterministic steps call the tools directly; the judgment steps each become one non-interactive `claude -p` call returning structured JSON — so a run is a bounded, scripted sequence instead of an open-ended agent loop. The CLI is additive: it drives the same `tools/` engine and reuses the `skills/` text as its per-step prompts.
 
 ## The problem it solves
 
@@ -175,12 +177,13 @@ npm run profile               # timing harness; see docs/profiling-plan.md
 
 A few things landed differently from the spec, worth knowing so the spec does not mislead you:
 
-- **Surface.** The spec described a CLI engine (`wp-block-compiler design/analyze/plan/...`) with MCP as an optional add-on. The build went the other way: the MCP server is the only surface and there is no CLI.
+- **Surface.** The spec described a CLI engine (`wp-block-compiler design/analyze/plan/...`) with MCP as an optional add-on. The build went MCP-first: the MCP server + skills is the primary surface. A CLI came later but in a different shape than the spec imagined — `wbdc` (`docs/cli.md`) is not the engine, it is a deterministic *driver* over the MCP engine that replaces the agent with a fixed step list and per-step `claude -p` calls.
 - **Eval harness.** The spec's Slice 8 called for a fixture-driven quality eval with strategy assertions and editability scores. What exists is a performance profiler (`tools/profile/`). Fidelity is gated per run by `build_page` / `compare_html` and `playground_render`, not by a standing eval suite.
 - **Beyond the spec.** Content modeling (Stage 0) and the full theme extractor (Stage 2) are larger than the spec anticipated — the spec sketched theme inference in a few bullets and did not mention content modeling, stand-ins, or hydration at all. Multi-page support is also new; the spec scoped itself to a single page.
 
 ## Other docs
 
+- `docs/cli.md` — the `wbdc` deterministic CLI runner (non-agent surface).
 - `docs/parallelization-plan.md` — running stages and pages concurrently.
 - `docs/profiling-plan.md` — what `npm run profile` measures and how.
 - `docs/turn-efficiency-plan.md` — cutting agent turns per run.
