@@ -57,6 +57,7 @@ function parseStages(value) {
 
 function buildOptions(args) {
     const stages = parseStages(args.stages);
+    const brochure = Boolean(args.brochure);
     return {
         harness: args.harness || 'claude',
         model: args.model || undefined,
@@ -65,7 +66,12 @@ function buildOptions(args) {
         callTimeoutMs: Math.max(30, Number(args['call-timeout'] || 600)) * 1000,
         thresholds: { mismatch: Number(args['threshold-mismatch'] || 1), height: Number(args['threshold-height'] || 8) },
         stages,
-        stage0: args.stage0 || 'auto',
+        // Brochure mode: a minimal N-page static site from a brief — no content
+        // model, no custom blocks. Applies to brief starts only (see run below).
+        brochure,
+        pages: Math.max(1, Number(args.pages || 5)),
+        noCustomBlocks: brochure || Boolean(args['no-custom-blocks']),
+        stage0: brochure ? 'off' : (args.stage0 || 'auto'),
         playground: args.playground !== false && stages.has(2),
         compareEditor: args.editor !== false,
         commandLog: args['command-log'] !== false,
@@ -84,6 +90,10 @@ Usage:
 Options:
   --source <path>            HTML export file or directory (multi-page supported)
   --brief <text|@file>       Design brief (generates a mockup when no --source)
+  --brochure                 Brief only: minimal N-page brochure site — no content
+                             model, no custom blocks (see --pages). Ignored with --source.
+  --pages <n>                Brochure page count (default: 5)
+  --no-custom-blocks         Core blocks only (implied by --brochure)
   --workspace <dir>          Run workspace directory (required for run)
   --stages 0,1,2             Which stages to run (default: 0,1,2)
   --stage0 auto|on|off       Content-modeling gate (default: auto)
@@ -142,6 +152,8 @@ async function main() {
     const source = resolveSource(args.source);
     const brief = readBrief(args.brief);
     if (!source && !brief) { log.error('provide --source or --brief'); process.exit(1); }
+    // Brochure mode is a prompt-only shortcut; an import must respect the real site.
+    if (options.brochure && source) { log.warn('--brochure ignored for --source imports (imports respect the provided site)'); options.brochure = false; options.noCustomBlocks = false; }
 
     // Setup gate: claude absent => exit. Playground only needed for Stage 2.
     log.step('doctor · verifying setup');

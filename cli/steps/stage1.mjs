@@ -104,15 +104,20 @@ async function planStep(ctx, entry, isFoundation) {
     const analysis = readJsonWs(ctx.workspaceRoot, `analysis/${page}.analysis.json`)
         || readJsonWs(ctx.workspaceRoot, 'analysis/analysis.json');
 
+    const noCustom = ctx.options.noCustomBlocks;
     const sharedBlocks = ctx.shared.customBlocks.length
         ? `\nSHARED CUSTOM BLOCKS already defined by the foundation page (reuse them, do not redefine): ${JSON.stringify(ctx.shared.customBlocks)}`
         : '';
 
+    const customLine = noCustom
+        ? 'CORE BLOCKS ONLY: do NOT propose any custom blocks. customBlocks MUST be []. Express everything with core blocks + supports + CSS.'
+        : (isFoundation
+            ? 'This is the FOUNDATION page: plan the shared custom blocks the whole site will reuse. List them in customBlocks.'
+            : 'This is a secondary page. Reuse the shared custom blocks; only add a new one if this page genuinely needs it.');
+
     const prompt = [
         `Produce the block plan for page "${page}".`,
-        isFoundation
-            ? 'This is the FOUNDATION page: plan the shared custom blocks the whole site will reuse. List them in customBlocks.'
-            : 'This is a secondary page. Reuse the shared custom blocks; only add a new one if this page genuinely needs it.',
+        customLine,
         `\nBRIEF:\n${ctx.brief}`,
         `\nSECTION ANALYSIS:\n${JSON.stringify(analysis?.sections || [], null, 0)}`,
         `\nCONTENT INVENTORY (forms/links counts):\n${JSON.stringify({ forms: inventory?.forms?.length, links: inventory?.links?.length }, null, 0)}`,
@@ -125,6 +130,8 @@ async function planStep(ctx, entry, isFoundation) {
     const res = await ctx.harness.complete({ id: `plan:${page}`, systemPrompt: PLAN_SYS(), prompt, schema: PLAN_SCHEMA, model: ctx.options.model });
     if (!res.ok) throw new Error(`plan:${page} failed — ${res.error}`);
     const plan = res.data;
+    // Enforce the no-custom-blocks mode even if the model still proposed some.
+    if (noCustom) plan.customBlocks = [];
     writeJsonWs(ctx.workspaceRoot, 'plan/block-plan.json', plan);
     writeWs(ctx.workspaceRoot, `plan/${page}.block-plan.md`, planToMarkdown(plan, page));
     return plan;
@@ -202,12 +209,15 @@ async function authorStep(ctx, entry, plan, isFoundation) {
     const mockupCss = clip(readWs(ctx.workspaceRoot, 'mockup/style.css'), 100000);
     const customBlocks = ctx.shared.customBlocks;
 
+    const noCustom = ctx.options.noCustomBlocks;
     const prompt = [
         `Author the data-only block tree and page CSS for page "${page}" to reproduce the mockup.`,
         'blockTree is { version, contract:"data-only", blocks:[...] }; every block is { blockName, attrs, innerBlocks }.',
         'NO raw markup fields (htmlLines/innerHTML/markup/sourceHtml). Put styling in block support attributes first, page CSS last.',
-        'Mark data-driven regions with attrs.metadata.standin per the stand-in rules. Use real core dynamic blocks (navigation/search/site-title/query-pagination), never custom stand-ins.',
-        customBlocks.length ? `\nAVAILABLE CUSTOM BLOCKS: ${JSON.stringify(customBlocks)}` : '',
+        noCustom
+            ? 'CORE BLOCKS ONLY: no custom blocks and no stand-ins — this is static brochure content. Chrome uses real core blocks (core/navigation, core/site-title); everything else is core group/columns/heading/paragraph/image/buttons.'
+            : 'Mark data-driven regions with attrs.metadata.standin per the stand-in rules. Use real core dynamic blocks (navigation/search/site-title/query-pagination), never custom stand-ins.',
+        (!noCustom && customBlocks.length) ? `\nAVAILABLE CUSTOM BLOCKS: ${JSON.stringify(customBlocks)}` : '',
         `\nBLOCK PLAN:\n${JSON.stringify(plan, null, 0)}`,
         `\nMOCKUP HTML:\n${mockupHtml}`,
         `\nMOCKUP CSS:\n${mockupCss}`,
@@ -290,7 +300,7 @@ export async function runStage1Page(ctx, entry, { foundation = false } = {}) {
 
     await ctx.client.call('analyze_mockup', { workspaceRoot: ctx.workspaceRoot, htmlPath: entry.mockupPath });
     const plan = await planStep(ctx, entry, foundation);
-    await customBlocksStep(ctx, entry, plan);
+    if (!ctx.options.noCustomBlocks) await customBlocksStep(ctx, entry, plan);
     await authorStep(ctx, entry, plan, foundation);
     const loop = await repairLoop(ctx, entry, plan);
 

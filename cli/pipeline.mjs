@@ -38,6 +38,29 @@ const DESIGN_SCHEMA = {
     properties: { html: { type: 'string' }, css: { type: 'string' }, js: { type: 'string' } },
 };
 
+// Brochure mode: one shared design system + N page specs, then each page's <main>.
+const SITE_DESIGN_SCHEMA = {
+    type: 'object', additionalProperties: false, required: ['pages', 'sharedCss', 'headerHtml', 'footerHtml'],
+    properties: {
+        pages: {
+            type: 'array',
+            items: {
+                type: 'object', additionalProperties: false, required: ['slug', 'title', 'purpose'],
+                properties: { slug: { type: 'string' }, title: { type: 'string' }, purpose: { type: 'string' } },
+            },
+        },
+        sharedCss: { type: 'string' },
+        headerHtml: { type: 'string' },
+        footerHtml: { type: 'string' },
+        designNotes: { type: 'string' },
+    },
+};
+
+const PAGE_DESIGN_SCHEMA = {
+    type: 'object', additionalProperties: false, required: ['mainHtml'],
+    properties: { mainHtml: { type: 'string' }, extraCss: { type: 'string' } },
+};
+
 function singlePageEntry() {
     return {
         page: 'index', sourceFile: 'index.html', primary: true, mockupPath: 'mockup/index.html',
@@ -47,6 +70,96 @@ function singlePageEntry() {
             reportPath: 'reports/comparison.json', tasksPath: 'reports/repair-tasks.md',
         },
     };
+}
+
+// A multi-page manifest entry matching import_provided_markup's shape, so Stage 1
+// and Stage 2 treat brochure pages exactly like imported ones.
+function pageEntry(slug, { primary = false } = {}) {
+    return {
+        page: slug, sourceFile: `${slug}.html`, primary, mockupPath: `mockup/${slug}.html`,
+        suggested: {
+            treePath: `wordpress/pages/${slug}.block-tree.json`,
+            contentPath: `wordpress/pages/${slug}.content.html`,
+            renderedPath: `rendered/${slug}.html`,
+            editorPath: `editor/${slug}.html`,
+            reportPath: `reports/${slug}.comparison.json`,
+            tasksPath: `reports/${slug}.repair-tasks.md`,
+        },
+    };
+}
+
+function assembleBrochurePage({ title, headerHtml, mainHtml, footerHtml, extraCss }) {
+    return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${title}</title>
+<link rel="stylesheet" href="style.css">
+${extraCss ? `<style>\n${extraCss}\n</style>` : ''}
+</head>
+<body>
+${headerHtml}
+<main>
+${mainHtml}
+</main>
+${footerHtml}
+</body>
+</html>
+`;
+}
+
+// Brief -> a cohesive N-page brochure site. One design-system call locks the
+// shared chrome + CSS + page list; each page's <main> is then generated
+// concurrently and wrapped by the CLI so every page shares the same header,
+// footer, and stylesheet. Static content only — no data model, no custom blocks.
+async function designBrochure(ctx, n) {
+    ctx.log.step(`design · ${n}-page brochure from brief`);
+    const sys = `${HARNESS_PREAMBLE}\n\n${skillContext(['skills/html-to-blocks/references/design-prompt.md'])}`;
+
+    const sitePrompt = [
+        `Design a cohesive ${n}-page brochure website from the brief. Return the shared design system and the page list.`,
+        `- pages: EXACTLY ${n} entries { slug, title, purpose }. The FIRST page is the home page; give it slug "index". Use short kebab-case slugs for the rest (e.g. about, services, work, contact).`,
+        '- sharedCss: the complete design system — tokens, base/typography, layout, and the header/nav/footer styles. One Google Fonts @import is allowed; no other network assets, no build tools.',
+        '- headerHtml: a <header> with a <nav> linking every page by "<slug>.html". footerHtml: a <footer>.',
+        'This is a static brochure: no forms, no data-driven grids, no login. Make one strong visual direction, not a generic template.',
+        `\nBRIEF:\n${ctx.brief}`,
+        '\nReturn { pages, sharedCss, headerHtml, footerHtml, designNotes? }.',
+    ].join('\n');
+
+    const site = await ctx.harness.complete({ id: 'site_design', systemPrompt: sys, prompt: sitePrompt, schema: SITE_DESIGN_SCHEMA, model: ctx.options.model });
+    if (!site.ok) throw new Error(`site_design failed — ${site.error}`);
+
+    let pages = (site.data.pages || []).slice(0, n);
+    if (!pages.length) throw new Error('site_design returned no pages');
+    // Guarantee a stable home slug so foundation detection + front page are clean.
+    pages[0] = { ...pages[0], slug: 'index' };
+    writeWs(ctx.workspaceRoot, 'mockup/style.css', site.data.sharedCss || '');
+    if (site.data.designNotes) writeWs(ctx.workspaceRoot, 'plan/design-notes.md', `${site.data.designNotes}\n`);
+
+    const pageList = pages.map((p) => `${p.slug}.html — ${p.title}`).join('; ');
+    await Promise.all(pages.map(async (p) => {
+        const prompt = [
+            `Write the <main> content for the "${p.title}" page (slug "${p.slug}") of this brochure site.`,
+            `Page purpose: ${p.purpose}`,
+            'Reuse the shared design system below; only add page-specific CSS in extraCss when needed. Static content only — no forms or data grids.',
+            `Link to other pages by "<slug>.html" where relevant. All pages: ${pageList}.`,
+            `\nBRIEF:\n${ctx.brief}`,
+            `\nSHARED CSS (already linked as style.css — do not repeat it):\n${site.data.sharedCss}`,
+            `\nSHARED HEADER (already on the page):\n${site.data.headerHtml}`,
+            '\nReturn { mainHtml, extraCss? }.',
+        ].join('\n');
+        const res = await ctx.harness.complete({ id: `page_design:${p.slug}`, systemPrompt: sys, prompt, schema: PAGE_DESIGN_SCHEMA, model: ctx.options.model });
+        if (!res.ok) throw new Error(`page_design:${p.slug} failed — ${res.error}`);
+        const html = assembleBrochurePage({
+            title: p.title, headerHtml: site.data.headerHtml, footerHtml: site.data.footerHtml,
+            mainHtml: res.data.mainHtml, extraCss: res.data.extraCss,
+        });
+        writeWs(ctx.workspaceRoot, `mockup/${p.slug}.html`, html);
+    }));
+
+    ctx.pages = pages.map((p, i) => pageEntry(p.slug, { primary: i === 0 }));
+    ctx.log.info(`brochure pages: ${pages.map((p) => p.slug).join(', ')}`);
 }
 
 async function designMockup(ctx) {
@@ -74,6 +187,8 @@ async function setup(ctx, sourceHtmlPath) {
         });
         ctx.pages = imported.pages && imported.pages.length ? imported.pages : [singlePageEntry()];
         ctx.log.info(`imported ${ctx.pages.length} page(s): ${ctx.pages.map((p) => p.page).join(', ')}`);
+    } else if (ctx.options.brochure) {
+        await designBrochure(ctx, ctx.options.pages);
     } else {
         await designMockup(ctx);
         ctx.pages = [singlePageEntry()];

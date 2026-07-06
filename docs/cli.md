@@ -45,6 +45,9 @@ node cli/index.mjs run --brief @brief.md --workspace ./runs/acme
 |------|---------|---------|
 | `--source <path>` | — | HTML export file or directory (siblings become pages) |
 | `--brief <text\|@file>` | — | Design brief; generates a mockup when no `--source` |
+| `--brochure` | — | Brief only: minimal N-page brochure site, no content model, no custom blocks (see Brochure mode). Ignored with `--source`. |
+| `--pages <n>` | `5` | Brochure page count |
+| `--no-custom-blocks` | — | Core blocks only (implied by `--brochure`) |
 | `--workspace <dir>` | — | Run workspace (required) |
 | `--stages 0,1,2` | `0,1,2` | Which stages to run |
 | `--stage0 auto\|on\|off` | `auto` | Content-modeling gate (auto = a classify step decides) |
@@ -71,8 +74,9 @@ hard error or `claude` missing.
 
 ## What runs, in order
 
-1. **Setup** — `doctor` → `create_workspace` → `import_provided_markup` (or a
-   `design_mockup` judgment call from the brief).
+1. **Setup** — `doctor` → `create_workspace` → `import_provided_markup` (or, from a
+   brief, a `design_mockup` call — or the `site_design` + per-page `page_design`
+   calls under `--brochure`).
 2. **Stage 1 (html-to-blocks), per page** — `analyze_mockup` → **plan** →
    **custom blocks** (scaffold + author) → **author tree** → bounded repair loop
    (`build_page` + **repair**). The foundation/index page runs first to lock the
@@ -92,6 +96,27 @@ hard error or `claude` missing.
 Steps in **bold** are the judgment steps — each is one `claude -p` call whose
 system prompt is the actual skill text (`skills/**`) and whose output is
 validated against a JSON Schema (retried once on mismatch).
+
+## Brochure mode
+
+`--brochure` (brief only) makes a minimal, cohesive multi-page brochure site
+instead of a single generated page:
+
+```bash
+node cli/index.mjs run --brief "a wine bar in Lisbon" --brochure --pages 5 --workspace ./runs/tinta
+```
+
+It replaces the single `design_mockup` step with a `site_design` call (one shared
+design system + CSS + header/nav/footer + the page list) followed by one
+`page_design` call per page, run concurrently; the CLI wraps each page's `<main>`
+in the shared chrome and writes `mockup/<slug>.html` + a shared `mockup/style.css`.
+The first page is the home page (slug `index`). Then Stage 1 runs **core blocks
+only** (custom blocks are off) and **Stage 0 is forced off** — static brochure
+content needs no content model. Stage 2 still builds the installable theme.
+
+This is a prompt-only shortcut: with `--source`, `--brochure` is ignored (with a
+warning) because an import must respect the site you provided. `--no-custom-blocks`
+is available on its own if you want core-only output without the brochure design flow.
 
 ## Serve the result
 
