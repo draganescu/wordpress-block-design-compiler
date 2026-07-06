@@ -93,17 +93,51 @@ Steps in **bold** are the judgment steps — each is one `claude -p` call whose
 system prompt is the actual skill text (`skills/**`) and whose output is
 validated against a JSON Schema (retried once on mismatch).
 
+## Serve the result
+
+```bash
+node cli/index.mjs serve --workspace ./runs/acme [--slug <theme-slug>] [--port 9400]
+```
+
+Boots the built theme plus the generated blocks/content/CPT plugins in WordPress
+Playground, runs the same blueprint the Stage 2 gate uses (activate the plugins,
+import the pages), and **leaves the server running** so you can open the site in a
+browser — unlike `playground_render`, which boots only to screenshot and exit. The
+slug is auto-detected from `theme/<slug>/theme.json` when omitted; the port falls
+back to a free one if the preferred is busy. Stop it with Ctrl-C (or
+`pkill -f '@wp-playground/cli'`).
+
+## Robustness
+
+The pipeline is built to finish and report rather than crash on a hard site:
+
+- **Serializer guardrail.** A `SERIALIZER CONSTRAINTS` cheat-sheet heads the author,
+  repair, and theme-plan prompts (allowed `core/group` tags, no invented
+  attributes, `core/navigation` for nav, no raw-markup fields) — the serializer
+  throws on the first violation, so preventing them keeps the repair loop from
+  stalling one-violation-at-a-time.
+- **Custom blocks author one call per block**, so a big page's blocks don't blow a
+  single generation's timeout; a block that still fails keeps its scaffold baseline.
+- **Scaffold / validate / Playground fix loops.** A tool that rejects the model's
+  output (bad theme args, validation errors, gate drift) feeds the exact error back
+  to a fix step and retries, bounded by `--max-repair`.
+- **Graceful failure.** A page or stage that throws is recorded in the run report
+  (errored / blocked with metrics), never a stack trace; a timeout fails fast
+  without a wasted retry.
+
 ## Architecture (for extending)
 
 ```
 cli/
-  index.mjs        arg parsing + command dispatch
+  index.mjs        arg parsing + command dispatch (run / serve / doctor)
   doctor.mjs       setup checks + installers
+  serve.mjs        boot a built theme in WordPress Playground and keep it running
   tool-client.mjs  McpToolClient — drives tools/mcp-server.mjs over JSON-RPC
   harness/         Harness interface; ClaudeHarness (claude -p) + MockHarness
-  prompts/         skill-grounding loader
+  prompts/         skill-grounding loader + serializer-constraints cheat-sheet
   steps/           stage0 / stage1 / stage2 step definitions
   loops.mjs        bounded repair loop (cap + plateau)
+  lib/             logger, semaphore, verbatim command log
   pipeline.mjs     the fixed-order runner + fan-out + run report
 ```
 
