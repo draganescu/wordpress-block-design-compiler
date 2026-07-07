@@ -28,3 +28,4 @@ tools/profile/fixture-theme/theme/
 tools/profile/fixture-theme/theme-plugin/
 tools/profile/fixture-theme/reports/
 .gstack/
+.asset-cache/

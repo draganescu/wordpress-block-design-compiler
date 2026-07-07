@@ -53,5 +53,15 @@ export const HARNESS_PREAMBLE = [
     'Respond with ONLY the JSON the schema requires — no prose, no markdown fences.',
 ].join(' ');
 
+// Variant for the repair steps that may LOOK at comparison screenshots: same
+// single-step discipline, but Read is allowed for the image paths given in the
+// prompt (and nothing else).
+export const HARNESS_PREAMBLE_VISION = [
+    'You are one deterministic step in a fixed pipeline, not an interactive agent.',
+    'Your ONLY tool is Read, and ONLY for the screenshot paths listed in the prompt — look at them before deciding your fix; do not explore other files.',
+    'Do exactly the one job described. Do not plan follow-up work or ask questions.',
+    'End by responding with ONLY the JSON the schema requires — no prose, no markdown fences.',
+].join(' ');
+
 export { ROOT };
 export default skillContext;

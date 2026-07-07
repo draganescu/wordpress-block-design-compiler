@@ -72,3 +72,63 @@ test('brochure mode builds N assembled pages, shared chrome, and no custom block
     assert.ok(harness.log.some((c) => c.id === 'site_design'));
     assert.equal(harness.log.filter((c) => c.id.startsWith('page_design:')).length, 2);
 });
+
+test('fast brochure mode pipelines pages with merged plan+author and no plan calls', async () => {
+    const workspace = path.join(tmp, 'run-fast');
+
+    const harness = getHarness('mock', {
+        responses: {
+            site_design: {
+                pages: [
+                    { slug: 'index', title: 'Home', purpose: 'welcome' },
+                    { slug: 'about', title: 'About', purpose: 'story' },
+                ],
+                sharedCss: 'body{font-family:serif}',
+                headerHtml: '<header class="site"><nav><a href="index.html">Home</a><a href="about.html">About</a></nav></header>',
+                footerHtml: '<footer>© Test</footer>',
+            },
+            'page_design:': (req) => ({ mainHtml: `<h1>${req.id}</h1><p>content</p>` }),
+            chrome_author: {
+                headerBlocks: [{ blockName: 'core/group', attrs: { tagName: 'header', className: 'site' }, innerBlocks: [] }],
+                footerBlocks: [{ blockName: 'core/group', attrs: { tagName: 'footer' }, innerBlocks: [] }],
+            },
+            'author:': { blockTree: CORE_TREE, pageCss: '' },
+        },
+    });
+
+    const options = {
+        harness: 'mock', model: undefined, concurrency: 4, maxRepair: 2, callTimeoutMs: 600000,
+        thresholds: { mismatch: 100, height: 100000 },
+        stages: new Set([1]), stage0: 'off', playground: false, compareEditor: false,
+        brochure: true, fast: true, pages: 2, noCustomBlocks: true, commandLog: false, verbose: false, install: false,
+        models: { design: 'sonnet', build: 'sonnet', repair: 'sonnet' },
+        efforts: {},
+    };
+
+    const report = await runPipeline({ workspaceRoot: workspace, brief: 'a tiny brochure', source: null, options, harness });
+
+    assert.equal(report.outcome.pagesTotal, 2);
+    assert.equal(report.outcome.pagesPassed, 2);
+
+    // Fast mode never calls plan: — plan+author are merged into author:.
+    assert.equal(harness.log.filter((c) => c.id.startsWith('plan:')).length, 0);
+    assert.equal(harness.log.filter((c) => c.id.startsWith('author:')).length, 2);
+
+    // Chrome authored once and spliced around each page's main content.
+    assert.equal(harness.log.filter((c) => c.id === 'chrome_author').length, 1);
+    const tree = JSON.parse(fs.readFileSync(path.join(workspace, 'wordpress/pages/index.block-tree.json'), 'utf8'));
+    assert.equal(tree.blocks[0].attrs.tagName, 'header', 'first block is the shared header');
+    assert.equal(tree.blocks[tree.blocks.length - 1].attrs.tagName, 'footer', 'last block is the shared footer');
+    assert.equal(tree.blocks[1].attrs.tagName, 'main', 'authored sections wrapped in <main>');
+
+    // The mockups still carry the shared chrome (fidelity path unchanged).
+    for (const slug of ['index', 'about']) {
+        const html = fs.readFileSync(path.join(workspace, `mockup/${slug}.html`), 'utf8');
+        assert.match(html, /<header class="site">/, `${slug} has shared header`);
+    }
+
+    // Per-call timings were recorded for the profile report.
+    const timings = JSON.parse(fs.readFileSync(path.join(workspace, 'reports/timings.json'), 'utf8'));
+    assert.ok(timings.harnessCalls.length >= 3, 'harness call log captured');
+    assert.ok(timings.toolCalls.some((c) => c.name === 'build_page'), 'tool call log captured');
+});

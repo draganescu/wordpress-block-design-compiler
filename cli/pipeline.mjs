@@ -8,9 +8,10 @@ import path from 'node:path';
 import { McpToolClient } from './tool-client.mjs';
 import { getHarness } from './harness/index.mjs';
 import { Logger } from './lib/log.mjs';
+import { Semaphore } from './lib/semaphore.mjs';
 import { CommandLog } from './lib/command-log.mjs';
-import { skillContext, HARNESS_PREAMBLE } from './prompts/skill-context.mjs';
-import { writeWs, writeJsonWs } from './steps/helpers.mjs';
+import { skillContext, HARNESS_PREAMBLE, SERIALIZER_CONSTRAINTS } from './prompts/skill-context.mjs';
+import { writeWs, writeJsonWs, judgeParams } from './steps/helpers.mjs';
 import { runStage1Page } from './steps/stage1.mjs';
 import { classifyContent, runContentModel, runHydration } from './steps/stage0.mjs';
 import { runStage2 } from './steps/stage2.mjs';
@@ -29,8 +30,8 @@ function logHarnessEvent(log, e) {
         const cost = typeof e.meta?.costUsd === 'number' ? ` · $${e.meta.costUsd.toFixed(2)}` : '';
         log.ok(`${label(e.id)} done${secs}${cost}`);
     }
-    else if (e.type === 'call:invalid') log.warn(`${label(e.id)} output rejected, retrying`);
-    else if (e.type === 'call:error') log.warn(`${label(e.id)} call failed`);
+    else if (e.type === 'call:invalid') log.warn(`${label(e.id)} output rejected, retrying — ${String(e.error || '').slice(0, 200)}`);
+    else if (e.type === 'call:error') log.warn(`${label(e.id)} call failed${secs} — ${String(e.error || '').slice(0, 200)}`);
 }
 
 const DESIGN_SCHEMA = {
@@ -109,14 +110,28 @@ ${footerHtml}
 `;
 }
 
-// Brief -> a cohesive N-page brochure site. One design-system call locks the
-// shared chrome + CSS + page list; each page's <main> is then generated
-// concurrently and wrapped by the CLI so every page shares the same header,
-// footer, and stylesheet. Static content only — no data model, no custom blocks.
-async function designBrochure(ctx, n) {
-    ctx.log.step(`design · ${n}-page brochure from brief`);
-    const sys = `${HARNESS_PREAMBLE}\n\n${skillContext(['skills/html-to-blocks/references/design-prompt.md'])}`;
+// Core-block chrome vs mockup parity. The design system styles plain elements
+// (a.btn-primary, a.wordmark, nav a); the serialized blocks put those classes
+// on WRAPPERS and add block-library chrome of their own (button-link padding,
+// site-title heading, nav item padding). Every button/nav on every brochure
+// page drifts identically without this — observed as a constant vertical
+// offset ghosting the whole page at 6-8% mismatch. All :where() so any
+// authored rule outranks it.
+const BLOCK_CHROME_PARITY_CSS = `
+/* --- block-chrome parity (seeded; design system owns all visual styling) --- */
+:where(.wp-block-site-title) { margin: 0; font-size: inherit; line-height: inherit; }
+:where(.wp-block-site-title a) { color: inherit; text-decoration: inherit; font: inherit; }
+:where(.wp-block-navigation a.wp-block-navigation-item__content) { padding: 0; }
+:where(.wp-block-button > .wp-block-button__link) {
+    all: unset; cursor: pointer; display: inline; text-align: inherit;
+}
+`;
 
+const DESIGN_SYS = () => `${HARNESS_PREAMBLE}\n\n${skillContext(['skills/html-to-blocks/references/design-prompt.md'])}`;
+
+// One design-system call locks the shared chrome + CSS + page list for the
+// whole brochure. Returns the site payload plus the normalized page list.
+async function siteDesignStep(ctx, n) {
     const sitePrompt = [
         `Design a cohesive ${n}-page brochure website from the brief. Return the shared design system and the page list.`,
         `- pages: EXACTLY ${n} entries { slug, title, purpose }. The FIRST page is the home page; give it slug "index". Use short kebab-case slugs for the rest (e.g. about, services, work, contact).`,
@@ -127,7 +142,7 @@ async function designBrochure(ctx, n) {
         '\nReturn { pages, sharedCss, headerHtml, footerHtml, designNotes? }.',
     ].join('\n');
 
-    const site = await ctx.harness.complete({ id: 'site_design', systemPrompt: sys, prompt: sitePrompt, schema: SITE_DESIGN_SCHEMA, model: ctx.options.model });
+    const site = await ctx.harness.complete({ id: 'site_design', systemPrompt: DESIGN_SYS(), prompt: sitePrompt, schema: SITE_DESIGN_SCHEMA, ...judgeParams(ctx, 'design') });
     if (!site.ok) throw new Error(`site_design failed — ${site.error}`);
 
     let pages = (site.data.pages || []).slice(0, n);
@@ -135,31 +150,120 @@ async function designBrochure(ctx, n) {
     // Guarantee a stable home slug so foundation detection + front page are clean.
     pages[0] = { ...pages[0], slug: 'index' };
     writeWs(ctx.workspaceRoot, 'mockup/style.css', site.data.sharedCss || '');
+    // The rendered and editor surfaces link wordpress/style.css, not the mockup
+    // stylesheet. In import flows that separation is the point (the theme must
+    // own the styles it lifts) — but the brochure design system is OUR generated
+    // CSS, shared by every page. Seed it deterministically so pages start at
+    // near-parity instead of asking the repair loop to re-derive a design
+    // system per page, one multi-minute LLM call at a time.
+    writeWs(ctx.workspaceRoot, 'wordpress/style.css', `${site.data.sharedCss || ''}\n${BLOCK_CHROME_PARITY_CSS}`);
     if (site.data.designNotes) writeWs(ctx.workspaceRoot, 'plan/design-notes.md', `${site.data.designNotes}\n`);
-
-    const pageList = pages.map((p) => `${p.slug}.html — ${p.title}`).join('; ');
-    await Promise.all(pages.map(async (p) => {
-        const prompt = [
-            `Write the <main> content for the "${p.title}" page (slug "${p.slug}") of this brochure site.`,
-            `Page purpose: ${p.purpose}`,
-            'Reuse the shared design system below; only add page-specific CSS in extraCss when needed. Static content only — no forms or data grids.',
-            `Link to other pages by "<slug>.html" where relevant. All pages: ${pageList}.`,
-            `\nBRIEF:\n${ctx.brief}`,
-            `\nSHARED CSS (already linked as style.css — do not repeat it):\n${site.data.sharedCss}`,
-            `\nSHARED HEADER (already on the page):\n${site.data.headerHtml}`,
-            '\nReturn { mainHtml, extraCss? }.',
-        ].join('\n');
-        const res = await ctx.harness.complete({ id: `page_design:${p.slug}`, systemPrompt: sys, prompt, schema: PAGE_DESIGN_SCHEMA, model: ctx.options.model });
-        if (!res.ok) throw new Error(`page_design:${p.slug} failed — ${res.error}`);
-        const html = assembleBrochurePage({
-            title: p.title, headerHtml: site.data.headerHtml, footerHtml: site.data.footerHtml,
-            mainHtml: res.data.mainHtml, extraCss: res.data.extraCss,
-        });
-        writeWs(ctx.workspaceRoot, `mockup/${p.slug}.html`, html);
-    }));
-
-    ctx.pages = pages.map((p, i) => pageEntry(p.slug, { primary: i === 0 }));
     ctx.log.info(`brochure pages: ${pages.map((p) => p.slug).join(', ')}`);
+    return { site: site.data, pages };
+}
+
+// One page's <main>, wrapped with the shared chrome into mockup/<slug>.html.
+async function pageDesignStep(ctx, site, p, pageList) {
+    const prompt = [
+        `Write the <main> content for the "${p.title}" page (slug "${p.slug}") of this brochure site.`,
+        `Page purpose: ${p.purpose}`,
+        'Reuse the shared design system below; only add page-specific CSS in extraCss when needed. Static content only — no forms or data grids.',
+        `Link to other pages by "<slug>.html" where relevant. All pages: ${pageList}.`,
+        `\nBRIEF:\n${ctx.brief}`,
+        `\nSHARED CSS (already linked as style.css — do not repeat it):\n${site.sharedCss}`,
+        `\nSHARED HEADER (already on the page):\n${site.headerHtml}`,
+        '\nReturn { mainHtml, extraCss? }.',
+    ].join('\n');
+    const res = await ctx.harness.complete({ id: `page_design:${p.slug}`, systemPrompt: DESIGN_SYS(), prompt, schema: PAGE_DESIGN_SCHEMA, ...judgeParams(ctx, 'design') });
+    if (!res.ok) throw new Error(`page_design:${p.slug} failed — ${res.error}`);
+    const html = assembleBrochurePage({
+        title: p.title, headerHtml: site.headerHtml, footerHtml: site.footerHtml,
+        mainHtml: res.data.mainHtml, extraCss: res.data.extraCss,
+    });
+    writeWs(ctx.workspaceRoot, `mockup/${p.slug}.html`, html);
+}
+
+// Brief -> a cohesive N-page brochure site. One design-system call locks the
+// shared chrome + CSS + page list; each page's <main> is then generated
+// concurrently and wrapped by the CLI so every page shares the same header,
+// footer, and stylesheet. Static content only — no data model, no custom blocks.
+async function designBrochure(ctx, n) {
+    ctx.log.step(`design · ${n}-page brochure from brief`);
+    const { site, pages } = await siteDesignStep(ctx, n);
+    const pageList = pages.map((p) => `${p.slug}.html — ${p.title}`).join('; ');
+    await Promise.all(pages.map((p) => pageDesignStep(ctx, site, p, pageList)));
+    ctx.pages = pages.map((p, i) => pageEntry(p.slug, { primary: i === 0 }));
+}
+
+// The brochure chrome (header + footer) is IDENTICAL on every page — the CLI
+// assembles the mockups that way. Author its block form ONCE per run and let
+// the CLI splice it around each page's <main> tree: five authors stop
+// re-deriving (or forgetting) the same header, cross-page chrome is identical
+// by construction, and each author's output shrinks.
+const CHROME_SCHEMA = {
+    type: 'object', additionalProperties: false, required: ['headerBlocks', 'footerBlocks'],
+    properties: {
+        headerBlocks: { type: 'array' },
+        footerBlocks: { type: 'array' },
+        chromeCss: { type: 'string' },
+    },
+};
+
+async function chromeAuthorStep(ctx, site) {
+    const sys = `${HARNESS_PREAMBLE}\n\n${SERIALIZER_CONSTRAINTS}\n\n${skillContext(['skills/html-to-blocks/references/core-block-selection.md'])}`;
+    const prompt = [
+        'Author the shared site chrome as core-block trees: the <header> and <footer> below, faithfully.',
+        'headerBlocks: an array with ONE core/group (tagName "header", same className as the mockup header) containing core/site-title and core/navigation (core/navigation-link children for every nav item, label/url verbatim) plus any other header elements (buttons etc.).',
+        'On core/navigation set overlayMenu to match the mockup CSS: "mobile" if the shared CSS collapses the nav behind a hamburger at small widths, otherwise "never".',
+        'footerBlocks: an array with ONE core/group (tagName "footer", mockup className) reproducing the footer content with core group/columns/paragraph blocks.',
+        'Reuse the shared CSS class names verbatim; chromeCss is ONLY for chrome-specific rules the shared stylesheet cannot express through those classes.',
+        `\nHEADER HTML:\n${site.headerHtml}`,
+        `\nFOOTER HTML:\n${site.footerHtml}`,
+        `\nSHARED CSS (already linked on every page):\n${clipText(site.sharedCss, 60000)}`,
+        '\nReturn { headerBlocks, footerBlocks, chromeCss? }.',
+    ].join('\n');
+    const res = await ctx.harness.complete({ id: 'chrome_author', systemPrompt: sys, prompt, schema: CHROME_SCHEMA, ...judgeParams(ctx, 'build') });
+    if (!res.ok) {
+        ctx.log.warn(`chrome_author failed (${res.error}); page authors will emit full pages`);
+        return null;
+    }
+    if (res.data.chromeCss && res.data.chromeCss.trim()) {
+        const file = path.join(ctx.workspaceRoot, 'wordpress/style.css');
+        fs.appendFileSync(file, `\n/* --- chrome-specific (chrome_author) --- */\n${res.data.chromeCss}\n`);
+    }
+    return { headerBlocks: res.data.headerBlocks || [], footerBlocks: res.data.footerBlocks || [] };
+}
+
+function clipText(text, max) {
+    if (!text) return '';
+    return text.length <= max ? text : `${text.slice(0, max)}\n/* …truncated… */`;
+}
+
+// Fast brochure path: pages share no custom blocks, so nothing forces the
+// foundation-first barrier or the "design everything, then build everything"
+// phasing. After the one site_design call, every page runs its own
+// design -> analyze -> author -> repair chain concurrently; wall time is the
+// slowest page, not the sum of phases. Gates and thresholds are unchanged.
+async function runBrochureFast(ctx, n) {
+    ctx.log.step(`design+build · ${n}-page brochure from brief (fast: pipelined pages)`);
+    const { site, pages } = await siteDesignStep(ctx, n);
+    const pageList = pages.map((p) => `${p.slug}.html — ${p.title}`).join('; ');
+    ctx.pages = pages.map((p, i) => pageEntry(p.slug, { primary: i === 0 }));
+
+    // Chrome authors once, concurrently with the page-design fan-out — the
+    // page authors only need it at tree-assembly time, minutes from now.
+    ctx.shared.chromePromise = chromeAuthorStep(ctx, site);
+
+    return Promise.all(pages.map(async (p, i) => {
+        const entry = ctx.pages[i];
+        try {
+            await pageDesignStep(ctx, site, p, pageList);
+        } catch (err) {
+            ctx.log.error(`[${entry.page}] design errored: ${err?.message || err}`);
+            return { page: entry.page, status: 'errored', passed: false, error: String(err?.message || err) };
+        }
+        return safePage(ctx, entry, { foundation: i === 0, fastAuthor: true });
+    }));
 }
 
 async function designMockup(ctx) {
@@ -171,7 +275,7 @@ async function designMockup(ctx) {
         `\nBRIEF:\n${ctx.brief}`,
         '\nReturn { html, css, js? }.',
     ].join('\n');
-    const res = await ctx.harness.complete({ id: 'design_mockup', systemPrompt: sys, prompt, schema: DESIGN_SCHEMA, model: ctx.options.model });
+    const res = await ctx.harness.complete({ id: 'design_mockup', systemPrompt: sys, prompt, schema: DESIGN_SCHEMA, ...judgeParams(ctx, 'design') });
     if (!res.ok) throw new Error(`design_mockup failed — ${res.error}`);
     writeWs(ctx.workspaceRoot, 'mockup/index.html', res.data.html);
     writeWs(ctx.workspaceRoot, 'mockup/style.css', res.data.css);
@@ -252,15 +356,32 @@ export async function runPipeline({ workspaceRoot, brief = '', source = null, op
 
     const ctx = {
         client, harness, log, workspaceRoot, brief, options,
+        judge: {
+            design: { model: options.models?.design, effort: options.efforts?.design },
+            build: { model: options.models?.build, effort: options.efforts?.build },
+            repair: { model: options.models?.repair, effort: options.efforts?.repair },
+        },
         pages: [], shared: { customBlocks: [] },
+        // build_page runs serializer CPU + three browser surfaces per call; N
+        // unbounded concurrent builds starve the editor capture into 60s
+        // waitForSelector timeouts (observed at concurrency 5). Bound it
+        // independently of the claude-session semaphore.
+        buildSemaphore: new Semaphore(Math.max(1, Number(options.buildConcurrency || 2))),
     };
     const report = { workspaceRoot, startedAt: new Date().toISOString(), stages: {}, harness: options.harness };
 
     try {
-        const { foundation, rest } = await setup(ctx, source);
-
-        if (options.stages.has(1)) {
-            report.stages.stage1 = await runStage1(ctx, foundation, rest);
+        // Fast brochure runs fuse design + Stage 1 into one per-page pipeline;
+        // everything else keeps the phased setup -> stage1 order.
+        const fastBrochure = Boolean(options.fast && options.brochure && !source && options.stages.has(1));
+        if (fastBrochure) {
+            await ctx.client.call('create_workspace', { workspaceRoot: ctx.workspaceRoot, prompt: ctx.brief || 'html-to-blocks run', force: true });
+            report.stages.stage1 = await runBrochureFast(ctx, options.pages);
+        } else {
+            const { foundation, rest } = await setup(ctx, source);
+            if (options.stages.has(1)) {
+                report.stages.stage1 = await runStage1(ctx, foundation, rest);
+            }
         }
 
         if (options.stages.has(0)) {
@@ -295,6 +416,16 @@ export async function runPipeline({ workspaceRoot, brief = '', source = null, op
         writeJsonWs(workspaceRoot, 'reports/run-report.json', report);
         return report;
     } finally {
+        // Always leave the time profile behind, even when the run crashed —
+        // failed runs are exactly the ones worth profiling.
+        try {
+            writeJsonWs(workspaceRoot, 'reports/timings.json', {
+                startedAt: report.startedAt,
+                wroteAt: new Date().toISOString(),
+                harnessCalls: harness.callLog || [],
+                toolCalls: client.callLog || [],
+            });
+        } catch { /* profiling must never mask the real outcome */ }
         await client.close();
     }
 }

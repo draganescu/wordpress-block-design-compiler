@@ -2,9 +2,9 @@
 // scaffold + validate are tools; the two judgment calls are the theme plan
 // (whose structured output IS the scaffold args) and the gate repairs.
 
-import { skillContext, HARNESS_PREAMBLE, SERIALIZER_CONSTRAINTS } from '../prompts/skill-context.mjs';
+import { skillContext, HARNESS_PREAMBLE, HARNESS_PREAMBLE_VISION, SERIALIZER_CONSTRAINTS } from '../prompts/skill-context.mjs';
 import { runBoundedLoop } from '../loops.mjs';
-import { readWs, readJsonWs, writeWs, writeJsonWs } from './helpers.mjs';
+import { readWs, readJsonWs, writeWs, writeJsonWs, judgeParams } from './helpers.mjs';
 
 const THEME_PLAN_SCHEMA = {
     type: 'object', additionalProperties: false,
@@ -74,19 +74,28 @@ const GATE_SYS = () => `${HARNESS_PREAMBLE}\n\n${skillContext([
     'skills/blocks-to-theme/references/playground-gate.md',
 ])}`;
 
+const GATE_VISION_SYS = () => `${HARNESS_PREAMBLE_VISION}\n\n${skillContext([
+    'skills/blocks-to-theme/SKILL.md',
+    'skills/blocks-to-theme/references/playground-gate.md',
+])}`;
+
 async function themePlanStep(ctx, evidence, parts) {
     const manifest = ctx.pages.map((p) => ({ page: p.page, sourceFile: p.sourceFile, primary: p.primary }));
     const prompt = [
         'Produce the WordPress block theme plan. Your JSON IS the scaffold_block_theme argument object.',
         'Build the token map from the ranked evidence. Every non-media/pseudo/position/blend/grid/interaction/selector CSS rule must lift into theme.json (lift-first gate). No template part without a cited occurrence group.',
         'templates must include index plus generic archive/single/404. pages entries: { page, slug, title, front?, stripIndexes?, sourceFile }. Set sourceFile to the original mockup filename so cross-page links resolve.',
+        'EXACT SHAPES — scaffold rejects anything else, so copy these patterns literally:',
+        '  parts: [{"slug":"header","area":"header","source":{"page":"index","index":0}}, {"slug":"footer","area":"footer","source":{"page":"index","index":2}}] — source.index is the ZERO-BASED position of that block among the page\'s top-level blocks (header is usually 0, footer usually the last index, e.g. 2 of 3 blocks); negative indexes are invalid.',
+        '  templates: {"index":[{"type":"part","slug":"header"},{"type":"tree","blocks":[]},{"type":"part","slug":"footer"}]} — EVERY template value is an ARRAY of {type:"part"|"tree"} entries; never true/false, never a string, never a bare object.',
+        '  pages: [{"page":"index","slug":"home","title":"Home","front":true,"sourceFile":"index.html"}]',
         `\nPAGE MANIFEST:\n${JSON.stringify(manifest, null, 0)}`,
         `\nTHEME EVIDENCE (ranked summary):\n${JSON.stringify(evidence, null, 0)}`,
         `\nTEMPLATE-PART EVIDENCE:\n${JSON.stringify(parts, null, 0)}`,
         '\nReturn the theme plan JSON.',
     ].join('\n');
 
-    const res = await ctx.harness.complete({ id: 'theme_plan', systemPrompt: PLAN_SYS(), prompt, schema: THEME_PLAN_SCHEMA, model: ctx.options.model });
+    const res = await ctx.harness.complete({ id: 'theme_plan', systemPrompt: PLAN_SYS(), prompt, schema: THEME_PLAN_SCHEMA, ...judgeParams(ctx, 'build') });
     if (!res.ok) throw new Error(`theme_plan failed — ${res.error}`);
     if (res.data.themePlanMd) writeWs(ctx.workspaceRoot, 'plan/theme-plan.md', res.data.themePlanMd);
     return res.data;
@@ -124,7 +133,7 @@ async function scaffoldWithFix(ctx, plan, fontFamilies) {
             ctx.log.warn(`scaffold rejected the theme plan (attempt ${iter}): ${err.message.split('\n')[0]}`);
             if (iter === ctx.options.maxRepair) throw err;
             const fix = await ctx.harness.complete({
-                id: `theme_plan_fix:${iter}`, systemPrompt: PLAN_SYS(), schema: THEME_PLAN_SCHEMA, model: ctx.options.model,
+                id: `theme_plan_fix:${iter}`, systemPrompt: PLAN_SYS(), schema: THEME_PLAN_SCHEMA, ...judgeParams(ctx, 'repair'),
                 prompt: [
                     'scaffold_block_theme rejected your theme plan. Return the FULL corrected plan JSON (same schema).',
                     'The error text below states the exact expected shapes — conform to them precisely.',
@@ -157,7 +166,7 @@ async function validateLoop(ctx, slug) {
             `\nCURRENT theme.json:\n${JSON.stringify(themeJson)}`,
             `\nCURRENT theme style.css:\n${themeCss.slice(0, 60000)}`,
         ].join('\n');
-        const res = await ctx.harness.complete({ id: `theme_fix:${iter}`, systemPrompt: GATE_SYS(), prompt, schema: THEME_FIX_SCHEMA, model: ctx.options.model });
+        const res = await ctx.harness.complete({ id: `theme_fix:${iter}`, systemPrompt: GATE_SYS(), prompt, schema: THEME_FIX_SCHEMA, ...judgeParams(ctx, 'repair') });
         if (!res.ok) return { passed: false, iters: iter, errors, note: res.error };
         applyThemeFix(ctx, slug, res.data);
     }
@@ -189,14 +198,23 @@ async function playgroundGate(ctx, slug) {
         repair: async (report, iter) => {
             const themeJson = readJsonWs(ctx.workspaceRoot, `theme/${slug}/theme.json`);
             const themeCss = readWs(ctx.workspaceRoot, `theme/${slug}/style.css`);
+            const images = (report.pages || [])
+                .flatMap((p) => (p.results || []).flatMap((r) => [r.diff, r.mockup, r.candidate]))
+                .filter((v, i, a) => v && a.indexOf(v) === i)
+                .slice(0, 6);
             const prompt = [
                 'Repair the block theme so every page passes the Playground gate at both viewports.',
-                'Edit ONLY theme.json and the theme style.css — never the content payloads. Return the full corrected file(s).',
+                'FIRST Read the diff screenshots below to see the concrete visual differences, then edit ONLY theme.json and/or the theme style.css — never the content payloads. Return only the file(s) you changed (omit the other).',
+                images.length ? `\nSCREENSHOTS (Read these; diff images show mismatching pixels in red):\n${images.join('\n')}` : '',
                 `\nGATE REPORT:\n${JSON.stringify({ passed: report.passed, aggregates: report.aggregates, pages: report.pages }, null, 0)}`,
                 `\nCURRENT theme.json:\n${JSON.stringify(themeJson)}`,
                 `\nCURRENT theme style.css:\n${themeCss.slice(0, 60000)}`,
             ].join('\n');
-            const res = await ctx.harness.complete({ id: `theme_repair:${iter}`, systemPrompt: GATE_SYS(), prompt, schema: THEME_FIX_SCHEMA, model: ctx.options.model });
+            const res = await ctx.harness.complete({
+                id: `theme_repair:${iter}`, systemPrompt: images.length ? GATE_VISION_SYS() : GATE_SYS(), prompt, schema: THEME_FIX_SCHEMA,
+                allowedTools: images.length ? ['Read'] : undefined, maxTurns: 24,
+                ...judgeParams(ctx, 'repair'),
+            });
             if (!res.ok) { ctx.log.warn(`[theme] repair ${iter} failed: ${res.error}`); return false; }
             applyThemeFix(ctx, slug, res.data);
             return true;

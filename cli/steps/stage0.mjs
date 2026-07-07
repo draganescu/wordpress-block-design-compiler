@@ -4,7 +4,7 @@
 // stand-ins are hydrated into real core/query loops AFTER the Stage 1 gate.
 
 import { skillContext, HARNESS_PREAMBLE } from '../prompts/skill-context.mjs';
-import { readJsonWs, writeJsonWs, writeWs } from './helpers.mjs';
+import { readJsonWs, writeJsonWs, writeWs, judgeParams } from './helpers.mjs';
 
 const CLASSIFY_SCHEMA = {
     type: 'object', additionalProperties: false, required: ['needed'],
@@ -38,7 +38,7 @@ export async function classifyContent(ctx) {
         `\nBRIEF:\n${ctx.brief}`,
         `\nPER-PAGE INVENTORY:\n${JSON.stringify(inventorySummary(ctx), null, 0)}`,
     ].join('\n');
-    const res = await ctx.harness.complete({ id: 'classify_content', systemPrompt: HARNESS_PREAMBLE, prompt, schema: CLASSIFY_SCHEMA, model: ctx.options.model });
+    const res = await ctx.harness.complete({ id: 'classify_content', systemPrompt: HARNESS_PREAMBLE, prompt, schema: CLASSIFY_SCHEMA, ...judgeParams(ctx, 'build') });
     if (!res.ok) { ctx.log.warn(`classify_content failed (${res.error}); assuming no content model`); return false; }
     ctx.log.info(`content model ${res.data.needed ? 'needed' : 'not needed'}: ${res.data.reason || ''}`);
     return Boolean(res.data.needed);
@@ -58,7 +58,7 @@ export async function runContentModel(ctx) {
         `\nPER-PAGE INVENTORY:\n${JSON.stringify(inventorySummary(ctx), null, 0)}`,
         '\nReturn { contentModel, notes }.',
     ].join('\n');
-    const res = await ctx.harness.complete({ id: 'content_model', systemPrompt: MODEL_SYS(), prompt, schema: MODEL_SCHEMA, model: ctx.options.model });
+    const res = await ctx.harness.complete({ id: 'content_model', systemPrompt: MODEL_SYS(), prompt, schema: MODEL_SCHEMA, ...judgeParams(ctx, 'build') });
     if (!res.ok) throw new Error(`content_model failed — ${res.error}`);
     writeJsonWs(ctx.workspaceRoot, 'content-model/content-model.json', res.data.contentModel);
     if (res.data.notes) writeWs(ctx.workspaceRoot, 'content-model/content-model.md', `${res.data.notes}\n`);
@@ -71,7 +71,7 @@ export async function runContentModel(ctx) {
         if (iter === ctx.options.maxRepair) { ctx.log.error('content model did not validate'); return { valid: false }; }
         const model = readJsonWs(ctx.workspaceRoot, 'content-model/content-model.json');
         const fix = await ctx.harness.complete({
-            id: `content_model_fix:${iter}`, systemPrompt: MODEL_SYS(), model: ctx.options.model,
+            id: `content_model_fix:${iter}`, systemPrompt: MODEL_SYS(), ...judgeParams(ctx, 'build'),
             schema: { type: 'object', additionalProperties: false, required: ['contentModel'], properties: { contentModel: { type: 'object' } } },
             prompt: `Fix the content model so validate_content_model has zero errors.\n\nERRORS:\n${JSON.stringify(report.errors, null, 0)}\n\nCURRENT MODEL:\n${JSON.stringify(model)}`,
         });

@@ -29,6 +29,19 @@ export function exists(ws, rel) {
     return fs.existsSync(path.join(ws, rel));
 }
 
+// Model/effort routing for a judgment call, by role: 'design' (mockup/site
+// aesthetics), 'build' (plan/author/theme plan), 'repair' (fix loops).
+// Falls back to the single --model override so old option objects keep working.
+export function judgeParams(ctx, role) {
+    const roles = ctx.judge || {};
+    const p = roles[role] || {};
+    const out = {};
+    const model = p.model || ctx.options?.model;
+    if (model) out.model = model;
+    if (p.effort) out.effort = p.effort;
+    return out;
+}
+
 // Inline large source safely: cap the size so a pathological mockup can't blow
 // the context, and flag when we trimmed so the model knows it's partial.
 export function clip(text, max = 120000) {
@@ -67,9 +80,28 @@ export function planToMarkdown(plan, page) {
 // Normalize a model-authored block tree to the { version, contract, blocks }
 // envelope the serializer expects, accepting either a bare array or the envelope.
 export function normalizeTree(blockTree) {
-    if (Array.isArray(blockTree)) return { version: 2, contract: 'data-only', blocks: blockTree };
-    if (blockTree && Array.isArray(blockTree.blocks)) {
-        return { version: 2, contract: 'data-only', ...blockTree };
+    let tree;
+    if (Array.isArray(blockTree)) tree = { version: 2, contract: 'data-only', blocks: blockTree };
+    else if (blockTree && Array.isArray(blockTree.blocks)) tree = { version: 2, contract: 'data-only', ...blockTree };
+    else throw new Error('author step returned a block tree without a blocks array');
+    hardenBlocks(tree.blocks);
+    return tree;
+}
+
+// Deterministic attribute guarantees the editor canvas depends on. A
+// core/navigation without attrs.layout makes the editor's getOrientation read
+// `layout.orientation` of undefined, throwing repeatedly and collapsing the
+// whole canvas render (observed: editor screenshots reduced to background
+// bands). Guarantee it in code — never trust each authored tree to remember.
+function hardenBlocks(blocks) {
+    for (const b of blocks || []) {
+        if (!b || typeof b !== 'object') continue;
+        if (b.blockName === 'core/navigation') {
+            b.attrs = b.attrs || {};
+            if (!b.attrs.layout || typeof b.attrs.layout !== 'object') {
+                b.attrs.layout = { type: 'flex', orientation: 'horizontal' };
+            }
+        }
+        hardenBlocks(b.innerBlocks);
     }
-    throw new Error('author step returned a block tree without a blocks array');
 }

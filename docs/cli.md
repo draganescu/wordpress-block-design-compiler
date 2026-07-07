@@ -52,12 +52,18 @@ node cli/index.mjs run --brief @brief.md --workspace ./runs/acme
 | `--stages 0,1,2` | `0,1,2` | Which stages to run |
 | `--stage0 auto\|on\|off` | `auto` | Content-modeling gate (auto = a classify step decides) |
 | `--harness claude\|mock` | `claude` | Judgment backend |
-| `--model <id>` | account default | Model for judgment calls (e.g. a cheaper model to cut cost) |
-| `--concurrency <n>` | `3` | Max parallel `claude -p` sessions (page fan-out) |
+| `--model <id>` | `sonnet` | Model for judgment calls. Always pinned explicitly — the account CLI default is never inherited, and fable-class models are refused (a flagship default makes single calls outlast their own timeout). |
+| `--fast` | — | Speed preset — see Fast mode below. Same gates and thresholds. |
+| `--model-design <id>` | `--model` | Model for design steps (`site_design`, `page_design`, `design_mockup`) |
+| `--model-build <id>` | `--model` | Model for build steps (plan, author, theme plan) |
+| `--model-repair <id>` | `--model` | Model for repair/fix loops |
+| `--effort <level>` | account default | `claude -p --effort` for all judgment calls (`low`…`max`) |
+| `--effort-design/build/repair <level>` | `--effort` | Per-role effort override |
+| `--concurrency <n>` | `3` (`6` fast) | Max parallel `claude -p` sessions (page fan-out) |
 | `--max-repair <n>` | `6` | Repair/gate loop cap per page and per theme |
 | `--call-timeout <s>` | `600` | Per `claude -p` call timeout in seconds |
-| `--threshold-mismatch <n>` | `1` | Pixel mismatch % gate |
-| `--threshold-height <n>` | `8` | Height delta px gate |
+| `--threshold-mismatch <n>` | `1` (`10` brochure) | Pixel mismatch % gate |
+| `--threshold-height <n>` | `8` (`100` brochure) | Height delta px gate |
 | `--no-editor` | — | Skip the editor-surface comparison (offline/faster) |
 | `--no-playground` | — | Skip the Stage 2 Playground gate |
 | `--no-command-log` | — | Don't write `reports/commands.log` |
@@ -117,6 +123,37 @@ content needs no content model. Stage 2 still builds the installable theme.
 This is a prompt-only shortcut: with `--source`, `--brochure` is ignored (with a
 warning) because an import must respect the site you provided. `--no-custom-blocks`
 is available on its own if you want core-only output without the brochure design flow.
+
+## Fast mode
+
+`--fast` cuts wall-clock time without touching the fidelity gates (mismatch/height
+thresholds, editor comparison, and the Playground gate all stay on):
+
+```bash
+node cli/index.mjs run --brief "a wine bar in Lisbon" --brochure --fast --workspace ./runs/tinta
+```
+
+What it changes:
+
+- **Judgment calls default to a fast model** (`sonnet`) instead of the account's
+  CLI default (often the largest, slowest model). Pin any role separately with
+  `--model-design` / `--model-build` / `--model-repair`.
+- **Brochure pages are pipelined end-to-end.** After the one `site_design` call,
+  each page runs its own `page_design → analyze → author → repair` chain
+  concurrently — no "design all pages, then build all pages" barrier, and no
+  foundation-first wait (brochure pages share no custom blocks, so there is
+  nothing for a foundation page to lock).
+- **Plan+author are merged** for core-blocks-only pages: the plan step's output
+  feeds nothing downstream when custom blocks are off, so the author call plans
+  internally and one judgment call per page disappears.
+- **Concurrency defaults to 6** so a 5-page site's chains actually overlap.
+
+Every run (fast or not) also writes **`reports/timings.json`** — per-judgment-call
+and per-tool-call timing records. Summarize one or more runs with:
+
+```bash
+node tools/profile/timings-summary.mjs runs/<workspace> [runs/<other> ...]
+```
 
 ## Serve the result
 

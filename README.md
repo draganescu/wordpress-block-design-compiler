@@ -101,6 +101,7 @@ node cli/index.mjs doctor                                   # verify/install set
 node cli/index.mjs run --source ./site-export --workspace ./runs/acme
 node cli/index.mjs run --brief @brief.md --workspace ./runs/acme --stages 1
 node cli/index.mjs run --brief "wine bar in Lisbon" --brochure --workspace ./runs/tinta
+node cli/index.mjs run --brief "wine bar in Lisbon" --brochure --fast --workspace ./runs/tinta   # speed preset, same gates
 node cli/index.mjs serve --workspace ./runs/acme            # boot the built theme in WordPress to look at it
 ```
 
@@ -109,6 +110,7 @@ It needs the `claude` CLI on PATH (and `claude login`); it provisions the rest (
 A few things worth knowing:
 
 - **`--brochure`** (brief only) builds a minimal multi-page brochure site — a cohesive N-page static site (default 5, `--pages`) with shared header/nav/footer and one design system, and **no content model and no custom blocks**. It's a prompt-only shortcut; with `--source` it's ignored, because an import must respect the site you gave it.
+- **`--fast`** is the speed preset: judgment calls route to a fast model (`sonnet`), brochure pages run their design→build→repair chains fully in parallel (plan+author merged, no foundation barrier), concurrency rises to 6. The fidelity gates and thresholds are unchanged — see `docs/cli.md` (“Fast mode”) for per-role `--model-*`/`--effort-*` overrides.
 - **`wbdc serve`** boots the built block theme plus the generated blocks/content/CPT plugins in WordPress Playground and imports the pages, then leaves it running so you can open it in a browser (`http://127.0.0.1:9400/` by default).
 - **Structured every step.** Each `claude -p` call is single-turn (`--allowedTools ""`) with a JSON Schema (`--json-schema`), re-validated locally and retried once — so a step returns the one artifact the next step needs, never a tool-using detour.
 - **Bounded, honest loops.** Repair and gate loops stop on pass, plateau, or a cap and report blocked pages with metrics rather than grinding; a page or stage that fails is recorded, not a crash.

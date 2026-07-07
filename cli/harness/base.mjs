@@ -18,13 +18,16 @@ export class BaseHarness {
         this.onCommand = onCommand || (() => {});
         this.calls = 0;
         this.costUsd = 0;
+        // Per-call timing/outcome records (written to reports/timings.json by the
+        // pipeline) so every run leaves an objective time profile behind.
+        this.callLog = [];
     }
 
     // One logical judgment step. Enforces the schema locally (belt-and-suspenders
     // over the harness's native structured output) and retries exactly once with
     // the validation error appended, so a single malformed reply never wedges the
     // pipeline into an open-ended loop.
-    async complete({ id, systemPrompt, prompt, schema, model, timeoutMs } = {}) {
+    async complete({ id, systemPrompt, prompt, schema, model, effort, timeoutMs, allowedTools, maxTurns } = {}) {
         return this.semaphore.run(async () => {
             const useModel = model || this.model;
             const useTimeout = timeoutMs || this.timeoutMs;
@@ -50,7 +53,7 @@ export class BaseHarness {
                 try {
                     res = await this._invoke({
                         id, attempt, systemPrompt, prompt: effectivePrompt, schema,
-                        model: useModel, timeoutMs: useTimeout,
+                        model: useModel, effort, timeoutMs: useTimeout, allowedTools, maxTurns,
                     });
                 } finally {
                     clearInterval(beat);
@@ -58,10 +61,21 @@ export class BaseHarness {
                 res.meta = { ...(res.meta || {}), elapsedMs: Date.now() - started };
                 lastRaw = res.raw;
                 if (typeof res.meta?.costUsd === 'number') this.costUsd += res.meta.costUsd;
+                this.callLog.push({
+                    id, attempt,
+                    startedAt: new Date(started).toISOString(),
+                    elapsedMs: res.meta.elapsedMs,
+                    ok: Boolean(res.ok),
+                    timedOut: Boolean(res.timedOut),
+                    error: res.ok ? undefined : String(res.error || '').slice(0, 300),
+                    costUsd: res.meta?.costUsd,
+                    apiDurationMs: res.meta?.durationMs,
+                    model: res.meta?.model,
+                });
 
                 if (!res.ok) {
                     lastError = res.error || 'harness invocation failed';
-                    this.onEvent({ type: 'call:error', id, attempt, error: lastError });
+                    this.onEvent({ type: 'call:error', id, attempt, error: lastError, elapsedMs: res.meta.elapsedMs });
                     // A timeout won't succeed on a re-run with the same prompt — it
                     // just burns another full timeout. Fail fast instead of retrying.
                     if (res.timedOut) return { ok: false, error: lastError, raw: res.raw, attempts: attempt, timedOut: true };
@@ -72,7 +86,7 @@ export class BaseHarness {
 
                 const check = validateAgainstSchema(schema, res.data);
                 if (check.valid) {
-                    this.onEvent({ type: 'call:ok', id, attempt, meta: res.meta });
+                    this.onEvent({ type: 'call:ok', id, attempt, meta: res.meta, elapsedMs: res.meta.elapsedMs });
                     return { ok: true, data: res.data, meta: res.meta, attempts: attempt };
                 }
 

@@ -58,13 +58,48 @@ function parseStages(value) {
 function buildOptions(args) {
     const stages = parseStages(args.stages);
     const brochure = Boolean(args.brochure);
+    const fast = Boolean(args.fast);
+    const str = (v) => (v && v !== true ? String(v) : undefined);
+    // Judgment calls ALWAYS run on an explicitly pinned model — never the
+    // account's CLI default (a flagship default like fable makes single calls
+    // outlast their own timeouts) and never a fable-class model at all.
+    const DEFAULT_JUDGMENT_MODEL = 'sonnet';
+    const noFable = (id) => {
+        if (!id) return undefined;
+        if (/fable/i.test(id)) {
+            process.stderr.write(`\x1b[33mwarn:\x1b[0m model "${id}" is not allowed for judgment calls; using ${DEFAULT_JUDGMENT_MODEL}\n`);
+            return undefined;
+        }
+        return id;
+    };
+    const model = noFable(str(args.model));
+    const effort = str(args.effort);
     return {
         harness: args.harness || 'claude',
-        model: args.model || undefined,
-        concurrency: Math.max(1, Number(args.concurrency || 3)),
+        model: model || DEFAULT_JUDGMENT_MODEL,
+        fast,
+        models: {
+            design: noFable(str(args['model-design'])) || model || DEFAULT_JUDGMENT_MODEL,
+            build: noFable(str(args['model-build'])) || model || DEFAULT_JUDGMENT_MODEL,
+            repair: noFable(str(args['model-repair'])) || model || DEFAULT_JUDGMENT_MODEL,
+        },
+        efforts: {
+            design: str(args['effort-design']) || effort,
+            build: str(args['effort-build']) || effort,
+            repair: str(args['effort-repair']) || effort,
+        },
+        concurrency: Math.max(1, Number(args.concurrency || (fast ? 6 : 3))),
+        buildConcurrency: Math.max(1, Number(args['build-concurrency'] || 2)),
         maxRepair: Math.max(1, Number(args['max-repair'] || 6)),
-        callTimeoutMs: Math.max(30, Number(args['call-timeout'] || 600)) * 1000,
-        thresholds: { mismatch: Number(args['threshold-mismatch'] || 1), height: Number(args['threshold-height'] || 8) },
+        callTimeoutMs: Math.max(30, Number(args['call-timeout'] || (fast ? 900 : 600))) * 1000,
+        // Brochure gates are looser by default: these are generated designs
+        // measured across two surfaces and two viewports, where the practical
+        // floor sits well above the 1% import-fidelity bar. Both remain
+        // explicit flags for stricter runs.
+        thresholds: {
+            mismatch: Number(args['threshold-mismatch'] || (brochure ? 10 : 1)),
+            height: Number(args['threshold-height'] || (brochure ? 100 : 8)),
+        },
         stages,
         // Brochure mode: a minimal N-page static site from a brief — no content
         // model, no custom blocks. Applies to brief starts only (see run below).
@@ -98,12 +133,25 @@ Options:
   --stages 0,1,2             Which stages to run (default: 0,1,2)
   --stage0 auto|on|off       Content-modeling gate (default: auto)
   --harness claude|mock      Judgment backend (default: claude)
-  --model <id>               Model override for judgment calls
-  --concurrency <n>          Max parallel claude sessions (default: 3)
+  --model <id>               Model for judgment calls (default: sonnet; the account
+                             default is NEVER inherited, fable models are refused)
+  --fast                     Speed preset: judgment calls on a fast model (sonnet),
+                             brochure pages pipelined design->build->repair with no
+                             cross-page waits, plan+author merged for core-only pages,
+                             concurrency 6. Fidelity gates and thresholds unchanged.
+  --model-design <id>        Model for design steps (site/page/mockup design)
+  --model-build <id>         Model for build steps (plan, author, theme plan)
+  --model-repair <id>        Model for repair/fix loop steps
+  --effort <level>           claude -p --effort for all judgment calls (low..max)
+  --effort-design <level>    Effort for design steps only
+  --effort-build <level>     Effort for build steps only
+  --effort-repair <level>    Effort for repair steps only
+  --concurrency <n>          Max parallel claude sessions (default: 3; 6 with --fast)
+  --build-concurrency <n>    Max parallel build_page tool calls (default: 2)
   --max-repair <n>           Repair/gate loop cap per page/theme (default: 6)
   --call-timeout <seconds>   Per claude -p call timeout (default: 600)
-  --threshold-mismatch <n>   Pixel mismatch % threshold (default: 1)
-  --threshold-height <n>     Height delta px threshold (default: 8)
+  --threshold-mismatch <n>   Pixel mismatch % gate (default: 1; 10 with --brochure)
+  --threshold-height <n>     Height delta px gate (default: 8; 100 with --brochure)
   --no-editor                Skip the editor-surface comparison (offline/faster)
   --no-playground            Skip the Stage 2 Playground gate
   --no-command-log           Don't write reports/commands.log (verbatim commands)

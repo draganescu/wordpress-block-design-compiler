@@ -1,8 +1,9 @@
 // tools/lib/capture.mjs — Playwright capture + PNG comparison shared by both skills.
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import http from 'node:http';
 import path from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { performance } from 'node:perf_hooks';
 import { isPathInside } from './workspace.mjs';
 import * as profile from './profile.mjs';
@@ -244,6 +245,58 @@ export async function serveDirectory(rootDir) {
     };
 }
 
+// ---- remote-asset disk cache ------------------------------------------------
+// The editor preview pulls ~47 scripts (~2.5 MB) from s.w.org and mockups may
+// @import Google Fonts. Re-fetching them for EVERY capture is the network cost
+// center (see docs/parallelization-plan.md) and, under concurrent builds, the
+// thing that starves `networkidle` into 60s waitForSelector timeouts. These
+// URLs are immutable-versioned (ver= query, hashed font files), so a plain
+// URL-keyed disk cache is safe — and makes captures deterministic offline.
+// Fidelity is unaffected: every surface gets byte-identical assets either way.
+const ASSET_CACHE_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '.asset-cache');
+
+function assetCachePaths(url) {
+    const key = crypto.createHash('sha1').update(url).digest('hex');
+    return {
+        body: path.join(ASSET_CACHE_DIR, `${key}.bin`),
+        meta: path.join(ASSET_CACHE_DIR, `${key}.json`),
+    };
+}
+
+// Attach a cache-first route for remote GETs to a Playwright page. Local hosts
+// (the workspace static server, Playground) are never intercepted. Errors fall
+// through to the live network so the cache can only make things better.
+export async function attachAssetCache(page) {
+    await page.route(/^https?:\/\//, async (route) => {
+        const request = route.request();
+        const url = request.url();
+        if (request.method() !== 'GET' || /^https?:\/\/(127\.0\.0\.1|localhost|0\.0\.0\.0)(:|\/)/i.test(url)) {
+            return route.fallback();
+        }
+        const files = assetCachePaths(url);
+        try {
+            if (fs.existsSync(files.body) && fs.existsSync(files.meta)) {
+                const meta = JSON.parse(fs.readFileSync(files.meta, 'utf8'));
+                return await route.fulfill({
+                    status: 200,
+                    headers: { 'content-type': meta.contentType || 'application/octet-stream' },
+                    body: fs.readFileSync(files.body),
+                });
+            }
+            const response = await route.fetch();
+            const body = await response.body();
+            if (response.status() === 200) {
+                fs.mkdirSync(ASSET_CACHE_DIR, { recursive: true });
+                fs.writeFileSync(files.body, body);
+                fs.writeFileSync(files.meta, JSON.stringify({ url, contentType: response.headers()['content-type'] || '' }));
+            }
+            return await route.fulfill({ response, body });
+        } catch {
+            return route.fallback();
+        }
+    });
+}
+
 function mimeType(filePath) {
     const ext = path.extname(filePath).toLowerCase();
     return {
@@ -271,6 +324,7 @@ export async function captureUrl(browser, url, screenshotPath, viewport, { edito
     // P1: attach network capture only when isNet(); detaches in finally.
     const detachNet = _attachNetCapture(page, meta);
     try {
+        await attachAssetCache(page);
         await page.emulateMedia({ reducedMotion: 'reduce' });
         // page.goto with waitUntil:'networkidle' couples navigation and the
         // networkidle settle into one awaited call, so it carries the full
@@ -433,6 +487,21 @@ export function comparePngs({ target, mockupShot, candidateShot, diffShot, viewp
                 { threshold: 0.1 }
             );
             fs.writeFileSync(diffShot, PNG.sync.write(diff));
+            // Where does the drift START? A constant vertical offset (one early
+            // gap pushing everything below it) ghosts the whole page and reads
+            // as uniform mismatch — the first row with a meaningful density of
+            // differing pixels localizes the culprit for a text-only repairer.
+            let firstDiffY = null;
+            const rowThreshold = Math.max(4, Math.floor(width * 0.005));
+            for (let y = 0; y < height && firstDiffY === null; y += 1) {
+                let rowDiffs = 0;
+                const rowStart = y * width * 4;
+                for (let x = 0; x < width; x += 1) {
+                    // pixelmatch writes red-ish pixels where they differ.
+                    if (diff.data[rowStart + x * 4] > 200 && diff.data[rowStart + x * 4 + 1] < 120) rowDiffs += 1;
+                }
+                if (rowDiffs >= rowThreshold) firstDiffY = y;
+            }
             return {
                 target,
                 viewport: viewport.name,
@@ -445,6 +514,7 @@ export function comparePngs({ target, mockupShot, candidateShot, diffShot, viewp
                 mismatchPercent: Number(((mismatch / (width * height)) * 100).toFixed(2)),
                 widthDelta: Math.abs(mockup.width - candidate.width),
                 heightDelta: Math.abs(mockup.height - candidate.height),
+                firstDiffY,
             };
         },
         {

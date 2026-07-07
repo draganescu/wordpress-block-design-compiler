@@ -9,6 +9,15 @@ for (const method of ['log', 'info', 'warn', 'debug']) {
 }
 
 import fs from 'node:fs';
+
+// WordPress editor assets for the block-editor preview. s.w.org serves
+// UNPINNED trunk builds — upstream drift broke the preview outright on
+// 2026-07-06 ("Cannot unlock an undefined object" during script init). Pin a
+// released WordPress build via the jsDelivr mirror of WordPress/WordPress;
+// tools/lib/capture.mjs caches every fetched asset on disk, so these are a
+// one-time download per version bump.
+const WP_ASSET_BASE = process.env.WBDC_WP_ASSET_BASE
+  || 'https://cdn.jsdelivr.net/gh/WordPress/WordPress@7.0/wp-includes';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import {
@@ -19,7 +28,7 @@ import {
 import {
     DEFAULT_VIEWPORTS, loadCaptureDeps, serveDirectory, capture, captureEditor,
     editorComparisonCss, motionFreezeCss, transientOverlayCaptureCss, comparePngs,
-    launchBrowser,
+    launchBrowser, attachAssetCache,
 } from './lib/capture.mjs';
 import { serializeBlockTreeWithWordPress, stripBlockComments, ensureBlocksRegistered } from './lib/wp-serialize.mjs';
 import { DEFAULT_PREVIEW_CONTEXT, EDITOR_SHIM_BLOCKS } from './lib/dynamic-render.mjs';
@@ -1114,10 +1123,10 @@ function editorPreviewHtml({ workspaceRoot, editorPath, treePath, cssSources }) 
         fallback fonts) and only creates parity drift against the mockup.
       */
       @layer wp-editor, wbdc-parity;
-      @import url("https://s.w.org/wp-includes/css/dist/components/style.min.css") layer(wp-editor);
-      @import url("https://s.w.org/wp-includes/css/dist/block-editor/style.min.css") layer(wp-editor);
-      @import url("https://s.w.org/wp-includes/css/dist/block-editor/content.min.css") layer(wp-editor);
-      @import url("https://s.w.org/wp-includes/css/dist/block-library/style.min.css") layer(wp-editor);
+      @import url("${WP_ASSET_BASE}/css/dist/components/style.min.css") layer(wp-editor);
+      @import url("${WP_ASSET_BASE}/css/dist/block-editor/style.min.css") layer(wp-editor);
+      @import url("${WP_ASSET_BASE}/css/dist/block-editor/content.min.css") layer(wp-editor);
+      @import url("${WP_ASSET_BASE}/css/dist/block-library/style.min.css") layer(wp-editor);
     </style>
     <style>
       @layer wbdc-parity {
@@ -1362,7 +1371,7 @@ function editorPreviewHtml({ workspaceRoot, editorPath, treePath, cssSources }) 
 }
 
 function wordpressBrowserScripts() {
-  const base = 'https://s.w.org/wp-includes/js/dist';
+  const base = `${WP_ASSET_BASE}/js/dist`;
   return [
     `${base}/vendor/react.min.js`,
     `${base}/vendor/react-dom.min.js`,
@@ -1752,6 +1761,7 @@ async function measurePageGeometry(browser, { htmlPath, kind, url, viewport, sel
     deviceScaleFactor: 1,
   });
   try {
+    await attachAssetCache(page);
     await page.emulateMedia({ reducedMotion: 'reduce' });
     if (kind === 'editor') {
       await page.goto(url, { waitUntil: 'networkidle', timeout: 60000 });
@@ -1893,11 +1903,14 @@ function comparisonTasks(results, thresholds) {
       });
     }
     if (result.mismatchPercent > thresholds.maxMismatchPercent) {
+      const firstDiff = typeof result.firstDiffY === 'number'
+        ? ` First divergence starts at y≈${result.firstDiffY}px — if the diff below that point looks like uniformly ghosted text, ONE gap near that y-offset is shifting everything after it; fix that single offset first.`
+        : '';
       tasks.push({
         priority: result.mismatchPercent > thresholds.maxMismatchPercent * 3 ? 'high' : 'medium',
         surface,
         viewport: result.viewport,
-        issue: `${label} pixel mismatch is ${result.mismatchPercent}%.`,
+        issue: `${label} pixel mismatch is ${result.mismatchPercent}%.${firstDiff}`,
         target: result.target === 'editor' ? 'visible editor canvas differences in screenshot diff' : 'visible frontend differences in screenshot diff',
         fix: result.target === 'editor'
           ? 'Inspect mockup/editor/diff images. Write specific tasks for edit component output, missing editable text, wrapper classes, wrong grids, button layout, component scale, color, and typography.'

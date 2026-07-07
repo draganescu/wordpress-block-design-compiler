@@ -26,6 +26,8 @@ export class McpToolClient {
         this.pending = new Map();
         this.ready = null;
         this.closed = false;
+        // Per-tool-call timing records, mirrored into reports/timings.json.
+        this.callLog = [];
     }
 
     async start() {
@@ -53,7 +55,20 @@ export class McpToolClient {
     async call(name, args = {}) {
         if (this.closed) throw new Error(`Tool client is closed; cannot call ${name}.`);
         this.onCommand({ kind: 'tool', name, args });
-        const result = await this._request('tools/call', { name, arguments: args });
+        const started = Date.now();
+        const entry = { name, startedAt: new Date(started).toISOString(), elapsedMs: null, ok: null };
+        this.callLog.push(entry);
+        let result;
+        try {
+            result = await this._request('tools/call', { name, arguments: args });
+            entry.ok = true;
+        } catch (err) {
+            entry.ok = false;
+            entry.error = String(err?.message || err).slice(0, 300);
+            throw err;
+        } finally {
+            entry.elapsedMs = Date.now() - started;
+        }
         // Handlers return arbitrary JSON, wrapped by the server as
         // { content: [{ type: 'text', text: '<json>' }] }. Unwrap it.
         const text = result?.content?.[0]?.text;

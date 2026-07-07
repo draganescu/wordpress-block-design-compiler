@@ -20,16 +20,25 @@ export class ClaudeHarness extends BaseHarness {
         this.bin = opts.bin || 'claude';
     }
 
-    _invoke({ id, attempt, systemPrompt, prompt, schema, model, timeoutMs }) {
+    _invoke({ id, attempt, systemPrompt, prompt, schema, model, effort, timeoutMs, allowedTools, maxTurns }) {
+        // Default: no tools at all => a single-turn pure function. A step may
+        // opt into a narrow tool list (e.g. Read, so a repair call can LOOK at
+        // the mockup/rendered/diff screenshots); cap its turns so it can never
+        // wander into an open-ended agent loop.
         const args = [
             '-p',
             '--output-format', 'json',
-            '--allowedTools', '',
+            '--allowedTools', allowedTools && allowedTools.length ? allowedTools.join(',') : '',
             '--no-session-persistence',
         ];
+        if (allowedTools && allowedTools.length) args.push('--max-turns', String(maxTurns || 10));
         if (schema) args.push('--json-schema', JSON.stringify(schema));
         if (systemPrompt) args.push('--append-system-prompt', systemPrompt);
-        if (model) args.push('--model', model);
+        // Always pin a model: inheriting the account default means judgment
+        // calls silently run on whatever flagship the user chats with (a real
+        // fable-5 default made author calls outlast their own timeout).
+        args.push('--model', model || 'sonnet');
+        if (effort) args.push('--effort', effort);
 
         // Report the exact command (argv + stdin prompt) before running it.
         this.onCommand({ kind: 'claude', id, attempt, argv: args, prompt });
