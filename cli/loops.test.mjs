@@ -54,6 +54,71 @@ test('runBoundedLoop reports blocked when repair fails', async () => {
     assert.equal(r.iters, 1);
 });
 
+test('runBoundedLoop keep-best restores the best iteration when repairs regress', async () => {
+    let state = 'v1';
+    let restoredTo = null;
+    const metricOf = { v1: 5, v2: 12 };
+    const r = await runBoundedLoop({
+        maxIters: 2,
+        build: async () => ({ passed: false, metric: metricOf[state], report: { state } }),
+        repair: async () => { state = 'v2'; return true; },
+        snapshot: async () => state,
+        restore: async (s) => { restoredTo = s; state = s; },
+    });
+    assert.equal(r.status, 'capped');
+    assert.equal(r.restored, true);
+    assert.equal(restoredTo, 'v1');
+    assert.equal(r.metric, 5, 'reports the rebuilt (restored) metric, not the regressed one');
+});
+
+test('runBoundedLoop keep-best leaves an improving run untouched', async () => {
+    let state = 'v1';
+    let restored = false;
+    const metricOf = { v1: 12, v2: 5 };
+    const r = await runBoundedLoop({
+        maxIters: 2,
+        build: async () => ({ passed: false, metric: metricOf[state], report: {} }),
+        repair: async () => { state = 'v2'; return true; },
+        snapshot: async () => state,
+        restore: async () => { restored = true; },
+    });
+    assert.equal(r.status, 'capped');
+    assert.equal(r.metric, 5);
+    assert.equal(restored, false);
+});
+
+test('runBoundedLoop restores best when the final build throws', async () => {
+    let builds = 0;
+    let state = 'good';
+    const r = await runBoundedLoop({
+        maxIters: 2,
+        build: async () => {
+            builds++;
+            if (state === 'broken') throw new Error('serialize boom');
+            return { passed: false, metric: 7, report: {} };
+        },
+        repair: async () => { state = 'broken'; return true; },
+        snapshot: async () => state,
+        restore: async (s) => { state = s; },
+    });
+    assert.equal(state, 'good', 'broken artifacts never survive as the final state');
+    assert.equal(r.restored, true);
+    assert.equal(r.metric, 7);
+});
+
+test('runBoundedLoop ends as skipped when shouldRepair declines', async () => {
+    let repairs = 0;
+    const r = await runBoundedLoop({
+        maxIters: 6,
+        build: async () => ({ passed: false, metric: 50, report: {} }),
+        repair: async () => { repairs++; return true; },
+        shouldRepair: (result) => result.metric <= 20,
+    });
+    assert.equal(r.status, 'skipped');
+    assert.equal(r.iters, 1);
+    assert.equal(repairs, 0);
+});
+
 test('runBoundedLoop feeds a thrown build error into repair', async () => {
     let repairedWith = null;
     let n = 0;

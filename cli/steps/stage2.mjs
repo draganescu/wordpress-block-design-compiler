@@ -2,6 +2,8 @@
 // scaffold + validate are tools; the two judgment calls are the theme plan
 // (whose structured output IS the scaffold args) and the gate repairs.
 
+import fs from 'node:fs';
+import path from 'node:path';
 import { skillContext, HARNESS_PREAMBLE, HARNESS_PREAMBLE_VISION, SERIALIZER_CONSTRAINTS } from '../prompts/skill-context.mjs';
 import { runBoundedLoop } from '../loops.mjs';
 import { readWs, readJsonWs, writeWs, writeJsonWs, judgeParams } from './helpers.mjs';
@@ -53,11 +55,15 @@ const THEME_PLAN_SCHEMA = {
     },
 };
 
+// appendCss exists because re-emitting the full theme stylesheet (the entire
+// design system) is what makes gate repairs slow — a fix is usually a handful
+// of rules, so let the model return just those.
 const THEME_FIX_SCHEMA = {
     type: 'object', additionalProperties: false,
     properties: {
         themeJson: { type: 'object' },
         themeStyleCss: { type: 'string' },
+        appendCss: { type: 'string' },
         note: { type: 'string' },
     },
 };
@@ -157,6 +163,18 @@ async function validateLoop(ctx, slug) {
         ctx.log.debug(`validate iteration ${iter}: ${errors.length} error(s)`);
         if (iter === ctx.options.maxRepair) return { passed: false, iters: iter, errors };
 
+        // Non-canonical part/template markup has a deterministic fix the LLM
+        // step cannot even express (its schema only returns theme.json and
+        // style.css) — route those errors to fix_block_markup and re-validate.
+        const markupFiles = [...new Set(errors
+            .map((e) => (String(e).match(/^((?:parts|templates)\/[^:]+\.html): invalid block markup/) || [])[1])
+            .filter(Boolean))];
+        if (markupFiles.length) {
+            ctx.log.info(`canonicalizing ${markupFiles.length} theme file(s) via fix_block_markup`);
+            await ctx.client.call('fix_block_markup', { workspaceRoot: ctx.workspaceRoot, paths: markupFiles.map((f) => `theme/${slug}/${f}`) });
+            continue;
+        }
+
         const themeJson = readJsonWs(ctx.workspaceRoot, `theme/${slug}/theme.json`);
         const themeCss = readWs(ctx.workspaceRoot, `theme/${slug}/style.css`);
         const prompt = [
@@ -180,6 +198,10 @@ function applyThemeFix(ctx, slug, data) {
     if (typeof data.themeStyleCss === 'string' && data.themeStyleCss.trim()) {
         writeWs(ctx.workspaceRoot, `theme/${slug}/style.css`, data.themeStyleCss);
     }
+    if (typeof data.appendCss === 'string' && data.appendCss.trim()) {
+        const current = readWs(ctx.workspaceRoot, `theme/${slug}/style.css`);
+        writeWs(ctx.workspaceRoot, `theme/${slug}/style.css`, `${current}\n/* --- gate repair --- */\n${data.appendCss.trim()}\n`);
+    }
 }
 
 async function playgroundGate(ctx, slug) {
@@ -188,6 +210,16 @@ async function playgroundGate(ctx, slug) {
         maxIters: ctx.options.maxRepair,
         plateauDelta: 0.3,
         log: (m) => ctx.log.debug(`[theme] ${m}`),
+        // Keep-best: a theme repair that regresses the gate metric is rolled
+        // back to the best-seen theme.json + style.css pair.
+        snapshot: () => ({
+            themeJson: readWs(ctx.workspaceRoot, `theme/${slug}/theme.json`),
+            styleCss: readWs(ctx.workspaceRoot, `theme/${slug}/style.css`),
+        }),
+        restore: (state) => {
+            if (state.themeJson) writeWs(ctx.workspaceRoot, `theme/${slug}/theme.json`, state.themeJson);
+            if (state.styleCss) writeWs(ctx.workspaceRoot, `theme/${slug}/style.css`, state.styleCss);
+        },
         build: async () => {
             const report = await ctx.client.call('playground_render', {
                 workspaceRoot: ctx.workspaceRoot, slug,
@@ -198,13 +230,20 @@ async function playgroundGate(ctx, slug) {
         repair: async (report, iter) => {
             const themeJson = readJsonWs(ctx.workspaceRoot, `theme/${slug}/theme.json`);
             const themeCss = readWs(ctx.workspaceRoot, `theme/${slug}/style.css`);
+            // Same miss-sizing as the page repairs: a gate failing on height
+            // alone is a vertical-rhythm problem, not a restyling problem.
+            const agg = report.aggregates || {};
+            const heightOnly = (agg.maxMismatchPercent ?? 0) <= th.mismatch && (agg.maxHeightDelta ?? 0) > th.height;
             const images = (report.pages || [])
                 .flatMap((p) => (p.results || []).flatMap((r) => [r.diff, r.mockup, r.candidate]))
                 .filter((v, i, a) => v && a.indexOf(v) === i)
-                .slice(0, 6);
+                .slice(0, heightOnly ? 3 : 4);
             const prompt = [
-                'Repair the block theme so every page passes the Playground gate at both viewports.',
-                'FIRST Read the diff screenshots below to see the concrete visual differences, then edit ONLY theme.json and/or the theme style.css — never the content payloads. Return only the file(s) you changed (omit the other).',
+                heightOnly
+                    ? `Repair the block theme: pages already match visually (${agg.maxMismatchPercent}% ≤ ${th.mismatch}%) but the worst page is ${agg.maxHeightDelta}px off its mockup height (gate: ${th.height}px). Find the vertical drift — a WordPress layout margin, block gap, or a stretched section — and fix THAT; do not restyle anything that matches.`
+                    : 'Repair the block theme so every page passes the Playground gate at both viewports.',
+                'FIRST Read the diff screenshots below to see the concrete visual differences, then edit ONLY theme.json and/or the theme stylesheet — never the content payloads.',
+                'Prefer returning appendCss with ONLY the new/changed rules (it is appended to the theme stylesheet, so later rules win); re-emit the full themeStyleCss only when existing rules must be REMOVED or rewritten.',
                 images.length ? `\nSCREENSHOTS (Read these; diff images show mismatching pixels in red):\n${images.join('\n')}` : '',
                 `\nGATE REPORT:\n${JSON.stringify({ passed: report.passed, aggregates: report.aggregates, pages: report.pages }, null, 0)}`,
                 `\nCURRENT theme.json:\n${JSON.stringify(themeJson)}`,
@@ -212,7 +251,7 @@ async function playgroundGate(ctx, slug) {
             ].join('\n');
             const res = await ctx.harness.complete({
                 id: `theme_repair:${iter}`, systemPrompt: images.length ? GATE_VISION_SYS() : GATE_SYS(), prompt, schema: THEME_FIX_SCHEMA,
-                allowedTools: images.length ? ['Read'] : undefined, maxTurns: 24,
+                allowedTools: images.length ? ['Read'] : undefined, maxTurns: heightOnly ? 12 : 16,
                 ...judgeParams(ctx, 'repair'),
             });
             if (!res.ok) { ctx.log.warn(`[theme] repair ${iter} failed: ${res.error}`); return false; }
@@ -223,6 +262,13 @@ async function playgroundGate(ctx, slug) {
 }
 
 export async function runStage2(ctx) {
+    // Fast brochure runs recorded the theme's structure as a fact (see
+    // runStage2Brochure) — assemble it in code instead of re-deriving it.
+    if (ctx.shared?.brochureAssembly) return runStage2Brochure(ctx);
+    return runStage2Planned(ctx);
+}
+
+async function runStage2Planned(ctx) {
     ctx.log.step('stage2 · blocks-to-theme');
 
     const evidence = await ctx.client.call('analyze_theme_evidence', { workspaceRoot: ctx.workspaceRoot });
@@ -256,6 +302,150 @@ export async function runStage2(ctx) {
     }
 
     return { slug: plan.slug, validation, gate };
+}
+
+// ---- deterministic brochure assembly ----------------------------------------
+//
+// Fast brochure pages are spliced by the pipeline as [header, main, footer]
+// around ONE authored chrome, so the theme's structure is known by
+// construction: lift the header/footer blocks as template parts, render page
+// content through post-content, strip the chrome from each page's payload.
+// Everything visible stays exactly as the creative calls authored it — chrome
+// design, page trees, all CSS. Only the bookkeeping the LLM plan used to
+// spend ~9 minutes re-deriving (sometimes wrongly) is done in code.
+
+function slugify(text, fallback = 'brochure-site') {
+    const slug = String(text || '').toLowerCase().replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '').slice(0, 40).replace(/-+$/g, '');
+    return slug || fallback;
+}
+
+// A tree with an item missing blockName/name would crash serialization inside
+// scaffold_block_theme and take the whole theme down with it. Exclude such
+// pages (they failed their gate anyway) instead of crashing.
+function treeIsSane(blocks) {
+    return (blocks || []).every((b) => b && typeof b === 'object'
+        && typeof (b.blockName || b.name) === 'string'
+        && treeIsSane(b.innerBlocks));
+}
+
+// Repairs may return a full restructured tree — scan for the chrome, never
+// assume the splice positions survived.
+function chromeIndexes(tree) {
+    const blocks = tree?.blocks || [];
+    const tag = (b) => b?.attrs?.tagName;
+    const header = blocks.findIndex((b) => tag(b) === 'header');
+    let footer = -1;
+    for (let i = blocks.length - 1; i >= 0; i--) {
+        if (tag(blocks[i]) === 'footer') { footer = i; break; }
+    }
+    return { header, footer };
+}
+
+async function runStage2Brochure(ctx) {
+    const { site } = ctx.shared.brochureAssembly;
+    ctx.log.step('stage2 · blocks-to-theme (deterministic brochure assembly)');
+
+    // Only pages that produced a sane tree ship (errored pages have none;
+    // a malformed tree would crash scaffold serialization for everyone).
+    const pages = [];
+    for (const entry of ctx.pages) {
+        const tree = readJsonWs(ctx.workspaceRoot, entry.suggested.treePath);
+        if (!tree || !Array.isArray(tree.blocks)) continue;
+        if (!treeIsSane(tree.blocks)) {
+            ctx.log.warn(`[theme] excluding page "${entry.page}" — its tree has items without blockName`);
+            continue;
+        }
+        pages.push({ entry, chrome: chromeIndexes(tree) });
+    }
+    if (!pages.length) throw new Error('no page trees available to assemble a theme from');
+
+    const source = pages.find((p) => p.chrome.header !== -1 && p.chrome.footer !== -1 && p.chrome.header < p.chrome.footer);
+    if (!source) {
+        ctx.log.warn('no page kept the [header, main, footer] shape; falling back to the planned theme path');
+        return runStage2Planned(ctx);
+    }
+
+    const name = (site.siteName || '').trim() || ctx.brief.trim().split(/\s+/).slice(0, 4).join(' ') || 'Brochure Site';
+    const slug = slugify(name);
+
+    let fontFamilies = [];
+    try {
+        const fonts = await ctx.client.call('fetch_theme_fonts', { workspaceRoot: ctx.workspaceRoot, slug });
+        fontFamilies = fonts.fontFamilies || [];
+        ctx.log.debug(`fetched ${fontFamilies.length} font family/-ies`);
+    } catch (err) {
+        ctx.log.warn(`fetch_theme_fonts skipped: ${err.message}`);
+    }
+
+    const titles = new Map((ctx.shared.brochureAssembly.pages || []).map((p) => [p.slug, p.title]));
+    const args = {
+        workspaceRoot: ctx.workspaceRoot,
+        slug,
+        name,
+        // Playground renders core/site-title from the blogname option; the
+        // content plugin sets it from this so the wordmark matches the design.
+        siteTitle: name,
+        description: `Block theme generated from a brief: ${ctx.brief.trim().slice(0, 140)}`,
+        // No token renames and no theme.json lifting: the LLM-authored CSS is
+        // the design system and ships verbatim (scaffold defaults customCss to
+        // wordpress/style.css and bundles every wordpress/pages/*.css).
+        tokenMap: {},
+        themeSettings: {},
+        themeStyles: {},
+        parts: [
+            { slug: 'header', area: 'header', source: { page: source.entry.page, index: source.chrome.header } },
+            { slug: 'footer', area: 'footer', source: { page: source.entry.page, index: source.chrome.footer } },
+        ],
+        templates: {
+            index: [
+                { type: 'part', slug: 'header' },
+                { type: 'post-content' },
+                { type: 'part', slug: 'footer' },
+            ],
+        },
+        pages: pages.map(({ entry, chrome }) => ({
+            page: entry.page,
+            slug: entry.page === 'index' ? 'home' : entry.page,
+            title: titles.get(entry.page) || entry.page,
+            front: Boolean(entry.primary),
+            sourceFile: entry.sourceFile,
+            // The template parts provide the chrome; a payload keeping its own
+            // copy would render a double header/footer.
+            stripIndexes: [chrome.header, chrome.footer].filter((i) => i !== -1),
+        })),
+    };
+    if (fontFamilies.length) args.fontFamilies = fontFamilies;
+    await ctx.client.call('scaffold_block_theme', args);
+
+    // Canonicalize the emitted parts/templates (parse → recreate → serialize).
+    // Authored chrome attrs occasionally don't byte-match save() output; the
+    // fix is mechanical, so never leave it to the validation loop.
+    const themeFiles = ['parts', 'templates'].flatMap((sub) => {
+        const dir = path.join(ctx.workspaceRoot, 'theme', slug, sub);
+        if (!fs.existsSync(dir)) return [];
+        return fs.readdirSync(dir).filter((f) => f.endsWith('.html')).map((f) => `theme/${slug}/${sub}/${f}`);
+    });
+    if (themeFiles.length) {
+        await ctx.client.call('fix_block_markup', { workspaceRoot: ctx.workspaceRoot, paths: themeFiles });
+    }
+
+    const validation = await validateLoop(ctx, slug);
+    if (!validation.passed) {
+        ctx.log.error('theme validation did not reach zero errors');
+        return { slug, validation, gate: null, deterministic: true };
+    }
+
+    let gate = null;
+    if (ctx.options.playground) {
+        gate = await playgroundGate(ctx, slug);
+        (gate.status === 'passed' ? ctx.log.ok : ctx.log.warn).call(ctx.log, `[theme] gate ${gate.status} after ${gate.iters} iter(s) · mismatch≈${gate.metric}`);
+        await ctx.client.call('playground_stop', { workspaceRoot: ctx.workspaceRoot, slug }).catch(() => {});
+    } else {
+        ctx.log.info('playground gate skipped (--no-playground)');
+    }
+
+    return { slug, validation, gate, deterministic: true };
 }
 
 export const _schemas = { THEME_PLAN_SCHEMA, THEME_FIX_SCHEMA };

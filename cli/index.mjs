@@ -90,7 +90,10 @@ function buildOptions(args) {
         },
         concurrency: Math.max(1, Number(args.concurrency || (fast ? 6 : 3))),
         buildConcurrency: Math.max(1, Number(args['build-concurrency'] || 2)),
-        maxRepair: Math.max(1, Number(args['max-repair'] || 6)),
+        // Fast mode allows ONE repair round per page/theme: profiling showed
+        // additional rounds are the run's worst spend (multi-minute calls that
+        // rarely change the outcome). An explicit --max-repair always wins.
+        maxRepair: Math.max(1, Number(args['max-repair'] || (fast ? 2 : 6))),
         callTimeoutMs: Math.max(30, Number(args['call-timeout'] || (fast ? 900 : 600))) * 1000,
         // Brochure gates are looser by default: these are generated designs
         // measured across two surfaces and two viewports, where the practical
@@ -138,7 +141,12 @@ Options:
   --fast                     Speed preset: judgment calls on a fast model (sonnet),
                              brochure pages pipelined design->build->repair with no
                              cross-page waits, plan+author merged for core-only pages,
-                             concurrency 6. Fidelity gates and thresholds unchanged.
+                             concurrency 6, ONE repair round per page (attempted only
+                             when the metric is within 2x of the gate; the best build
+                             seen is always kept; repairs are sized to the miss), and
+                             deterministic theme assembly for brochures (no theme-plan
+                             calls — the theme structure is known from the chrome
+                             splice). Gates unchanged.
   --model-design <id>        Model for design steps (site/page/mockup design)
   --model-build <id>         Model for build steps (plan, author, theme plan)
   --model-repair <id>        Model for repair/fix loop steps
@@ -148,7 +156,7 @@ Options:
   --effort-repair <level>    Effort for repair steps only
   --concurrency <n>          Max parallel claude sessions (default: 3; 6 with --fast)
   --build-concurrency <n>    Max parallel build_page tool calls (default: 2)
-  --max-repair <n>           Repair/gate loop cap per page/theme (default: 6)
+  --max-repair <n>           Repair/gate loop cap per page/theme (default: 6; 2 with --fast)
   --call-timeout <seconds>   Per claude -p call timeout (default: 600)
   --threshold-mismatch <n>   Pixel mismatch % gate (default: 1; 10 with --brochure)
   --threshold-height <n>     Height delta px gate (default: 8; 100 with --brochure)

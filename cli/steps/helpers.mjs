@@ -93,6 +93,16 @@ export function normalizeTree(blockTree) {
 // `layout.orientation` of undefined, throwing repeatedly and collapsing the
 // whole canvas render (observed: editor screenshots reduced to background
 // bands). Guarantee it in code — never trust each authored tree to remember.
+//
+// The registered layout type names. WordPress registers the flow layout under
+// "default" — but its DOCUMENTED name is "flow", so authors regularly write
+// layout:{type:"flow"}. getLayoutType('flow') then resolves undefined and the
+// editor canvas crash-loops on a getOrientation TypeError: entire sections
+// render blank while reserving thousands of px (observed editor height deltas
+// of +3618 and +5329 on otherwise near-perfect pages). Map any unregistered
+// type to "default".
+const LAYOUT_TYPES = new Set(['default', 'constrained', 'flex', 'grid']);
+
 function hardenBlocks(blocks) {
     for (const b of blocks || []) {
         if (!b || typeof b !== 'object') continue;
@@ -101,6 +111,10 @@ function hardenBlocks(blocks) {
             if (!b.attrs.layout || typeof b.attrs.layout !== 'object') {
                 b.attrs.layout = { type: 'flex', orientation: 'horizontal' };
             }
+        }
+        const layout = b.attrs?.layout;
+        if (layout && typeof layout === 'object' && typeof layout.type === 'string' && !LAYOUT_TYPES.has(layout.type)) {
+            layout.type = 'default';
         }
         hardenBlocks(b.innerBlocks);
     }

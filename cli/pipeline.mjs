@@ -53,6 +53,7 @@ const SITE_DESIGN_SCHEMA = {
         sharedCss: { type: 'string' },
         headerHtml: { type: 'string' },
         footerHtml: { type: 'string' },
+        siteName: { type: 'string' },
         designNotes: { type: 'string' },
     },
 };
@@ -122,6 +123,16 @@ const BLOCK_CHROME_PARITY_CSS = `
 :where(.wp-block-site-title) { margin: 0; font-size: inherit; line-height: inherit; }
 :where(.wp-block-site-title a) { color: inherit; text-decoration: inherit; font: inherit; }
 :where(.wp-block-navigation a.wp-block-navigation-item__content) { padding: 0; }
+/* The preview surfaces emit the nav as a bare <ul> (real WP adds is-layout-flex
+   via layout support). Without this, the nav stacks vertically, inflates the
+   header, and ghosts EVERY page below it — observed as a uniform ~25% mismatch
+   across all pages whenever the design's CSS didn't happen to style the ul. */
+:where(.wp-block-navigation) { display: flex; align-items: center; }
+:where(.wp-block-navigation ul.wp-block-navigation__container) {
+    display: flex; align-items: center; gap: inherit;
+    list-style: none; margin: 0; padding: 0;
+}
+:where(.wp-block-navigation-item) { display: inline-flex; align-items: center; }
 :where(.wp-block-button > .wp-block-button__link) {
     all: unset; cursor: pointer; display: inline; text-align: inherit;
 }
@@ -137,9 +148,10 @@ async function siteDesignStep(ctx, n) {
         `- pages: EXACTLY ${n} entries { slug, title, purpose }. The FIRST page is the home page; give it slug "index". Use short kebab-case slugs for the rest (e.g. about, services, work, contact).`,
         '- sharedCss: the complete design system — tokens, base/typography, layout, and the header/nav/footer styles. One Google Fonts @import is allowed; no other network assets, no build tools.',
         '- headerHtml: a <header> with a <nav> linking every page by "<slug>.html". footerHtml: a <footer>.',
+        '- siteName: the site\'s name as it appears in the header wordmark.',
         'This is a static brochure: no forms, no data-driven grids, no login. Make one strong visual direction, not a generic template.',
         `\nBRIEF:\n${ctx.brief}`,
-        '\nReturn { pages, sharedCss, headerHtml, footerHtml, designNotes? }.',
+        '\nReturn { pages, sharedCss, headerHtml, footerHtml, siteName, designNotes? }.',
     ].join('\n');
 
     const site = await ctx.harness.complete({ id: 'site_design', systemPrompt: DESIGN_SYS(), prompt: sitePrompt, schema: SITE_DESIGN_SCHEMA, ...judgeParams(ctx, 'design') });
@@ -157,6 +169,12 @@ async function siteDesignStep(ctx, n) {
     // near-parity instead of asking the repair loop to re-derive a design
     // system per page, one multi-minute LLM call at a time.
     writeWs(ctx.workspaceRoot, 'wordpress/style.css', `${site.data.sharedCss || ''}\n${BLOCK_CHROME_PARITY_CSS}`);
+    // The preview surfaces render core/site-title from this context and default
+    // to the literal text "Site Title" — a guaranteed header mismatch against
+    // the mockup's real wordmark on every page. Seed the real name.
+    if (site.data.siteName && site.data.siteName.trim()) {
+        writeJsonWs(ctx.workspaceRoot, 'wordpress/preview-context.json', { siteTitle: site.data.siteName.trim() });
+    }
     if (site.data.designNotes) writeWs(ctx.workspaceRoot, 'plan/design-notes.md', `${site.data.designNotes}\n`);
     ctx.log.info(`brochure pages: ${pages.map((p) => p.slug).join(', ')}`);
     return { site: site.data, pages };
@@ -231,7 +249,15 @@ async function chromeAuthorStep(ctx, site) {
         const file = path.join(ctx.workspaceRoot, 'wordpress/style.css');
         fs.appendFileSync(file, `\n/* --- chrome-specific (chrome_author) --- */\n${res.data.chromeCss}\n`);
     }
-    return { headerBlocks: res.data.headerBlocks || [], footerBlocks: res.data.footerBlocks || [] };
+    // Guarantee exactly ONE top-level block per chrome side. Downstream relies
+    // on it: the splice makes every page [header, main, footer], and the
+    // deterministic theme assembly lifts each side as ONE template-part block.
+    const oneBlock = (blocks, tagName) => {
+        const list = (Array.isArray(blocks) ? blocks : []).filter(Boolean);
+        if (list.length === 1) return list;
+        return [{ blockName: 'core/group', attrs: { tagName }, innerBlocks: list }];
+    };
+    return { headerBlocks: oneBlock(res.data.headerBlocks, 'header'), footerBlocks: oneBlock(res.data.footerBlocks, 'footer') };
 }
 
 function clipText(text, max) {
@@ -254,7 +280,7 @@ async function runBrochureFast(ctx, n) {
     // page authors only need it at tree-assembly time, minutes from now.
     ctx.shared.chromePromise = chromeAuthorStep(ctx, site);
 
-    return Promise.all(pages.map(async (p, i) => {
+    const results = await Promise.all(pages.map(async (p, i) => {
         const entry = ctx.pages[i];
         try {
             await pageDesignStep(ctx, site, p, pageList);
@@ -264,6 +290,13 @@ async function runBrochureFast(ctx, n) {
         }
         return safePage(ctx, entry, { foundation: i === 0, fastAuthor: true });
     }));
+
+    // Every fast-brochure page tree is [header, main, footer] by construction
+    // (the splice above). Record that fact so Stage 2 can assemble the theme
+    // deterministically — the parts split is known, not something to re-derive.
+    const chrome = await ctx.shared.chromePromise;
+    if (chrome) ctx.shared.brochureAssembly = { site, pages };
+    return results;
 }
 
 async function designMockup(ctx) {

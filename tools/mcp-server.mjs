@@ -379,6 +379,7 @@ const TOOLS = [
         required: ['workspaceRoot', 'slug', 'name', 'tokenMap', 'themeSettings', 'themeStyles', 'parts', 'templates', 'pages'],
         properties: {
             workspaceRoot: { type: 'string' }, slug: { type: 'string' }, name: { type: 'string' }, description: { type: 'string' },
+            siteTitle: { type: 'string', description: 'The site\'s display name; the content plugin sets it as the blogname option so core/site-title renders the real wordmark.' },
             tokenMap: { type: 'object' }, themeSettings: { type: 'object' }, themeStyles: { type: 'object' },
             fontFamilies: { type: 'array' }, customCss: { type: 'string' },
             parts: { type: 'array' },

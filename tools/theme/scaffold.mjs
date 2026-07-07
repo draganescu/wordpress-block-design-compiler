@@ -132,9 +132,6 @@ export function scaffoldBlockTheme(args) {
     });
 
     // theme.json / style.css / functions.php
-    // Default block-gap to 0 when the agent ships component CSS that owns vertical
-    // rhythm — otherwise WordPress's layout layer adds margin between every stacked
-    // block and inflates page height (a large, avoidable first-gate drift).
     // customCss defaults to the workspace's shared stylesheet so the design system
     // ALWAYS ships even when the caller omits the arg (forgetting it renders every
     // page unstyled — a silent, catastrophic footgun) and so the large file need not
@@ -146,12 +143,23 @@ export function scaffoldBlockTheme(args) {
             ? fs.readFileSync(sharedCssPath, 'utf8').replace(/@import\s+url\([^)]*\)\s*;?/g, '/* fonts bundled locally via theme.json */')
             : '';
     }
+    // When the shipped CSS owns vertical rhythm, WordPress must emit NO layout
+    // gap rules at all. styles.blockGap='0px' looks right but emits
+    // `:root :where(.is-layout-flow) > * { margin-block: 0 }` — the :root gives
+    // it class-level specificity that beats the design's plain element rules
+    // and strips the design's own text margins (measured: pages ~400px SHORTER
+    // in Playground than the mockup). settings.blockGap=null disables the gap
+    // feature entirely, which is the documented way for a theme that manages
+    // its own spacing. Callers that set a gap explicitly are respected.
     const themeStyles = args.themeStyles || {};
-    if (customCss && (!themeStyles.spacing || themeStyles.spacing.blockGap === undefined)) {
-        themeStyles.spacing = { ...(themeStyles.spacing || {}), blockGap: '0px' };
+    const themeSettings = { ...(args.themeSettings || {}) };
+    const callerSetGap = themeStyles.spacing?.blockGap !== undefined
+        || themeSettings.spacing?.blockGap !== undefined;
+    if (customCss && !callerSetGap) {
+        themeSettings.spacing = { ...(themeSettings.spacing || {}), blockGap: null };
     }
     const themeJson = buildThemeJson({
-        settings: args.themeSettings,
+        settings: themeSettings,
         styles: deepMapStrings(themeStyles, (s) => rewriteCssVars(s, customRenames)),
         fontFamilies: args.fontFamilies || [],
         // theme.json schema: templateParts items allow only name/title/area (name = parts/<name>.html).
@@ -189,7 +197,7 @@ export function scaffoldBlockTheme(args) {
         files.push(to);
     }
 
-    const contentResult = writeContentPlugin({ slug, themeName: name, outDir: path.join(workspaceRoot, 'theme-plugin', `${slug}-content`), pages: contentPages, hasBlocksPlugin: blocksResult.blocks.length > 0 });
+    const contentResult = writeContentPlugin({ slug, themeName: name, siteTitle: args.siteTitle || '', outDir: path.join(workspaceRoot, 'theme-plugin', `${slug}-content`), pages: contentPages, hasBlocksPlugin: blocksResult.blocks.length > 0 });
     return {
         themeDir, files,
         blocksPlugin: blocksResult.blocks.length ? `theme-plugin/${slug}-blocks` : null,

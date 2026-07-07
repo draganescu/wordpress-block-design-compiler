@@ -104,6 +104,11 @@ const FAST_AUTHOR_SYS = () => `${HARNESS_PREAMBLE}\n\n${SERIALIZER_CONSTRAINTS}\
     'skills/html-to-blocks/references/core-block-selection.md',
 ])}`;
 
+const FAST_AUTHOR_VISION_SYS = () => `${HARNESS_PREAMBLE_VISION}\n\n${SERIALIZER_CONSTRAINTS}\n\n${skillContext([
+    'skills/html-to-blocks/SKILL.md',
+    'skills/html-to-blocks/references/core-block-selection.md',
+])}`;
+
 // ---- individual steps -------------------------------------------------------
 
 async function planStep(ctx, entry, isFoundation) {
@@ -274,6 +279,13 @@ async function fastAuthorStep(ctx, entry, isFoundation) {
     // serialize behind it here (~4 min of critical path saved per run).
     const chromeExpected = Boolean(ctx.shared.chromePromise);
 
+    // NOTE: authoring the page's sections as parallel per-section calls was
+    // tried (2026-07-07) and reverted: first-build fidelity dropped from 5-9%
+    // to 10-13% mismatch (sections authored in isolation lose the cross-
+    // section rhythm), author cost tripled (every call re-ingests the full
+    // mockup), and occasional malformed section envelopes broke serialization.
+    // Whole-page authoring is load-bearing for quality — same reason the
+    // chrome is authored once, not per page.
     const prompt = [
         chromeExpected
             ? `Author the data-only block tree (MAIN CONTENT ONLY) and page CSS for page "${page}" to reproduce the mockup's <main>. The site header and footer are authored separately — do NOT include them; your blocks array starts at the first section inside <main>.`
@@ -291,30 +303,35 @@ async function fastAuthorStep(ctx, entry, isFoundation) {
     ].join('\n');
 
     const res = await ctx.harness.complete({
-        id: `author:${page}`, systemPrompt: mockupShot ? `${HARNESS_PREAMBLE_VISION}\n\n${SERIALIZER_CONSTRAINTS}\n\n${skillContext(['skills/html-to-blocks/SKILL.md', 'skills/html-to-blocks/references/core-block-selection.md'])}` : FAST_AUTHOR_SYS(),
+        id: `author:${page}`, systemPrompt: mockupShot ? FAST_AUTHOR_VISION_SYS() : FAST_AUTHOR_SYS(),
         prompt, schema: AUTHOR_SCHEMA,
         allowedTools: mockupShot ? ['Read'] : undefined, maxTurns: 16,
         ...judgeParams(ctx, 'build'),
     });
     if (!res.ok) throw new Error(`author:${page} failed — ${res.error}`);
+    let data = res.data;
     if (chromeExpected) {
         // Splice: header chrome + <main> wrapper around the authored sections +
         // footer chrome. Identical chrome on every page, by construction. Await
         // the chrome only now — it authored concurrently with this call.
+        // Never mutate res.data: the harness may hand out shared objects.
         const chrome = await ctx.shared.chromePromise;
         if (!chrome) throw new Error(`author:${page} produced main-only content but chrome authoring failed`);
-        const main = normalizeTree(res.data.blockTree);
-        res.data.blockTree = {
-            version: main.version, contract: 'data-only',
-            blocks: [
-                ...chrome.headerBlocks,
-                { blockName: 'core/group', attrs: { tagName: 'main' }, innerBlocks: main.blocks },
-                ...chrome.footerBlocks,
-            ],
+        const main = normalizeTree(data.blockTree);
+        data = {
+            ...data,
+            blockTree: {
+                version: main.version, contract: 'data-only',
+                blocks: [
+                    ...chrome.headerBlocks,
+                    { blockName: 'core/group', attrs: { tagName: 'main' }, innerBlocks: main.blocks },
+                    ...chrome.footerBlocks,
+                ],
+            },
         };
     }
-    applyTree(ctx, entry, res.data, { writePreview: isFoundation });
-    return res.data;
+    applyTree(ctx, entry, data, { writePreview: isFoundation });
+    return data;
 }
 
 function applyTree(ctx, entry, data, { writePreview = false } = {}) {
@@ -342,6 +359,25 @@ async function repairLoop(ctx, entry, plan) {
         maxIters: ctx.options.maxRepair,
         plateauDelta: 0.3,
         log: (m) => ctx.log.debug(`[${page}] ${m}`),
+        // Fast mode only chases misses a single repair round can plausibly
+        // close. Profiling showed repairs on far-off pages are the worst spend
+        // in the run (multi-minute calls that plateau above the gate anyway).
+        // A build that THREW is always repairable: its carried-over metric is
+        // meaningless and the fix (make the tree serialize) is mandatory.
+        shouldRepair: ctx.options.fast
+            ? (result) => Boolean(result.threw || result.report?.error) || result.metric <= th.mismatch * 2
+            : null,
+        // Keep-best: a repair must never leave the page worse than its best
+        // build (observed: a repair pushing a 10% page to 57%). State is the
+        // pair of files a build measures.
+        snapshot: () => ({
+            tree: readWs(ctx.workspaceRoot, entry.suggested.treePath),
+            css: readWs(ctx.workspaceRoot, pageCssPath(entry)),
+        }),
+        restore: (state) => {
+            if (state.tree) writeWs(ctx.workspaceRoot, entry.suggested.treePath, state.tree);
+            writeWs(ctx.workspaceRoot, pageCssPath(entry), state.css || '');
+        },
         build: async () => {
             const report = await ctx.buildSemaphore.run(() => ctx.client.call('build_page', {
                 workspaceRoot: ctx.workspaceRoot,
@@ -356,7 +392,18 @@ async function repairLoop(ctx, entry, plan) {
         repair: async (report, iter) => {
             const tree = readJsonWs(ctx.workspaceRoot, entry.suggested.treePath);
             const css = readWs(ctx.workspaceRoot, pageCssPath(entry));
-            const mockupHtml = clip(readWs(ctx.workspaceRoot, entry.mockupPath), 80000);
+            // Repair calls are the run's single worst time sink (observed
+            // 4–10min each), and most of that is context the fix never needed.
+            // Classify the miss and size the call to it: a page whose pixels
+            // already sit under the mismatch gate but whose HEIGHT drifts is a
+            // vertical-rhythm problem — one offset to find, no need to re-read
+            // 80k of mockup HTML through 24 vision turns.
+            const m = report.metrics || {};
+            const worstMismatch = Math.max(m.rendered?.maxMismatchPercent ?? 0, m.editor?.maxMismatchPercent ?? 0);
+            const worstHeight = Math.max(m.rendered?.maxHeightDelta ?? 0, m.editor?.maxHeightDelta ?? 0);
+            const heightOnly = !report.error && worstMismatch <= th.mismatch && worstHeight > th.height;
+            const maxImages = heightOnly ? 3 : 4;
+            const mockupHtml = clip(readWs(ctx.workspaceRoot, entry.mockupPath), heightOnly ? 30000 : 50000);
             // The comparison screenshots ARE the ground truth the numbers only
             // summarize. Give the repair call eyes: it may Read the mockup /
             // rendered / diff images named in the tasks before deciding a fix.
@@ -366,10 +413,14 @@ async function repairLoop(ctx, entry, plan) {
                 // Diff images first — they say the most per token. Few images, so
                 // the turn budget is spent fixing, not looking.
                 .sort((a, b) => (b.includes('diff') ? 1 : 0) - (a.includes('diff') ? 1 : 0))
-                .slice(0, 6);
+                .slice(0, maxImages);
             const prompt = [
-                `Repair page "${page}". Return the updated pageCss and, ONLY IF block structure/content must change, the FULL updated blockTree (omit blockTree for CSS-only fixes — smaller answers apply faster).`,
-                'FIRST look at the diff screenshots (Read the image paths below), identify the concrete visual differences (offsets, alignment, sizing, colors, missing chrome), then fix the largest drift first. A uniform ghosting of all text below some y usually means ONE early vertical gap — fix that single offset. Do not chase the ~1% webfont antialiasing floor.',
+                heightOnly
+                    ? `Repair page "${page}": the pixels already match (${worstMismatch}% ≤ ${th.mismatch}%) but the page is ${worstHeight}px off the mockup's height (gate: ${th.height}px). Find the vertical drift — one wrong margin/padding/gap, a stretched section, or a missing/duplicated section — and fix THAT. Return pageCss ONLY; include a full blockTree only if a section must be added or removed.`
+                    : `Repair page "${page}". Return the updated pageCss and, ONLY IF block structure/content must change, the FULL updated blockTree (omit blockTree for CSS-only fixes — smaller answers apply faster).`,
+                heightOnly
+                    ? 'The diff screenshot\'s first red band marks where the layouts diverge (see firstDiffY in the tasks) — the cause sits AT or ABOVE that y. Compare section heights between mockup and rendered screenshots; do not restyle anything that already matches.'
+                    : 'FIRST look at the diff screenshots (Read the image paths below), identify the concrete visual differences (offsets, alignment, sizing, colors, missing chrome), then fix the largest drift first. A uniform ghosting of all text below some y usually means ONE early vertical gap — fix that single offset. Do not chase the ~1% webfont antialiasing floor.',
                 report.error ? `\nThe previous tree FAILED TO SERIALIZE with: ${report.error}\nFix the tree so it serializes (this needs the full blockTree back).` : '',
                 images.length ? `\nSCREENSHOTS (Read these; diff images show mismatching pixels in red):\n${images.join('\n')}` : '',
                 `\nBUILD REPORT:\n${JSON.stringify({
@@ -382,7 +433,7 @@ async function repairLoop(ctx, entry, plan) {
             ].join('\n');
             const res = await ctx.harness.complete({
                 id: `repair:${page}:${iter}`, systemPrompt: REPAIR_SYS(), prompt, schema: REPAIR_SCHEMA,
-                allowedTools: images.length ? ['Read'] : undefined, maxTurns: 24,
+                allowedTools: images.length ? ['Read'] : undefined, maxTurns: heightOnly ? 12 : 16,
                 ...judgeParams(ctx, 'repair'),
             });
             if (!res.ok) { ctx.log.warn(`[${page}] repair ${iter} failed: ${res.error}`); return false; }

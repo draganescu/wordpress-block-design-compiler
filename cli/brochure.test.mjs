@@ -92,14 +92,30 @@ test('fast brochure mode pipelines pages with merged plan+author and no plan cal
                 headerBlocks: [{ blockName: 'core/group', attrs: { tagName: 'header', className: 'site' }, innerBlocks: [] }],
                 footerBlocks: [{ blockName: 'core/group', attrs: { tagName: 'footer' }, innerBlocks: [] }],
             },
-            'author:': { blockTree: CORE_TREE, pageCss: '' },
+            // Fast authors return MAIN-ONLY content (the chrome is spliced in).
+            // The group uses layout type "flow" — the unregistered name authors
+            // guess — which normalizeTree must harden to "default" (the editor
+            // canvas crash-loops on unregistered layout types).
+            'author:': {
+                blockTree: {
+                    version: 2, contract: 'data-only',
+                    blocks: [
+                        {
+                            blockName: 'core/group', attrs: { className: 'intro', layout: { type: 'flow' } },
+                            innerBlocks: [{ blockName: 'core/heading', attrs: { level: 1, content: 'Hello' }, innerBlocks: [] }],
+                        },
+                        { blockName: 'core/paragraph', attrs: { content: 'Static brochure content.' }, innerBlocks: [] },
+                    ],
+                },
+                pageCss: '',
+            },
         },
     });
 
     const options = {
         harness: 'mock', model: undefined, concurrency: 4, maxRepair: 2, callTimeoutMs: 600000,
         thresholds: { mismatch: 100, height: 100000 },
-        stages: new Set([1]), stage0: 'off', playground: false, compareEditor: false,
+        stages: new Set([1, 2]), stage0: 'off', playground: false, compareEditor: false,
         brochure: true, fast: true, pages: 2, noCustomBlocks: true, commandLog: false, verbose: false, install: false,
         models: { design: 'sonnet', build: 'sonnet', repair: 'sonnet' },
         efforts: {},
@@ -120,6 +136,7 @@ test('fast brochure mode pipelines pages with merged plan+author and no plan cal
     assert.equal(tree.blocks[0].attrs.tagName, 'header', 'first block is the shared header');
     assert.equal(tree.blocks[tree.blocks.length - 1].attrs.tagName, 'footer', 'last block is the shared footer');
     assert.equal(tree.blocks[1].attrs.tagName, 'main', 'authored sections wrapped in <main>');
+    assert.equal(tree.blocks[1].innerBlocks[0].attrs.layout.type, 'default', 'unregistered layout type "flow" hardened to "default"');
 
     // The mockups still carry the shared chrome (fidelity path unchanged).
     for (const slug of ['index', 'about']) {
@@ -131,4 +148,25 @@ test('fast brochure mode pipelines pages with merged plan+author and no plan cal
     const timings = JSON.parse(fs.readFileSync(path.join(workspace, 'reports/timings.json'), 'utf8'));
     assert.ok(timings.harnessCalls.length >= 3, 'harness call log captured');
     assert.ok(timings.toolCalls.some((c) => c.name === 'build_page'), 'tool call log captured');
+
+    // Stage 2 assembled the theme deterministically: zero judgment calls
+    // (no theme_plan / theme_fix), validation clean, chrome lifted as parts,
+    // per-page payloads stripped of the chrome the parts now provide.
+    assert.equal(harness.log.filter((c) => c.id.startsWith('theme_')).length, 0, 'no theme judgment calls');
+    assert.equal(report.stages.stage2.deterministic, true);
+    assert.equal(report.stages.stage2.validation.passed, true);
+    const slug = report.stages.stage2.slug;
+    const themeDir = path.join(workspace, 'theme', slug);
+    assert.ok(fs.existsSync(path.join(themeDir, 'parts/header.html')), 'header part exists');
+    assert.ok(fs.existsSync(path.join(themeDir, 'parts/footer.html')), 'footer part exists');
+    const indexTpl = fs.readFileSync(path.join(themeDir, 'templates/index.html'), 'utf8');
+    assert.match(indexTpl, /wp:template-part.*"slug":"header"/, 'index template references header part');
+    assert.match(indexTpl, /wp:post-content/, 'index template renders content');
+    const payload = fs.readFileSync(path.join(workspace, `theme-plugin/${slug}-content/content/home.html`), 'utf8');
+    assert.doesNotMatch(payload, /"tagName":"header"/, 'chrome stripped from the page payload');
+    assert.match(payload, /"tagName":"main"/, 'main content kept in the page payload');
 });
+
+// NOTE: a per-section author fan-out was tried here (2026-07-07) and reverted —
+// see the note in fastAuthorStep. Whole-page authoring is load-bearing for
+// cross-section fidelity.

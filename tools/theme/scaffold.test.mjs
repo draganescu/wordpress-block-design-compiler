@@ -55,7 +55,7 @@ test('scaffoldBlockTheme keeps {{THEME_URI}} placeholders in part markup', () =>
     fs.rmSync(ws, { recursive: true, force: true });
 });
 
-test('scaffoldBlockTheme defaults blockGap to 0 (component CSS) and rewrites orphan links', () => {
+test('scaffoldBlockTheme disables blockGap (component CSS owns rhythm) and rewrites orphan links', () => {
     const ws = path.join(path.dirname(fileURLToPath(import.meta.url)), 'fixtures/mini-orphan');
     fs.rmSync(ws, { recursive: true, force: true });
     fs.cpSync(path.join(MINI, 'wordpress'), path.join(ws, 'wordpress'), { recursive: true });
@@ -68,9 +68,14 @@ test('scaffoldBlockTheme defaults blockGap to 0 (component CSS) and rewrites orp
 
     const result = scaffoldBlockTheme(miniScaffoldArgs(ws));
 
-    // C10: the mini fixture ships component customCss, so block-gap is defaulted to 0.
+    // C10: the mini fixture ships component customCss, so the blockGap feature is
+    // disabled outright (settings null) — styles.blockGap='0px' emitted
+    // `:root :where(.is-layout-flow) > *` rules that outranked the design's own
+    // element margins and stripped its vertical rhythm.
     const themeJson = JSON.parse(fs.readFileSync(path.join(ws, 'theme/mini/theme.json'), 'utf8'));
-    assert.equal(themeJson.styles?.spacing?.blockGap, '0px');
+    assert.equal(themeJson.settings?.spacing?.blockGap, null);
+    assert.ok('blockGap' in (themeJson.settings?.spacing || {}), 'blockGap explicitly present as null');
+    assert.equal(themeJson.styles?.spacing?.blockGap, undefined);
 
     // C9: the orphan link is recorded and rewritten to the front page, not left to fatal validate.
     assert.deepEqual(result.orphanLinks, ['nowhere.html']);

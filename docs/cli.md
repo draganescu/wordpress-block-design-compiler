@@ -60,7 +60,7 @@ node cli/index.mjs run --brief @brief.md --workspace ./runs/acme
 | `--effort <level>` | account default | `claude -p --effort` for all judgment calls (`low`…`max`) |
 | `--effort-design/build/repair <level>` | `--effort` | Per-role effort override |
 | `--concurrency <n>` | `3` (`6` fast) | Max parallel `claude -p` sessions (page fan-out) |
-| `--max-repair <n>` | `6` | Repair/gate loop cap per page and per theme |
+| `--max-repair <n>` | `6` (`2` fast) | Repair/gate loop cap per page and per theme |
 | `--call-timeout <s>` | `600` | Per `claude -p` call timeout in seconds |
 | `--threshold-mismatch <n>` | `1` (`10` brochure) | Pixel mismatch % gate |
 | `--threshold-height <n>` | `8` (`100` brochure) | Height delta px gate |
@@ -147,6 +147,28 @@ What it changes:
   feeds nothing downstream when custom blocks are off, so the author call plans
   internally and one judgment call per page disappears.
 - **Concurrency defaults to 6** so a 5-page site's chains actually overlap.
+  (Authoring stays whole-page on purpose: fanning it out per section was tried
+  and reverted — sections authored in isolation lose cross-section rhythm and
+  first-build fidelity dropped measurably.)
+- **One repair round per page/theme** (`--max-repair` defaults to 2), attempted
+  only when the miss is within 2× of the gate — profiling showed multi-round
+  repairs chasing far-off pages were the single worst time sink, usually
+  plateauing above the gate anyway. The loop always **keeps the best build
+  seen**: a repair that regresses the metric (or breaks serialization) is
+  rolled back before the run reports. Repairs are also *sized to the miss*: a
+  page whose pixels already sit under the mismatch gate but whose height
+  drifts gets a targeted vertical-rhythm prompt (fewer screenshots, fewer
+  turns, CSS-only bias) instead of the full repair context.
+- **The brochure theme is assembled deterministically** — zero theme judgment
+  calls. The pipeline spliced every page as `[header, main, footer]` around one
+  authored chrome, so Stage 2 already knows the structure: it lifts the chrome
+  blocks as the header/footer template parts, renders pages through
+  `post-content`, and strips the chrome from each page payload. Nothing canned
+  enters the output — the chrome design, page trees, and all CSS ship exactly
+  as the creative calls authored them; only the bookkeeping the theme-plan call
+  used to re-derive (in ~9 minutes, sometimes wrongly) is done in code. The
+  theme name comes from the site design's `siteName`. If no page kept the
+  spliced shape, Stage 2 falls back to the planned (LLM) path.
 
 Every run (fast or not) also writes **`reports/timings.json`** — per-judgment-call
 and per-tool-call timing records. Summarize one or more runs with:

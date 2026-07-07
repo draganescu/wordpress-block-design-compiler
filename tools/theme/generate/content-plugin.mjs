@@ -2,10 +2,11 @@
 import path from 'node:path';
 import { writeFile, writeJson } from '../../lib/workspace.mjs';
 
-export function writeContentPlugin({ slug, themeName, outDir, pages, hasBlocksPlugin = false }) {
+export function writeContentPlugin({ slug, themeName, outDir, pages, hasBlocksPlugin = false, siteTitle = '' }) {
     const prefix = slug.replace(/-/g, '_') + '_content';
     writeJson(path.join(outDir, 'content/manifest.json'), {
         theme: slug,
+        ...(siteTitle ? { siteTitle } : {}),
         pages: pages.map(({ markup, ...page }) => page),
     });
     for (const page of pages) {
@@ -44,9 +45,15 @@ function ${prefix}_manifest() {
 }
 
 function ${prefix}_import_pages() {
+    $manifest = ${prefix}_manifest();
+    // The header's core/site-title renders the blogname option; without this,
+    // every page shows the WordPress default instead of the site's wordmark.
+    if (!empty($manifest['siteTitle'])) {
+        update_option('blogname', $manifest['siteTitle']);
+    }
     $state = get_option(${prefix.toUpperCase()}_OPTION, array());
     $results = array();
-    foreach (${prefix}_manifest()['pages'] as $page) {
+    foreach ($manifest['pages'] as $page) {
         $slug = $page['slug'];
         if (isset($state[$slug]) && get_post($state[$slug]['post_id'])) {
             $results[$slug] = array('status' => 'already-imported', 'permalink' => get_permalink($state[$slug]['post_id']));
