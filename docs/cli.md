@@ -126,8 +126,13 @@ is available on its own if you want core-only output without the brochure design
 
 ## Fast mode
 
-`--fast` cuts wall-clock time without touching the fidelity gates (mismatch/height
-thresholds, editor comparison, and the Playground gate all stay on):
+For a brochure, the generated mockup is scaffolding the user never sees — the
+shipped artifact is the WordPress theme. `--fast` therefore treats the design
+as a **suggestion**: what must carry over is content, style, spacing rhythm,
+mood, tokens, color, typography, and layout direction — not pixel parity with
+an internal artifact. Imports are untouched (there the source site is ground
+truth, and parity is the product); non-fast brochure keeps the strict
+pixel gates too.
 
 ```bash
 node cli/index.mjs run --brief "a wine bar in Lisbon" --brochure --fast --workspace ./runs/tinta
@@ -135,40 +140,36 @@ node cli/index.mjs run --brief "a wine bar in Lisbon" --brochure --fast --worksp
 
 What it changes:
 
-- **Judgment calls default to a fast model** (`sonnet`) instead of the account's
-  CLI default (often the largest, slowest model). Pin any role separately with
-  `--model-design` / `--model-build` / `--model-repair`.
-- **Brochure pages are pipelined end-to-end.** After the one `site_design` call,
-  each page runs its own `page_design → analyze → author → repair` chain
-  concurrently — no "design all pages, then build all pages" barrier, and no
-  foundation-first wait (brochure pages share no custom blocks, so there is
-  nothing for a foundation page to lock).
-- **Plan+author are merged** for core-blocks-only pages: the plan step's output
-  feeds nothing downstream when custom blocks are off, so the author call plans
-  internally and one judgment call per page disappears.
-- **Concurrency defaults to 6** so a 5-page site's chains actually overlap.
-  (Authoring stays whole-page on purpose: fanning it out per section was tried
-  and reverted — sections authored in isolation lose cross-section rhythm and
-  first-build fidelity dropped measurably.)
-- **One repair round per page/theme** (`--max-repair` defaults to 2), attempted
-  only when the miss is within 2× of the gate — profiling showed multi-round
-  repairs chasing far-off pages were the single worst time sink, usually
-  plateauing above the gate anyway. The loop always **keeps the best build
-  seen**: a repair that regresses the metric (or breaks serialization) is
-  rolled back before the run reports. Repairs are also *sized to the miss*: a
-  page whose pixels already sit under the mismatch gate but whose height
-  drifts gets a targeted vertical-rhythm prompt (fewer screenshots, fewer
-  turns, CSS-only bias) instead of the full repair context.
-- **The brochure theme is assembled deterministically** — zero theme judgment
-  calls. The pipeline spliced every page as `[header, main, footer]` around one
-  authored chrome, so Stage 2 already knows the structure: it lifts the chrome
-  blocks as the header/footer template parts, renders pages through
-  `post-content`, and strips the chrome from each page payload. Nothing canned
-  enters the output — the chrome design, page trees, and all CSS ship exactly
-  as the creative calls authored them; only the bookkeeping the theme-plan call
-  used to re-derive (in ~9 minutes, sometimes wrongly) is done in code. The
-  theme name comes from the site design's `siteName`. If no page kept the
-  spliced shape, Stage 2 falls back to the planned (LLM) path.
+- **Pages gate on sanity, not pixels.** A page passes when its tree
+  serializes, renders on both surfaces, and covers **every mockup section**
+  (heading coverage is checked deterministically — dropped sections were the
+  #1 authoring failure). Pixel mismatch and height are still measured and
+  land in the run report as information. Each sanity failure gets exactly one
+  bounded fix call; there are no pixel repair loops.
+- **The mockup briefs the author, lean trees ship.** The author is told the
+  mockup is a design guide: carry content verbatim, keep section order and
+  style, and prefer the design system's class names over per-block styling —
+  smaller trees generate faster and edit cleaner in the block editor.
+- **The site design's tokens land in `theme.json`.** `site_design` emits
+  structured tokens (palette, font sizes, spacing scale, mood, layout
+  direction); the CLI sanitizes them deterministically into theme.json
+  settings, so the user gets a real palette/typography/spacing experience in
+  the editor — the surface they actually see.
+- **Brochure pages are pipelined end-to-end.** After the one `site_design`
+  call, each page runs its own `page_design → analyze → author → check` chain
+  concurrently; plan+author merge (custom blocks are off); the shared chrome
+  authors once and splices around every page. Concurrency defaults to 6.
+  (Per-section author fan-out was tried and reverted — isolated sections lose
+  cross-section rhythm.)
+- **The theme assembles deterministically** — zero theme judgment calls. The
+  splice makes the structure a known fact: chrome blocks lift as template
+  parts, pages render through `post-content`, payloads drop their chrome
+  copy. Theme validation stays (with deterministic markup canonicalization),
+  and Playground runs a **smoke render** — every page must render in real
+  WordPress; its mismatch numbers are informational.
+- **Judgment calls default to a fast model** (`sonnet`) instead of the
+  account's CLI default. Pin any role separately with `--model-design` /
+  `--model-build` / `--model-repair`.
 
 Every run (fast or not) also writes **`reports/timings.json`** — per-judgment-call
 and per-tool-call timing records. Summarize one or more runs with:

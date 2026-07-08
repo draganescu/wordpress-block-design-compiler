@@ -138,15 +138,17 @@ Options:
   --harness claude|mock      Judgment backend (default: claude)
   --model <id>               Model for judgment calls (default: sonnet; the account
                              default is NEVER inherited, fable models are refused)
-  --fast                     Speed preset: judgment calls on a fast model (sonnet),
-                             brochure pages pipelined design->build->repair with no
-                             cross-page waits, plan+author merged for core-only pages,
-                             concurrency 6, ONE repair round per page (attempted only
-                             when the metric is within 2x of the gate; the best build
-                             seen is always kept; repairs are sized to the miss), and
-                             deterministic theme assembly for brochures (no theme-plan
-                             calls — the theme structure is known from the chrome
-                             splice). Gates unchanged.
+  --fast                     Speed preset. For brochures, the generated mockup is a
+                             DESIGN GUIDE, not a pixel contract (the user never sees
+                             it): pages gate on sanity — the tree serializes, renders,
+                             and covers every mockup section — while pixel metrics are
+                             measured and reported as information only. No pixel
+                             repair loops. Pages pipeline design->author->check with
+                             no cross-page waits, plan+author merge, chrome authors
+                             once, the theme assembles deterministically with the site
+                             design's tokens in theme.json, and Playground does a
+                             smoke render instead of a pixel gate. Judgment calls run
+                             on a fast model (sonnet), concurrency 6.
   --model-design <id>        Model for design steps (site/page/mockup design)
   --model-build <id>         Model for build steps (plan, author, theme plan)
   --model-repair <id>        Model for repair/fix loop steps

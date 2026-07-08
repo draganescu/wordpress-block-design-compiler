@@ -54,6 +54,10 @@ const SITE_DESIGN_SCHEMA = {
         headerHtml: { type: 'string' },
         footerHtml: { type: 'string' },
         siteName: { type: 'string' },
+        // Free-form on purpose: the CLI sanitizes tokens deterministically
+        // before they reach theme.json, so a loose shape here never costs a
+        // schema-validation retry.
+        tokens: { type: 'object' },
         designNotes: { type: 'string' },
     },
 };
@@ -149,9 +153,10 @@ async function siteDesignStep(ctx, n) {
         '- sharedCss: the complete design system — tokens, base/typography, layout, and the header/nav/footer styles. One Google Fonts @import is allowed; no other network assets, no build tools.',
         '- headerHtml: a <header> with a <nav> linking every page by "<slug>.html". footerHtml: a <footer>.',
         '- siteName: the site\'s name as it appears in the header wordmark.',
+        '- tokens: the design tokens as structured data — { colors: [{slug,name,color}], fontSizes: [{slug,name,size}], spacing: [{slug,name,size}], radius, mood, layoutDirection }. These seed the theme.json palette/typography/spacing the user edits in the WordPress editor, so name them like a designer would.',
         'This is a static brochure: no forms, no data-driven grids, no login. Make one strong visual direction, not a generic template.',
         `\nBRIEF:\n${ctx.brief}`,
-        '\nReturn { pages, sharedCss, headerHtml, footerHtml, siteName, designNotes? }.',
+        '\nReturn { pages, sharedCss, headerHtml, footerHtml, siteName, tokens, designNotes? }.',
     ].join('\n');
 
     const site = await ctx.harness.complete({ id: 'site_design', systemPrompt: DESIGN_SYS(), prompt: sitePrompt, schema: SITE_DESIGN_SCHEMA, ...judgeParams(ctx, 'design') });
@@ -175,6 +180,9 @@ async function siteDesignStep(ctx, n) {
     if (site.data.siteName && site.data.siteName.trim()) {
         writeJsonWs(ctx.workspaceRoot, 'wordpress/preview-context.json', { siteTitle: site.data.siteName.trim() });
     }
+    if (site.data.tokens && Object.keys(site.data.tokens).length) {
+        writeJsonWs(ctx.workspaceRoot, 'plan/design-tokens.json', site.data.tokens);
+    }
     if (site.data.designNotes) writeWs(ctx.workspaceRoot, 'plan/design-notes.md', `${site.data.designNotes}\n`);
     ctx.log.info(`brochure pages: ${pages.map((p) => p.slug).join(', ')}`);
     return { site: site.data, pages };
@@ -185,6 +193,11 @@ async function pageDesignStep(ctx, site, p, pageList) {
     const prompt = [
         `Write the <main> content for the "${p.title}" page (slug "${p.slug}") of this brochure site.`,
         `Page purpose: ${p.purpose}`,
+        // Fast mode never pixel-gates against this mockup — it is the block
+        // author's reference. Clean semantic structure beats pixel detailing.
+        ctx.options.fast
+            ? 'This mockup is internal reference for a WordPress block build (the user never sees it). Favor clean semantic <section> structure and the design-system classes over intricate bespoke detailing.'
+            : '',
         'Reuse the shared design system below; only add page-specific CSS in extraCss when needed. Static content only — no forms or data grids.',
         `Link to other pages by "<slug>.html" where relevant. All pages: ${pageList}.`,
         `\nBRIEF:\n${ctx.brief}`,

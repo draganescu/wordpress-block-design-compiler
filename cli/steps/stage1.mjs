@@ -288,13 +288,15 @@ async function fastAuthorStep(ctx, entry, isFoundation) {
     // chrome is authored once, not per page.
     const prompt = [
         chromeExpected
-            ? `Author the data-only block tree (MAIN CONTENT ONLY) and page CSS for page "${page}" to reproduce the mockup's <main>. The site header and footer are authored separately — do NOT include them; your blocks array starts at the first section inside <main>.`
-            : `Author the data-only block tree and page CSS for page "${page}" to reproduce the mockup (including the header and footer chrome). Plan the section-to-block mapping internally; return only the finished tree.`,
+            ? `Author the data-only block tree (MAIN CONTENT ONLY) and page CSS for page "${page}" from the mockup's <main>. The site header and footer are authored separately — do NOT include them; your blocks array starts at the first section inside <main>.`
+            : `Author the data-only block tree and page CSS for page "${page}" from the mockup (including the header and footer chrome). Plan the section-to-block mapping internally; return only the finished tree.`,
+        'The mockup is a DESIGN GUIDE, not a pixel contract — the user never sees it. Carry over its content VERBATIM, its section order, and its style (colors, typography, spacing rhythm, mood); you do not need pixel-exact geometry.',
+        'LEAN TREES: reuse the shared design-system class names via className and let the stylesheet do the styling. Avoid per-block style/layout attrs unless a section genuinely needs one, and omit attributes that restate defaults — smaller trees author faster and edit cleaner.',
         'blockTree is { version, contract:"data-only", blocks:[...] }; every block is { blockName, attrs, innerBlocks }.',
-        'NO raw markup fields (htmlLines/innerHTML/markup/sourceHtml). Put styling in block support attributes first, page CSS last.',
+        'NO raw markup fields (htmlLines/innerHTML/markup/sourceHtml).',
         'CORE BLOCKS ONLY: no custom blocks and no stand-ins — this is static brochure content; core group/columns/heading/paragraph/image/buttons/quote/list.',
-        'The MOCKUP CSS below is the shared design system and is ALREADY linked on the rendered page — do NOT repeat its rules in pageCss. Reuse its class names verbatim via className attrs; pageCss is ONLY for page-specific rules the shared stylesheet lacks (and any structural drift the block markup introduces).',
-        'Cover EVERY section in the section analysis below — dropped sections are the most common failure.',
+        'The MOCKUP CSS below is the shared design system and is ALREADY linked on the rendered page — do NOT repeat its rules in pageCss; pageCss is ONLY for page-specific rules the shared stylesheet lacks.',
+        'Cover EVERY section in the section analysis below — dropped sections are the most common failure, and section coverage IS the gate.',
         mockupShot ? `\nMOCKUP SCREENSHOT (Read this first to see the intended layout, section proportions, and rhythm):\n${mockupShot}` : '',
         `\nSECTION ANALYSIS:\n${JSON.stringify(analysis?.sections || [], null, 0)}`,
         `\nMOCKUP HTML:\n${mockupHtml}`,
@@ -349,6 +351,136 @@ function metricOf(report) {
     const r = report?.metrics?.rendered?.maxMismatchPercent ?? 999;
     const e = report?.metrics?.editor?.maxMismatchPercent ?? 999;
     return Math.max(r, e);
+}
+
+// ---- suggestion gate (fast brochure) -----------------------------------------
+//
+// Fast brochure mode treats the generated mockup as a DESIGN GUIDE, not a
+// pixel contract — the user never sees the mockup, so pixel parity with it is
+// not the product. Pages gate on sanity instead: the tree serializes and
+// renders, and every mockup section made it into the tree (dropped sections
+// are the historical #1 authoring failure). Pixel metrics are still measured
+// and reported, but only as information.
+
+function buildPageOnce(ctx, entry) {
+    const th = ctx.options.thresholds;
+    return ctx.buildSemaphore.run(() => ctx.client.call('build_page', {
+        workspaceRoot: ctx.workspaceRoot,
+        page: entry.page,
+        mockupPath: entry.mockupPath,
+        compareEditor: ctx.options.compareEditor !== false,
+        maxMismatchPercent: th.mismatch,
+        maxHeightDelta: th.height,
+    }));
+}
+
+export function collectTreeText(blocks, out = []) {
+    for (const b of blocks || []) {
+        if (!b || typeof b !== 'object') continue;
+        for (const key of ['content', 'label', 'text', 'citation', 'value', 'summary']) {
+            if (typeof b.attrs?.[key] === 'string') out.push(b.attrs[key]);
+        }
+        collectTreeText(b.innerBlocks, out);
+    }
+    return out;
+}
+
+export function normText(text) {
+    return String(text || '')
+        .replace(/<[^>]*>/g, ' ')
+        .replace(/&#(\d+);/g, (_, n) => String.fromCodePoint(Number(n)))
+        .replace(/&amp;/g, '&').replace(/&nbsp;/g, ' ').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#0?39;/g, "'")
+        .toLowerCase().replace(/\s+/g, ' ').trim();
+}
+
+// Which mockup sections' headings are absent from the authored tree. Headings
+// transfer verbatim (the author transcribes content), so a missing heading
+// means a dropped section, not a rewording.
+export function missingHeadings(sections, tree) {
+    const text = normText(collectTreeText(tree?.blocks).join(' '));
+    return (sections || [])
+        .map((s) => (typeof s.heading === 'string' ? s.heading.trim() : ''))
+        .filter((h) => h.length >= 4)
+        .filter((h) => !text.includes(normText(h).slice(0, 60)));
+}
+
+// One bounded fix call — used for the two sanity failures a page can have.
+async function sanityFixStep(ctx, entry, { id, instructions }) {
+    const { page } = entry;
+    const tree = readJsonWs(ctx.workspaceRoot, entry.suggested.treePath);
+    const mockupHtml = clip(readWs(ctx.workspaceRoot, entry.mockupPath), 60000);
+    const res = await ctx.harness.complete({
+        id, systemPrompt: REPAIR_SYS(), schema: REPAIR_SCHEMA, maxTurns: 8,
+        prompt: [
+            instructions,
+            'Return the FULL corrected blockTree (and pageCss additions only if needed). Keep everything that is already correct unchanged.',
+            `\nCURRENT BLOCK TREE:\n${JSON.stringify(tree)}`,
+            `\nMOCKUP HTML (reference):\n${mockupHtml}`,
+        ].join('\n'),
+        ...judgeParams(ctx, 'repair'),
+    });
+    if (!res.ok || !res.data.blockTree) return false;
+    applyTree(ctx, entry, res.data);
+    return true;
+}
+
+async function suggestionGatePage(ctx, entry) {
+    const { page } = entry;
+    const analysis = readJsonWs(ctx.workspaceRoot, `analysis/${page}.analysis.json`)
+        || readJsonWs(ctx.workspaceRoot, 'analysis/analysis.json');
+    const sections = analysis?.sections || [];
+
+    let report = null;
+    let iters = 1;
+    try {
+        report = await buildPageOnce(ctx, entry);
+    } catch (err) {
+        // A tree that cannot serialize/render is broken product, not drift —
+        // one mandatory fix attempt.
+        ctx.log.warn(`[${page}] build failed (${String(err?.message || err).split('\n')[0]}); one serialize-fix pass`);
+        const fixed = await sanityFixStep(ctx, entry, {
+            id: `repair:${page}:serialize`,
+            instructions: `The block tree for page "${page}" FAILED to serialize/render with:\n${err?.message || err}\nFix the tree so it serializes.`,
+        });
+        iters = 2;
+        if (fixed) report = await buildPageOnce(ctx, entry).catch(() => null);
+        if (!report) {
+            return { page, status: 'errored', passed: false, iters, metric: 999, error: String(err?.message || err) };
+        }
+    }
+
+    let missing = missingHeadings(sections, readJsonWs(ctx.workspaceRoot, entry.suggested.treePath));
+    if (missing.length) {
+        ctx.log.warn(`[${page}] ${missing.length} mockup section(s) missing from the tree; one coverage-fix pass`);
+        const fixed = await sanityFixStep(ctx, entry, {
+            id: `repair:${page}:coverage`,
+            instructions: [
+                `The authored tree for page "${page}" DROPPED these mockup sections (their headings appear nowhere in the tree):`,
+                ...missing.map((h) => `- ${h}`),
+                'Add the missing sections in their mockup order with their full content.',
+            ].join('\n'),
+        });
+        iters += 1;
+        if (fixed) {
+            report = await buildPageOnce(ctx, entry).catch(() => report);
+            missing = missingHeadings(sections, readJsonWs(ctx.workspaceRoot, entry.suggested.treePath));
+        }
+    }
+
+    const passed = missing.length === 0;
+    const metric = metricOf(report);
+    (passed ? ctx.log.ok : ctx.log.warn).call(ctx.log,
+        `[${page}] ${passed ? 'passed' : 'incomplete'} · sections ${sections.length - missing.length}/${sections.length} · informational mismatch≈${metric}`);
+    return {
+        page,
+        status: passed ? 'passed' : 'incomplete',
+        passed,
+        iters,
+        metric,
+        metrics: report?.metrics || null,
+        informationalMetrics: true,
+        ...(missing.length ? { missingSections: missing } : {}),
+    };
 }
 
 async function repairLoop(ctx, entry, plan) {
@@ -461,11 +593,14 @@ export async function runStage1Page(ctx, entry, { foundation = false, fastAuthor
     let plan = null;
     if (fastAuthor && ctx.options.noCustomBlocks) {
         await fastAuthorStep(ctx, entry, foundation);
-    } else {
-        plan = await planStep(ctx, entry, foundation);
-        if (!ctx.options.noCustomBlocks) await customBlocksStep(ctx, entry, plan);
-        await authorStep(ctx, entry, plan, foundation);
+        // Fast brochure: the mockup is a design guide, not a pixel target —
+        // sanity gates (serializes, renders, full section coverage) instead of
+        // the pixel repair loop.
+        return suggestionGatePage(ctx, entry);
     }
+    plan = await planStep(ctx, entry, foundation);
+    if (!ctx.options.noCustomBlocks) await customBlocksStep(ctx, entry, plan);
+    await authorStep(ctx, entry, plan, foundation);
     const loop = await repairLoop(ctx, entry, plan);
 
     const passed = loop.status === 'passed';

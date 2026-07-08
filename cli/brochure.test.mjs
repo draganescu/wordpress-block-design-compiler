@@ -86,6 +86,16 @@ test('fast brochure mode pipelines pages with merged plan+author and no plan cal
                 sharedCss: 'body{font-family:serif}',
                 headerHtml: '<header class="site"><nav><a href="index.html">Home</a><a href="about.html">About</a></nav></header>',
                 footerHtml: '<footer>© Test</footer>',
+                tokens: {
+                    colors: [
+                        { slug: 'Night Ink', name: 'Night Ink', color: '#101014' },
+                        { color: '#c8f04a' }, // no slug/name — sanitizer must cope
+                        { slug: 'junk' }, // no color — must drop
+                    ],
+                    fontSizes: [{ slug: 'display', size: 'clamp(2.5rem,6vw,4.5rem)' }],
+                    spacing: [{ slug: 'section', size: '6rem' }],
+                    mood: 'nocturnal neon',
+                },
             },
             'page_design:': (req) => ({ mainHtml: `<h1>${req.id}</h1><p>content</p>` }),
             chrome_author: {
@@ -93,22 +103,24 @@ test('fast brochure mode pipelines pages with merged plan+author and no plan cal
                 footerBlocks: [{ blockName: 'core/group', attrs: { tagName: 'footer' }, innerBlocks: [] }],
             },
             // Fast authors return MAIN-ONLY content (the chrome is spliced in).
-            // The group uses layout type "flow" — the unregistered name authors
-            // guess — which normalizeTree must harden to "default" (the editor
-            // canvas crash-loops on unregistered layout types).
-            'author:': {
+            // The heading carries the mockup's h1 text so the section-coverage
+            // gate sees every section transferred. The group uses layout type
+            // "flow" — the unregistered name authors guess — which
+            // normalizeTree must harden to "default" (the editor canvas
+            // crash-loops on unregistered layout types).
+            'author:': (req) => ({
                 blockTree: {
                     version: 2, contract: 'data-only',
                     blocks: [
                         {
                             blockName: 'core/group', attrs: { className: 'intro', layout: { type: 'flow' } },
-                            innerBlocks: [{ blockName: 'core/heading', attrs: { level: 1, content: 'Hello' }, innerBlocks: [] }],
+                            innerBlocks: [{ blockName: 'core/heading', attrs: { level: 1, content: `page_design:${req.id.split(':')[1]}` }, innerBlocks: [] }],
                         },
                         { blockName: 'core/paragraph', attrs: { content: 'Static brochure content.' }, innerBlocks: [] },
                     ],
                 },
                 pageCss: '',
-            },
+            }),
         },
     });
 
@@ -125,10 +137,17 @@ test('fast brochure mode pipelines pages with merged plan+author and no plan cal
 
     assert.equal(report.outcome.pagesTotal, 2);
     assert.equal(report.outcome.pagesPassed, 2);
+    // Suggestion mode: pages gate on sanity; pixel metrics are informational.
+    for (const p of report.stages.stage1) {
+        assert.equal(p.informationalMetrics, true, `${p.page} reports informational metrics`);
+        assert.equal(p.status, 'passed');
+    }
 
     // Fast mode never calls plan: — plan+author are merged into author:.
+    // And no repair/fix calls ran: sanity gates all passed first time.
     assert.equal(harness.log.filter((c) => c.id.startsWith('plan:')).length, 0);
     assert.equal(harness.log.filter((c) => c.id.startsWith('author:')).length, 2);
+    assert.equal(harness.log.filter((c) => c.id.startsWith('repair:')).length, 0);
 
     // Chrome authored once and spliced around each page's main content.
     assert.equal(harness.log.filter((c) => c.id === 'chrome_author').length, 1);
@@ -157,6 +176,15 @@ test('fast brochure mode pipelines pages with merged plan+author and no plan cal
     assert.equal(report.stages.stage2.validation.passed, true);
     const slug = report.stages.stage2.slug;
     const themeDir = path.join(workspace, 'theme', slug);
+    // The site design's tokens landed in theme.json, sanitized (junk dropped,
+    // missing slugs derived).
+    const themeJson = JSON.parse(fs.readFileSync(path.join(themeDir, 'theme.json'), 'utf8'));
+    const palette = themeJson.settings.color.palette;
+    assert.deepEqual(palette.map((c) => c.slug), ['night-ink', 'token-2']);
+    assert.equal(palette[0].color, '#101014');
+    assert.equal(themeJson.settings.typography.fontSizes[0].slug, 'display');
+    assert.equal(themeJson.settings.spacing.spacingSizes[0].size, '6rem');
+    assert.equal(themeJson.settings.spacing.blockGap, null, 'blockGap stays disabled alongside spacingSizes');
     assert.ok(fs.existsSync(path.join(themeDir, 'parts/header.html')), 'header part exists');
     assert.ok(fs.existsSync(path.join(themeDir, 'parts/footer.html')), 'footer part exists');
     const indexTpl = fs.readFileSync(path.join(themeDir, 'templates/index.html'), 'utf8');

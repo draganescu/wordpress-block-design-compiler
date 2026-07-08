@@ -320,6 +320,31 @@ function slugify(text, fallback = 'brochure-site') {
     return slug || fallback;
 }
 
+// The site design's free-form tokens object, sanitized into valid theme.json
+// settings. Deterministic and defensive: junk entries drop, slugs dedupe —
+// bad LLM data must never fail theme validation.
+function tokensToThemeSettings(tokens = {}) {
+    const entries = (list, valueKey) => {
+        const seen = new Set();
+        return (Array.isArray(list) ? list : [])
+            .filter((t) => t && typeof t === 'object' && t[valueKey] && String(t[valueKey]).trim())
+            .map((t, i) => ({
+                slug: slugify(t.slug || t.name || `token-${i + 1}`, `token-${i + 1}`),
+                name: String(t.name || t.slug || `Token ${i + 1}`),
+                [valueKey]: String(t[valueKey]).trim(),
+            }))
+            .filter((t) => (seen.has(t.slug) ? false : seen.add(t.slug)));
+    };
+    const settings = {};
+    const palette = entries(tokens.colors, 'color');
+    if (palette.length) settings.color = { palette };
+    const fontSizes = entries(tokens.fontSizes, 'size');
+    if (fontSizes.length) settings.typography = { fontSizes };
+    const spacingSizes = entries(tokens.spacing, 'size');
+    if (spacingSizes.length) settings.spacing = { spacingSizes };
+    return settings;
+}
+
 // A tree with an item missing blockName/name would crash serialization inside
 // scaffold_block_theme and take the whole theme down with it. Exclude such
 // pages (they failed their gate anyway) instead of crashing.
@@ -387,11 +412,13 @@ async function runStage2Brochure(ctx) {
         // content plugin sets it from this so the wordmark matches the design.
         siteTitle: name,
         description: `Block theme generated from a brief: ${ctx.brief.trim().slice(0, 140)}`,
-        // No token renames and no theme.json lifting: the LLM-authored CSS is
-        // the design system and ships verbatim (scaffold defaults customCss to
-        // wordpress/style.css and bundles every wordpress/pages/*.css).
+        // No token renames: the LLM-authored CSS is the design system and
+        // ships verbatim (scaffold defaults customCss to wordpress/style.css
+        // and bundles every wordpress/pages/*.css). theme.json settings carry
+        // the site design's structured tokens so the user gets a real palette/
+        // typography/spacing experience in the editor.
         tokenMap: {},
-        themeSettings: {},
+        themeSettings: tokensToThemeSettings(site.tokens),
         themeStyles: {},
         parts: [
             { slug: 'header', area: 'header', source: { page: source.entry.page, index: source.chrome.header } },
@@ -418,14 +445,23 @@ async function runStage2Brochure(ctx) {
     if (fontFamilies.length) args.fontFamilies = fontFamilies;
     await ctx.client.call('scaffold_block_theme', args);
 
-    // Canonicalize the emitted parts/templates (parse → recreate → serialize).
-    // Authored chrome attrs occasionally don't byte-match save() output; the
-    // fix is mechanical, so never leave it to the validation loop.
-    const themeFiles = ['parts', 'templates'].flatMap((sub) => {
-        const dir = path.join(ctx.workspaceRoot, 'theme', slug, sub);
-        if (!fs.existsSync(dir)) return [];
-        return fs.readdirSync(dir).filter((f) => f.endsWith('.html')).map((f) => `theme/${slug}/${sub}/${f}`);
-    });
+    // Canonicalize EVERYTHING the theme stores as block markup (parse →
+    // recreate → serialize): parts, templates, AND the per-page content
+    // payloads. Authored attrs occasionally don't byte-match save() output
+    // (observed: a core/spacer in a payload failing the Playground stored-
+    // content validation); the fix is mechanical, so never leave it to a loop.
+    const themeFiles = [
+        ...['parts', 'templates'].flatMap((sub) => {
+            const dir = path.join(ctx.workspaceRoot, 'theme', slug, sub);
+            if (!fs.existsSync(dir)) return [];
+            return fs.readdirSync(dir).filter((f) => f.endsWith('.html')).map((f) => `theme/${slug}/${sub}/${f}`);
+        }),
+        ...(() => {
+            const dir = path.join(ctx.workspaceRoot, 'theme-plugin', `${slug}-content`, 'content');
+            if (!fs.existsSync(dir)) return [];
+            return fs.readdirSync(dir).filter((f) => f.endsWith('.html')).map((f) => `theme-plugin/${slug}-content/content/${f}`);
+        })(),
+    ];
     if (themeFiles.length) {
         await ctx.client.call('fix_block_markup', { workspaceRoot: ctx.workspaceRoot, paths: themeFiles });
     }
@@ -436,13 +472,30 @@ async function runStage2Brochure(ctx) {
         return { slug, validation, gate: null, deterministic: true };
     }
 
+    // Brochure themes are built from a generated design the user never sees,
+    // so the Playground check is a SMOKE render, not a pixel gate: every page
+    // must render in real WordPress; the mismatch numbers are informational.
     let gate = null;
     if (ctx.options.playground) {
-        gate = await playgroundGate(ctx, slug);
-        (gate.status === 'passed' ? ctx.log.ok : ctx.log.warn).call(ctx.log, `[theme] gate ${gate.status} after ${gate.iters} iter(s) · mismatch≈${gate.metric}`);
+        try {
+            const report = await ctx.client.call('playground_render', {
+                workspaceRoot: ctx.workspaceRoot, slug,
+                maxMismatchPercent: 100, maxHeightDelta: 1000000,
+            });
+            gate = {
+                status: report.passed ? 'passed' : 'failed', smoke: true, iters: 1,
+                metric: report.aggregates?.maxMismatchPercent ?? null,
+                aggregates: report.aggregates || null,
+            };
+            (gate.status === 'passed' ? ctx.log.ok : ctx.log.warn).call(ctx.log,
+                `[theme] smoke render ${gate.status} · informational mismatch≈${gate.metric} · height Δ≈${report.aggregates?.maxHeightDelta ?? '?'}px`);
+        } catch (err) {
+            gate = { status: 'failed', smoke: true, iters: 1, error: String(err?.message || err) };
+            ctx.log.error(`[theme] smoke render failed: ${gate.error}`);
+        }
         await ctx.client.call('playground_stop', { workspaceRoot: ctx.workspaceRoot, slug }).catch(() => {});
     } else {
-        ctx.log.info('playground gate skipped (--no-playground)');
+        ctx.log.info('playground smoke render skipped (--no-playground)');
     }
 
     return { slug, validation, gate, deterministic: true };
