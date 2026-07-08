@@ -42,6 +42,7 @@ export const SERIALIZER_CONSTRAINTS = [
     '- core/group tagName MUST be one of: div, main, section, article, aside, header, footer. NEVER nav, ul, ol, li, p, span, or any inline tag. A nav menu is core/navigation (it renders a <nav>); a list is core/list; a search box is core/search.',
     '- NEVER include raw-markup fields: htmlLines, innerHTML, innerContent, html, markup, sourceHtml, innerHtml. Markup is generated from attrs only.',
     '- Every block item is { blockName, attrs, innerBlocks }.',
+    '- className MUST carry the source element\'s FULL class list verbatim (e.g. "btn btn-cta", never just "btn-cta") — stylesheets key on the exact combination, and a dropped base class unstyles the element.',
 ].join('\n');
 
 // The shared operating rules that apply to EVERY judgment call in this CLI: you

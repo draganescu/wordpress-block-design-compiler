@@ -137,9 +137,18 @@ const BLOCK_CHROME_PARITY_CSS = `
     list-style: none; margin: 0; padding: 0;
 }
 :where(.wp-block-navigation-item) { display: inline-flex; align-items: center; }
-:where(.wp-block-button > .wp-block-button__link) {
+/* Buttons: the design class lands on the WRAPPER (WP puts className there),
+   so the wrapper owns the visual and the inner link must be invisible chrome.
+   NOT :where() on purpose: in real WordPress, global styles paint
+   .wp-element-button with its own background/padding at class specificity —
+   this rule must outrank it (theme CSS also loads after global styles). */
+.wp-block-button > .wp-block-button__link {
     all: unset; cursor: pointer; display: inline; text-align: inherit;
+    font: inherit; color: inherit; text-decoration: inherit;
 }
+/* The buttons ROW renders as a bare div on the preview surfaces (real WP adds
+   is-layout-flex) — same class of bug as the nav ul. Keep rows horizontal. */
+:where(.wp-block-buttons) { display: flex; flex-wrap: wrap; align-items: center; gap: inherit; }
 `;
 
 const DESIGN_SYS = () => `${HARNESS_PREAMBLE}\n\n${skillContext(['skills/html-to-blocks/references/design-prompt.md'])}`;
