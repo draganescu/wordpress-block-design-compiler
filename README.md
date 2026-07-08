@@ -102,6 +102,7 @@ node cli/index.mjs run --source ./site-export --workspace ./runs/acme
 node cli/index.mjs run --brief @brief.md --workspace ./runs/acme --stages 1
 node cli/index.mjs run --brief "wine bar in Lisbon" --brochure --workspace ./runs/tinta
 node cli/index.mjs run --brief "wine bar in Lisbon" --brochure --fast --workspace ./runs/tinta   # speed preset, same gates
+node cli/index.mjs run --brief "wine bar in Lisbon" --brochure --fast --with-images --workspace ./runs/tinta   # + generated photos (needs GEMINI_API_KEY)
 node cli/index.mjs serve --workspace ./runs/acme            # boot the built theme in WordPress to look at it
 ```
 

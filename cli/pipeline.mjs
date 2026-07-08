@@ -9,6 +9,7 @@ import { McpToolClient } from './tool-client.mjs';
 import { getHarness } from './harness/index.mjs';
 import { Logger } from './lib/log.mjs';
 import { Semaphore } from './lib/semaphore.mjs';
+import { createGeminiImageClient, generateWorkspaceImages } from './lib/images.mjs';
 import { CommandLog } from './lib/command-log.mjs';
 import { skillContext, HARNESS_PREAMBLE, SERIALIZER_CONSTRAINTS } from './prompts/skill-context.mjs';
 import { writeWs, writeJsonWs, judgeParams } from './steps/helpers.mjs';
@@ -153,6 +154,14 @@ const BLOCK_CHROME_PARITY_CSS = `
 
 const DESIGN_SYS = () => `${HARNESS_PREAMBLE}\n\n${skillContext(['skills/html-to-blocks/references/design-prompt.md'])}`;
 
+// The placeholder contract for --with-images: the design names each photo,
+// the generation pass creates the exact files, the theme bundles them.
+const IMAGE_CONTRACT = [
+    'IMAGES: include photographic <img> placeholders where photography serves the design (hero, cards, texture bands).',
+    'Every <img> MUST have: src="images/<descriptive-kebab-name>.jpg" (unique per subject — reuse the exact name to reuse the same photo), real alt text, data-image-prompt="subject, setting, composition — concrete and specific, NO style words (art direction is applied globally)", and optionally data-image-aspect="16:9|4:3|3:4|1:1" (default 16:9).',
+    'The files do not exist yet — a generation pass creates each one from its data-image-prompt. Size and crop with CSS (object-fit: cover).',
+].join(' ');
+
 // One design-system call locks the shared chrome + CSS + page list for the
 // whole brochure. Returns the site payload plus the normalized page list.
 async function siteDesignStep(ctx, n) {
@@ -162,7 +171,8 @@ async function siteDesignStep(ctx, n) {
         '- sharedCss: the complete design system — tokens, base/typography, layout, and the header/nav/footer styles. One Google Fonts @import is allowed; no other network assets, no build tools.',
         '- headerHtml: a <header> with a <nav> linking every page by "<slug>.html". footerHtml: a <footer>.',
         '- siteName: the site\'s name as it appears in the header wordmark.',
-        '- tokens: the design tokens as structured data — { colors: [{slug,name,color}], fontSizes: [{slug,name,size}], spacing: [{slug,name,size}], radius, mood, layoutDirection }. These seed the theme.json palette/typography/spacing the user edits in the WordPress editor, so name them like a designer would.',
+        '- tokens: the design tokens as structured data — { colors: [{slug,name,color}], fontSizes: [{slug,name,size}], spacing: [{slug,name,size}], radius, mood, artDirection, layoutDirection }. These seed the theme.json palette/typography/spacing the user edits in the WordPress editor, so name them like a designer would. artDirection is one sentence of photographic art direction for the site\'s imagery.',
+        ctx.images ? IMAGE_CONTRACT : 'Use NO <img> elements — the design must work with color, typography, and CSS shapes alone.',
         'This is a static brochure: no forms, no data-driven grids, no login. Make one strong visual direction, not a generic template.',
         `\nBRIEF:\n${ctx.brief}`,
         '\nReturn { pages, sharedCss, headerHtml, footerHtml, siteName, tokens, designNotes? }.',
@@ -192,6 +202,11 @@ async function siteDesignStep(ctx, n) {
     if (site.data.tokens && Object.keys(site.data.tokens).length) {
         writeJsonWs(ctx.workspaceRoot, 'plan/design-tokens.json', site.data.tokens);
     }
+    // Shared art direction for every generated image (see lib/images.mjs).
+    ctx.shared.imageArt = {
+        artDirection: site.data.tokens?.artDirection,
+        mood: site.data.tokens?.mood,
+    };
     if (site.data.designNotes) writeWs(ctx.workspaceRoot, 'plan/design-notes.md', `${site.data.designNotes}\n`);
     ctx.log.info(`brochure pages: ${pages.map((p) => p.slug).join(', ')}`);
     return { site: site.data, pages };
@@ -207,6 +222,9 @@ async function pageDesignStep(ctx, site, p, pageList) {
         ctx.options.fast
             ? 'This mockup is internal reference for a WordPress block build (the user never sees it). Favor clean semantic <section> structure and the design-system classes over intricate bespoke detailing.'
             : '',
+        ctx.images
+            ? `${IMAGE_CONTRACT} Reuse an image name the site design already declared when the subject repeats.`
+            : 'Use NO <img> elements — express the design with color, typography, and CSS shapes alone.',
         'Reuse the shared design system below; only add page-specific CSS in extraCss when needed. Static content only — no forms or data grids.',
         `Link to other pages by "<slug>.html" where relevant. All pages: ${pageList}.`,
         `\nBRIEF:\n${ctx.brief}`,
@@ -231,7 +249,11 @@ async function designBrochure(ctx, n) {
     ctx.log.step(`design · ${n}-page brochure from brief`);
     const { site, pages } = await siteDesignStep(ctx, n);
     const pageList = pages.map((p) => `${p.slug}.html — ${p.title}`).join('; ');
-    await Promise.all(pages.map((p) => pageDesignStep(ctx, site, p, pageList)));
+    await Promise.all(pages.map(async (p) => {
+        await pageDesignStep(ctx, site, p, pageList);
+        // Generate this page's images before Stage 1 captures it.
+        await generateWorkspaceImages(ctx, [`mockup/${p.slug}.html`]);
+    }));
     ctx.pages = pages.map((p, i) => pageEntry(p.slug, { primary: i === 0 }));
 }
 
@@ -306,6 +328,9 @@ async function runBrochureFast(ctx, n) {
         const entry = ctx.pages[i];
         try {
             await pageDesignStep(ctx, site, p, pageList);
+            // Images must exist before this page's screenshot and build —
+            // per-image failures inside the pass warn and skip, never throw.
+            await generateWorkspaceImages(ctx, [`mockup/${p.slug}.html`]);
         } catch (err) {
             ctx.log.error(`[${entry.page}] design errored: ${err?.message || err}`);
             return { page: entry.page, status: 'errored', passed: false, error: String(err?.message || err) };
@@ -327,6 +352,7 @@ async function designMockup(ctx) {
     const prompt = [
         'Generate one strong, self-contained HTML/CSS mockup (optional JS) for this brief.',
         'No network assets, no remote fonts except a Google Fonts @import, no build tools. Inspectable and deterministic.',
+        ctx.images ? IMAGE_CONTRACT : '',
         `\nBRIEF:\n${ctx.brief}`,
         '\nReturn { html, css, js? }.',
     ].join('\n');
@@ -335,6 +361,7 @@ async function designMockup(ctx) {
     writeWs(ctx.workspaceRoot, 'mockup/index.html', res.data.html);
     writeWs(ctx.workspaceRoot, 'mockup/style.css', res.data.css);
     if (res.data.js) writeWs(ctx.workspaceRoot, 'mockup/script.js', res.data.js);
+    await generateWorkspaceImages(ctx, ['mockup/index.html']);
 }
 
 async function setup(ctx, sourceHtmlPath) {
@@ -409,8 +436,25 @@ export async function runPipeline({ workspaceRoot, brief = '', source = null, op
     });
     await client.start();
 
+    // --with-images: real photos for the design's placeholders. No API key is
+    // a warning, not an error — the design prompts then forbid <img> instead.
+    // options.imageClient injects a fake for tests.
+    let images = null;
+    if (options.withImages) {
+        if (options.imageClient) {
+            images = options.imageClient;
+        } else if (process.env.GEMINI_API_KEY) {
+            images = createGeminiImageClient({ apiKey: process.env.GEMINI_API_KEY, model: options.imageModel });
+        } else {
+            log.warn('--with-images: GEMINI_API_KEY is not set — generating without images');
+        }
+    }
+
     const ctx = {
         client, harness, log, workspaceRoot, brief, options,
+        images,
+        imageSemaphore: new Semaphore(6),
+        imageLog: [],
         judge: {
             design: { model: options.models?.design, effort: options.efforts?.design },
             build: { model: options.models?.build, effort: options.efforts?.build },
@@ -479,6 +523,7 @@ export async function runPipeline({ workspaceRoot, brief = '', source = null, op
                 wroteAt: new Date().toISOString(),
                 harnessCalls: harness.callLog || [],
                 toolCalls: client.callLog || [],
+                imageCalls: ctx.imageLog || [],
             });
         } catch { /* profiling must never mask the real outcome */ }
         await client.close();

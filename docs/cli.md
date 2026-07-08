@@ -47,6 +47,8 @@ node cli/index.mjs run --brief @brief.md --workspace ./runs/acme
 | `--brief <text\|@file>` | — | Design brief; generates a mockup when no `--source` |
 | `--brochure` | — | Brief only: minimal N-page brochure site, no content model, no custom blocks (see Brochure mode). Ignored with `--source`. |
 | `--pages <n>` | `5` | Brochure page count |
+| `--with-images` | — | Generate real images for the design's placeholders (Google Gemini / Nano Banana; needs `GEMINI_API_KEY`) |
+| `--image-model <id>` | `gemini-3.1-flash-lite-image` | Image model for `--with-images` |
 | `--no-custom-blocks` | — | Core blocks only (implied by `--brochure`) |
 | `--workspace <dir>` | — | Run workspace (required) |
 | `--stages 0,1,2` | `0,1,2` | Which stages to run |
@@ -123,6 +125,21 @@ content needs no content model. Stage 2 still builds the installable theme.
 This is a prompt-only shortcut: with `--source`, `--brochure` is ignored (with a
 warning) because an import must respect the site you provided. `--no-custom-blocks`
 is available on its own if you want core-only output without the brochure design flow.
+
+### Images (`--with-images`)
+
+By default, generated designs are CSS-only (no `<img>` elements). With
+`--with-images` (and `GEMINI_API_KEY` set), the design calls declare
+photographic placeholders — `<img src="images/<name>.jpg">` with alt text, a
+`data-image-prompt` describing subject/setting/composition, and an optional
+`data-image-aspect` — and a generation pass (Google Gemini, the Nano Banana
+image models; `--image-model` to override) creates each unique file under the
+exact name the placeholder expects, as soon as its page's mockup exists. The
+site design's `artDirection`/`mood` tokens are appended to every image prompt
+so all photos share one look; the same `src` reused across pages is generated
+once. Stage 2 bundles the files into the theme (`assets/images/`) and rewrites
+every reference; failures warn and skip, never blocking a page. Without the
+key, the flag downgrades to a warning and the design stays CSS-only.
 
 ## Fast mode
 

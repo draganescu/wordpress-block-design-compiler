@@ -295,6 +295,7 @@ async function fastAuthorStep(ctx, entry, isFoundation) {
         'blockTree is { version, contract:"data-only", blocks:[...] }; every block is { blockName, attrs, innerBlocks }.',
         'NO raw markup fields (htmlLines/innerHTML/markup/sourceHtml).',
         'CORE BLOCKS ONLY: no custom blocks and no stand-ins — this is static brochure content; core group/columns/heading/paragraph/image/buttons/quote/list.',
+        'IMAGES: reproduce each mockup <img> as core/image with the EXACT same relative url (images/<name>.jpg) and the same alt text — the files exist under those names.',
         'The MOCKUP CSS below is the shared design system and is ALREADY linked on the rendered page — do NOT repeat its rules in pageCss; pageCss is ONLY for page-specific rules the shared stylesheet lacks.',
         'Cover EVERY section in the section analysis below — dropped sections are the most common failure, and section coverage IS the gate.',
         mockupShot ? `\nMOCKUP SCREENSHOT (Read this first to see the intended layout, section proportions, and rhythm):\n${mockupShot}` : '',

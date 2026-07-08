@@ -443,6 +443,20 @@ async function runStage2Brochure(ctx) {
         })),
     };
     if (fontFamilies.length) args.fontFamilies = fontFamilies;
+
+    // Generated images (--with-images) live at mockup/images/<name> and the
+    // trees reference them as "images/<name>". mediaMap makes scaffold copy
+    // each file into the theme and rewrite every reference to
+    // {{THEME_URI}}/assets/images/<name>.
+    const imagesDir = path.join(ctx.workspaceRoot, 'mockup/images');
+    if (fs.existsSync(imagesDir)) {
+        const mediaMap = {};
+        for (const f of fs.readdirSync(imagesDir)) {
+            if (/\.(jpe?g|png|webp)$/i.test(f)) mediaMap[`images/${f}`] = `assets/images/${f}`;
+        }
+        if (Object.keys(mediaMap).length) args.mediaMap = mediaMap;
+    }
+
     await ctx.client.call('scaffold_block_theme', args);
 
     // Canonicalize EVERYTHING the theme stores as block markup (parse →

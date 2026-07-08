@@ -29,3 +29,6 @@ tools/profile/fixture-theme/theme-plugin/
 tools/profile/fixture-theme/reports/
 .gstack/
 .asset-cache/
+
+# run workspaces (benchmark + generation output)
+runs/

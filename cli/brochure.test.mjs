@@ -97,7 +97,7 @@ test('fast brochure mode pipelines pages with merged plan+author and no plan cal
                     mood: 'nocturnal neon',
                 },
             },
-            'page_design:': (req) => ({ mainHtml: `<h1>${req.id}</h1><p>content</p>` }),
+            'page_design:': (req) => ({ mainHtml: `<h1>${req.id}</h1><p>content</p><img src="images/test-photo.jpg" alt="Test photo" data-image-prompt="a test photo" data-image-aspect="4:3">` }),
             chrome_author: {
                 headerBlocks: [{ blockName: 'core/group', attrs: { tagName: 'header', className: 'site' }, innerBlocks: [] }],
                 footerBlocks: [{ blockName: 'core/group', attrs: { tagName: 'footer' }, innerBlocks: [] }],
@@ -117,6 +117,7 @@ test('fast brochure mode pipelines pages with merged plan+author and no plan cal
                             innerBlocks: [{ blockName: 'core/heading', attrs: { level: 1, content: `page_design:${req.id.split(':')[1]}` }, innerBlocks: [] }],
                         },
                         { blockName: 'core/paragraph', attrs: { content: 'Static brochure content.' }, innerBlocks: [] },
+                        { blockName: 'core/image', attrs: { url: 'images/test-photo.jpg', alt: 'Test photo' }, innerBlocks: [] },
                     ],
                 },
                 pageCss: '',
@@ -124,11 +125,19 @@ test('fast brochure mode pipelines pages with merged plan+author and no plan cal
         },
     });
 
+    // A 1x1 white JPEG so the generated "photo" is a real decodable image.
+    const JPEG_1PX = Buffer.from('/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/wAALCAABAAEBAREA/8QAFAABAAAAAAAAAAAAAAAAAAAACf/EABQQAQAAAAAAAAAAAAAAAAAAAAD/2gAIAQEAAD8AKp//2Q==', 'base64');
+    const imageCalls = [];
     const options = {
         harness: 'mock', model: undefined, concurrency: 4, maxRepair: 2, callTimeoutMs: 600000,
         thresholds: { mismatch: 100, height: 100000 },
         stages: new Set([1, 2]), stage0: 'off', playground: false, compareEditor: false,
         brochure: true, fast: true, pages: 2, noCustomBlocks: true, commandLog: false, verbose: false, install: false,
+        withImages: true,
+        imageClient: {
+            model: 'fake-image-model',
+            generate: async (prompt, aspect) => { imageCalls.push({ prompt, aspect }); return { data: JPEG_1PX, mimeType: 'image/jpeg', ms: 1 }; },
+        },
         models: { design: 'sonnet', build: 'sonnet', repair: 'sonnet' },
         efforts: {},
     };
@@ -193,6 +202,15 @@ test('fast brochure mode pipelines pages with merged plan+author and no plan cal
     const payload = fs.readFileSync(path.join(workspace, `theme-plugin/${slug}-content/content/home.html`), 'utf8');
     assert.doesNotMatch(payload, /"tagName":"header"/, 'chrome stripped from the page payload');
     assert.match(payload, /"tagName":"main"/, 'main content kept in the page payload');
+
+    // --with-images: the placeholder became a real file with the exact name,
+    // generated ONCE despite appearing on both pages, bundled into the theme,
+    // and every payload reference rewritten to the theme asset.
+    assert.equal(imageCalls.length, 1, 'shared placeholder generated once');
+    assert.equal(imageCalls[0].aspect, '4:3');
+    assert.ok(fs.existsSync(path.join(workspace, 'mockup/images/test-photo.jpg')), 'image saved where the placeholder expects');
+    assert.ok(fs.existsSync(path.join(themeDir, 'assets/images/test-photo.jpg')), 'image bundled into the theme');
+    assert.match(payload, /\{\{THEME_URI\}\}\/assets\/images\/test-photo\.jpg/, 'payload reference rewritten to the theme asset');
 });
 
 // NOTE: a per-section author fan-out was tried here (2026-07-07) and reverted —

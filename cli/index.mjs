@@ -11,6 +11,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { Logger } from './lib/log.mjs';
+import { DEFAULT_IMAGE_MODEL } from './lib/images.mjs';
 import { runDoctor, reportDoctor } from './doctor.mjs';
 import { runPipeline } from './pipeline.mjs';
 import { runServe } from './serve.mjs';
@@ -107,6 +108,10 @@ function buildOptions(args) {
         // Brochure mode: a minimal N-page static site from a brief — no content
         // model, no custom blocks. Applies to brief starts only (see run below).
         brochure,
+        // Real images for the design's placeholders (brief flows only —
+        // imports bring their own media). Needs GEMINI_API_KEY.
+        withImages: Boolean(args['with-images']),
+        imageModel: str(args['image-model']) || DEFAULT_IMAGE_MODEL,
         pages: Math.max(1, Number(args.pages || 5)),
         noCustomBlocks: brochure || Boolean(args['no-custom-blocks']),
         stage0: brochure ? 'off' : (args.stage0 || 'auto'),
@@ -131,6 +136,12 @@ Options:
   --brochure                 Brief only: minimal N-page brochure site — no content
                              model, no custom blocks (see --pages). Ignored with --source.
   --pages <n>                Brochure page count (default: 5)
+  --with-images              Generate real images for the design's placeholders
+                             (Google Gemini / Nano Banana; needs GEMINI_API_KEY).
+                             Designs declare <img src="images/<name>.jpg"> with a
+                             data-image-prompt; a pass generates each unique file
+                             under the exact name and the theme bundles them.
+  --image-model <id>         Image model (default: ${DEFAULT_IMAGE_MODEL})
   --no-custom-blocks         Core blocks only (implied by --brochure)
   --workspace <dir>          Run workspace directory (required for run)
   --stages 0,1,2             Which stages to run (default: 0,1,2)
