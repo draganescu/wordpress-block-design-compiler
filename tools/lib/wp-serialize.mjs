@@ -91,6 +91,44 @@ function assertDataOnlyBlock(block) {
     }
 }
 
+// Support-derived attributes @wordpress/blocks does not register on its own.
+// WordPress defines these through block supports, and their attribute
+// registration + saved-class serialization live in @wordpress/block-editor
+// hooks that never load in this Node environment. Without them, valid author
+// output (e.g. textAlign on core/heading) is rejected by validateBlockContract,
+// and even if accepted the canonical class would never reach the saved markup.
+// One entry per missing support: how a block declares it, the attribute it
+// defines, and the class the save output must carry to match real WordPress.
+const SUPPORT_DERIVED_ATTRIBUTES = [
+    {
+        attribute: 'textAlign',
+        schema: { type: 'string' },
+        declared: (supports) => Boolean(supports?.typography?.textAlign),
+        saveClass: (value) => (/^[a-z-]+$/.test(value) ? `has-text-align-${value}` : null),
+    },
+];
+
+function addSupportDerivedAttributes(settings) {
+    let attributes = settings.attributes;
+    for (const { attribute, schema, declared } of SUPPORT_DERIVED_ATTRIBUTES) {
+        if (declared(settings.supports) && !attributes?.[attribute]) {
+            attributes = { ...attributes, [attribute]: schema };
+        }
+    }
+    return attributes === settings.attributes ? settings : { ...settings, attributes };
+}
+
+function addSupportDerivedSaveProps(props, blockType, attributes) {
+    let className = props.className;
+    for (const { attribute, declared, saveClass } of SUPPORT_DERIVED_ATTRIBUTES) {
+        const value = attributes?.[attribute];
+        if (!declared(blockType.supports) || typeof value !== 'string') continue;
+        const cls = saveClass(value.trim());
+        if (cls) className = [className, cls].filter(Boolean).join(' ');
+    }
+    return className === props.className ? props : { ...props, className };
+}
+
 function validateBlockContract(blockName, attrs) {
     if (!blockName.startsWith('core/')) return;
     const { getBlockType } = loadWordPressBlocks();
@@ -333,6 +371,12 @@ export function registerWordPressCoreBlocks() {
     if (coreBlocksRegistered) return;
     setupDomEnvironment();
     try {
+        // Filters must land in the CJS @wordpress/hooks instance — the same
+        // one @wordpress/blocks consults. The ESM build is a separate module
+        // with its own filter store, and filters added there never fire.
+        const { addFilter } = require('@wordpress/hooks');
+        addFilter('blocks.registerBlockType', 'wbdc/support-derived-attributes', addSupportDerivedAttributes);
+        addFilter('blocks.getSaveContent.extraProps', 'wbdc/support-derived-save-props', addSupportDerivedSaveProps);
         require('@wordpress/block-library').registerCoreBlocks();
         coreBlocksRegistered = true;
     } catch (error) {
