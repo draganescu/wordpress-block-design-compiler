@@ -14,7 +14,7 @@ import { buildBlueprint, resolveContentModelPlugin } from '../tools/theme/playgr
 const PLUGIN_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const WP_VERSION = '6.8';
 
-function detectSlug(workspaceRoot) {
+export function detectSlug(workspaceRoot) {
     const themeRoot = path.join(workspaceRoot, 'theme');
     if (!fs.existsSync(themeRoot)) return null;
     const dirs = fs.readdirSync(themeRoot, { withFileTypes: true })

@@ -16,6 +16,7 @@ import { DEFAULT_IMAGE_MODEL } from './lib/images.mjs';
 import { runDoctor, reportDoctor } from './doctor.mjs';
 import { runPipeline } from './pipeline.mjs';
 import { runServe } from './serve.mjs';
+import { runPublish } from './publish.mjs';
 
 function parseArgs(argv) {
     const out = { _: [] };
@@ -129,6 +130,7 @@ const USAGE = `wbdc — deterministic html-to-blocks workflow runner
 Usage:
   wbdc run --workspace <dir> (--source <html-export> | --brief <text|@file>) [options]
   wbdc serve --workspace <dir> [--slug <slug>] [--port <n>]   # boot the built theme in WordPress
+  wbdc publish --workspace <dir> [--slug <slug>] [publish options]   # share as a playground.wordpress.net link
   wbdc doctor [--no-install] [--no-playground]
 
 Options:
@@ -180,6 +182,16 @@ Options:
   --no-install               Doctor checks only, no auto-install
   --verbose                  Per-call debug logging
 
+Publish options (wbdc publish):
+  --repo OWNER/REPO          GitHub repo for the artifact branch (default: this
+                             checkout's origin; must be a public github.com repo —
+                             Playground fetches the ZIP from raw.githubusercontent.com)
+  --branch <name>            Artifact branch (default: playground-artifacts)
+  --name <file.zip>          Asset filename (default: <slug>-playground-<utc>.zip)
+  --out <path>               Where to write the bundle (default: <workspace>/reports/publish/)
+  --dry-run                  Build the bundle, skip the upload
+  --clobber                  Overwrite a same-named asset on the branch
+
 Environment keys (GEMINI_API_KEY, ...) may live in a .env file — the current
 directory is checked first, then the wbdc checkout. Variables already set in
 the shell always win over the file.
@@ -213,6 +225,24 @@ async function main() {
         // runServe keeps the Playground process alive; hold the event loop open.
         await new Promise(() => {});
         return;
+    }
+
+    if (command === 'publish') {
+        const workspace = args.workspace && args.workspace !== true ? path.resolve(args.workspace) : (args._[1] ? path.resolve(args._[1]) : null);
+        if (!workspace) { log.error('usage: wbdc publish --workspace <dir> [--slug <slug>] [--repo OWNER/REPO] [--branch <name>] [--name <file.zip>] [--out <path>] [--dry-run] [--clobber]'); process.exit(1); }
+        const str = (v) => (v && v !== true ? String(v) : undefined);
+        await runPublish({
+            workspaceRoot: workspace,
+            slug: str(args.slug),
+            repo: str(args.repo),
+            branch: str(args.branch) || undefined,
+            name: str(args.name),
+            out: str(args.out),
+            dryRun: Boolean(args['dry-run']),
+            clobber: Boolean(args.clobber),
+            log,
+        });
+        process.exit(0);
     }
 
     if (command === 'doctor') {

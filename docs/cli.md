@@ -224,6 +224,33 @@ slug is auto-detected from `theme/<slug>/theme.json` when omitted; the port fall
 back to a free one if the preferred is busy. Stop it with Ctrl-C (or
 `pkill -f '@wp-playground/cli'`).
 
+## Publish a shareable link
+
+```bash
+node cli/index.mjs publish --workspace ./runs/acme [--slug <theme-slug>] [--dry-run]
+```
+
+Packages the built site as a WordPress Playground bundle — `blueprint.json` plus a
+`site.zip` holding `theme/<slug>` and every shipped plugin — pushes it to a
+dedicated `playground-artifacts` branch on this checkout's GitHub origin, and
+prints a `https://playground.wordpress.net/?blueprint-url=...` link. Opening the
+link boots the same site `wbdc serve` shows (the blueprint replays serve's
+activation/import steps), entirely in the visitor's browser — no server involved.
+
+Details worth knowing:
+
+- Artifacts go on a **git branch**, not GitHub Releases: Playground fetches the
+  ZIP from the browser, and `raw.githubusercontent.com` sends the CORS headers
+  that allow that; the release CDN does not. The repo must be public for the
+  raw URL to be fetchable — and everything in the bundle becomes public with it
+  (the bundle carries only the theme and plugins, never logs or reports).
+- The branch keeps an `index.json` and a README table of every published bundle;
+  re-publishing a same-named asset needs `--clobber`, and `--name`/`--out`
+  control the asset filename and local bundle path (default
+  `<workspace>/reports/publish/`).
+- `--repo OWNER/REPO` overrides the origin-derived repo; `--dry-run` builds the
+  bundle without uploading.
+
 ## Robustness
 
 The pipeline is built to finish and report rather than crash on a hard site:
@@ -246,9 +273,10 @@ The pipeline is built to finish and report rather than crash on a hard site:
 
 ```
 cli/
-  index.mjs        arg parsing + command dispatch (run / serve / doctor)
+  index.mjs        arg parsing + command dispatch (run / serve / publish / doctor)
   doctor.mjs       setup checks + installers
   serve.mjs        boot a built theme in WordPress Playground and keep it running
+  publish.mjs      package a run as a Playground bundle + push to the artifact branch
   tool-client.mjs  McpToolClient — drives tools/mcp-server.mjs over JSON-RPC
   harness/         Harness interface; ClaudeHarness (claude -p) + MockHarness
   prompts/         skill-grounding loader + serializer-constraints cheat-sheet

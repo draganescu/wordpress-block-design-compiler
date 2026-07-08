@@ -23,7 +23,7 @@ const COLD_SERVER_WAIT_MS = 20000;
 // boots byte-identical core, keeping the visual gate's diffs attributable to the
 // theme rather than a silently bumped "latest". The CLI cleanly supports --wp
 // (server --help: --wp [default: "latest"]), so pinning never risks the boot.
-const WP_VERSION = '6.8';
+export const WP_VERSION = '6.8';
 
 export function buildBlueprint({ slug, hasBlocksPlugin, contentModel }) {
     const prefix = slug.replace(/-/g, '_') + '_content';
