@@ -11,6 +11,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { Logger } from './lib/log.mjs';
+import { loadDotEnv } from './lib/env.mjs';
 import { DEFAULT_IMAGE_MODEL } from './lib/images.mjs';
 import { runDoctor, reportDoctor } from './doctor.mjs';
 import { runPipeline } from './pipeline.mjs';
@@ -178,6 +179,10 @@ Options:
   --no-command-log           Don't write reports/commands.log (verbatim commands)
   --no-install               Doctor checks only, no auto-install
   --verbose                  Per-call debug logging
+
+Environment keys (GEMINI_API_KEY, ...) may live in a .env file — the current
+directory is checked first, then the wbdc checkout. Variables already set in
+the shell always win over the file.
 `;
 
 async function main() {
@@ -190,6 +195,11 @@ async function main() {
         process.stdout.write(USAGE);
         process.exit(command ? 0 : 1);
     }
+
+    // Keys (GEMINI_API_KEY, ...) may live in a .env file; loaded before any
+    // step reads env, and inherited by the claude/Playground subprocesses.
+    const envFile = loadDotEnv();
+    if (envFile) log.info(`env: loaded ${envFile}`);
 
     if (command === 'serve') {
         const workspace = args.workspace && args.workspace !== true ? path.resolve(args.workspace) : (args._[1] ? path.resolve(args._[1]) : null);

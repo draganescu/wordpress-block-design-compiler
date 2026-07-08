@@ -106,7 +106,7 @@ node cli/index.mjs run --brief "wine bar in Lisbon" --brochure --fast --with-ima
 node cli/index.mjs serve --workspace ./runs/acme            # boot the built theme in WordPress to look at it
 ```
 
-It needs the `claude` CLI on PATH (and `claude login`); it provisions the rest (Playwright Chromium, WordPress Playground) itself.
+It needs the `claude` CLI on PATH (and `claude login`); it provisions the rest (Playwright Chromium, WordPress Playground) itself. API keys like `GEMINI_API_KEY` can live in a `.env` file (in the directory you run from, or the checkout root) — real environment variables always win over the file.
 
 A few things worth knowing:
 

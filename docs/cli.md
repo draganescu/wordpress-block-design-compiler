@@ -29,6 +29,21 @@ components:
   screenshots/diffs).
 - **WordPress Playground CLI** — installed on demand for the Stage 2 gate.
 
+### API keys and `.env`
+
+Environment keys (`GEMINI_API_KEY` for `--with-images`, anything the `claude`
+CLI honors) can live in a `.env` file instead of the shell profile:
+
+```bash
+echo 'GEMINI_API_KEY=...' > .env
+```
+
+Every command loads it at startup — the directory you invoke `wbdc` from is
+checked first, then the wbdc checkout — and the subprocesses (the `claude -p`
+judgment calls, Playground) inherit the result. Variables already set in the
+real environment always win over the file; a missing file is fine. `.env` is
+gitignored.
+
 ## Run
 
 ```bash
@@ -129,7 +144,7 @@ is available on its own if you want core-only output without the brochure design
 ### Images (`--with-images`)
 
 By default, generated designs are CSS-only (no `<img>` elements). With
-`--with-images` (and `GEMINI_API_KEY` set), the design calls declare
+`--with-images` (and `GEMINI_API_KEY` set — shell or `.env`), the design calls declare
 photographic placeholders — `<img src="images/<name>.jpg">` with alt text, a
 `data-image-prompt` describing subject/setting/composition, and an optional
 `data-image-aspect` — and a generation pass (Google Gemini, the Nano Banana
