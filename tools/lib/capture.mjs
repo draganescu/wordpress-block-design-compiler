@@ -350,6 +350,13 @@ export async function captureUrl(browser, url, screenshotPath, viewport, { edito
             await page.addStyleTag({ content: editorComparisonCss() });
         } else {
             await page.addStyleTag({ content: `${motionFreezeCss()}\n${revealNeutralizeCss()}\n${transientOverlayCaptureCss()}` });
+            // Force lazy images to fetch before the no-scroll fullPage shot;
+            // see settleImages. Before the font wait so image fetches overlap it.
+            await profile.span(
+                'capture.wait.images',
+                () => page.evaluate(settleImages, 10000).catch(() => {}),
+                meta,
+            );
         }
         // Wait for webfonts to finish loading before the screenshot. An @import
         // or late <link> font can swap in AFTER networkidle settles, reflowing
@@ -425,6 +432,31 @@ export function editorComparisonCss() {
 // deterministically, while transitions and smooth scroll are still killed.
 export function motionFreezeCss() {
     return '*,*::before,*::after{animation-duration:1ms!important;animation-delay:-1ms!important;animation-iteration-count:1!important;animation-fill-mode:forwards!important;transition:none!important;scroll-behavior:auto!important}';
+}
+
+// WordPress marks every content image after the first few loading="lazy"
+// (wp_omit_loading_attr_threshold), and a fullPage screenshot never scrolls —
+// so deferred images below the viewport never fetch and capture as blank
+// boxes: phantom "missing image" defects for content any scrolling visitor
+// sees. Mockup HTML carries no loading attribute, which is why the same
+// capture path renders mockups complete while the WordPress side blanks.
+// Flipping lazy to eager triggers the deferred fetch (per spec); the promise
+// then settles when every pending image has loaded or errored, capped so a
+// dead image URL can never hang the capture. Runs in the page via
+// page.evaluate, so it must stay self-contained; `doc` is injectable for
+// tests only.
+export async function settleImages(timeoutMs, doc = globalThis.document) {
+    for (const img of doc.querySelectorAll('img[loading="lazy"]')) img.loading = 'eager';
+    const pending = Array.from(doc.images || []).filter((img) => !img.complete);
+    if (!pending.length) return 0;
+    await Promise.race([
+        Promise.all(pending.map((img) => new Promise((resolve) => {
+            img.addEventListener('load', resolve, { once: true });
+            img.addEventListener('error', resolve, { once: true });
+        }))),
+        new Promise((resolve) => setTimeout(resolve, timeoutMs)),
+    ]);
+    return pending.length;
 }
 
 // Mockups routinely hide content behind a JS scroll-reveal (an IntersectionObserver
