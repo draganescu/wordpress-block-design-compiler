@@ -1,5 +1,13 @@
 [
   {
+    "project": "jeremy-a-wall",
+    "asset": "jeremy-a-wall-playground-20260708T162755Z.zip",
+    "artifact_url": "https://raw.githubusercontent.com/draganescu/wordpress-block-design-compiler/playground-artifacts/jeremy-a-wall-playground-20260708T162755Z.zip",
+    "playground_url": "https://playground.wordpress.net/?blueprint-url=https%3A%2F%2Fraw.githubusercontent.com%2Fdraganescu%2Fwordpress-block-design-compiler%2Fplayground-artifacts%2Fjeremy-a-wall-playground-20260708T162755Z.zip",
+    "size_bytes": 14006962,
+    "created_at": "2026-07-08T16:28:00.813Z"
+  },
+  {
     "project": "ladyfactory",
     "asset": "ladyfactory-playground-20260708T153258Z.zip",
     "artifact_url": "https://raw.githubusercontent.com/draganescu/wordpress-block-design-compiler/playground-artifacts/ladyfactory-playground-20260708T153258Z.zip",
