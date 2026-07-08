@@ -213,6 +213,88 @@ test('fast brochure mode pipelines pages with merged plan+author and no plan cal
     assert.match(payload, /\{\{THEME_URI\}\}\/assets\/images\/test-photo\.jpg/, 'payload reference rewritten to the theme asset');
 });
 
+// Observed in a real run: one page's author violated the serializer contract,
+// its one repair pass returned a tree broken in a DIFFERENT way, and stage 2
+// crashed the whole theme serializing that leftover tree — four good pages got
+// no theme. Stage 2 must exclude the broken page and ship the rest.
+test('fast brochure excludes a page whose tree cannot serialize instead of crashing stage 2', async () => {
+    const workspace = path.join(tmp, 'run-broken-page');
+
+    const harness = getHarness('mock', {
+        responses: {
+            site_design: {
+                pages: [
+                    { slug: 'index', title: 'Home', purpose: 'welcome' },
+                    { slug: 'about', title: 'About', purpose: 'story' },
+                ],
+                sharedCss: 'body{font-family:serif}',
+                headerHtml: '<header class="site"><nav><a href="index.html">Home</a></nav></header>',
+                footerHtml: '<footer>© Test</footer>',
+            },
+            'page_design:': (req) => ({ mainHtml: `<h1>${req.id}</h1><p>content</p>` }),
+            chrome_author: {
+                headerBlocks: [{ blockName: 'core/group', attrs: { tagName: 'header', className: 'site' }, innerBlocks: [] }],
+                footerBlocks: [{ blockName: 'core/group', attrs: { tagName: 'footer' }, innerBlocks: [] }],
+            },
+            'author:': (req) => ({
+                blockTree: {
+                    version: 2, contract: 'data-only',
+                    blocks: [
+                        { blockName: 'core/heading', attrs: { level: 1, content: `page_design:${req.id.split(':')[1]}` }, innerBlocks: [] },
+                        { blockName: 'core/paragraph', attrs: { content: 'Static brochure content.' }, innerBlocks: [] },
+                    ],
+                },
+                pageCss: '',
+            }),
+            // The about author violates the serializer contract (paragraphs
+            // define no tagName)...
+            'author:about': {
+                blockTree: {
+                    version: 2, contract: 'data-only',
+                    blocks: [
+                        { blockName: 'core/heading', attrs: { level: 1, content: 'page_design:about' }, innerBlocks: [] },
+                        { blockName: 'core/paragraph', attrs: { content: 'Broken.', tagName: 'figure' }, innerBlocks: [] },
+                    ],
+                },
+                pageCss: '',
+            },
+            // ...and the one serialize-repair pass returns a tree broken in a
+            // different way, so the tree left on disk still cannot serialize.
+            'repair:about:serialize': {
+                blockTree: {
+                    version: 2, contract: 'data-only',
+                    blocks: [
+                        { blockName: 'core/paragraph', attrs: { content: 'Still broken.', tagName: 'aside' }, innerBlocks: [] },
+                    ],
+                },
+            },
+        },
+    });
+
+    const options = {
+        harness: 'mock', model: undefined, concurrency: 2, maxRepair: 2, callTimeoutMs: 600000,
+        thresholds: { mismatch: 100, height: 100000 },
+        stages: new Set([1, 2]), stage0: 'off', playground: false, compareEditor: false,
+        brochure: true, fast: true, pages: 2, noCustomBlocks: true, commandLog: false, verbose: false, install: false,
+        models: {}, efforts: {},
+    };
+
+    const report = await runPipeline({ workspaceRoot: workspace, brief: 'a tiny brochure', source: null, options, harness });
+
+    // The broken page is reported, not fatal; the good page passed.
+    assert.equal(report.stages.stage1.find((p) => p.page === 'about').status, 'errored');
+    assert.equal(report.stages.stage1.find((p) => p.page === 'index').status, 'passed');
+
+    // Stage 2 shipped a validated theme from the surviving page.
+    assert.equal(report.stages.stage2.deterministic, true);
+    assert.equal(report.stages.stage2.validation.passed, true);
+    const slug = report.stages.stage2.slug;
+    assert.ok(fs.existsSync(path.join(workspace, `theme-plugin/${slug}-content/content/home.html`)), 'surviving page shipped');
+    assert.ok(!fs.existsSync(path.join(workspace, `theme-plugin/${slug}-content/content/about.html`)), 'broken page excluded');
+    assert.equal(report.outcome.themeValidated, true);
+    assert.equal(report.outcome.allPassed, false, 'the blocked page still fails the run outcome');
+});
+
 // NOTE: a per-section author fan-out was tried here (2026-07-07) and reverted —
 // see the note in fastAuthorStep. Whole-page authoring is load-bearing for
 // cross-section fidelity.

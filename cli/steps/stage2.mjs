@@ -4,6 +4,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
+import { serializeBlockTreeWithWordPress } from '../../tools/lib/wp-serialize.mjs';
 import { skillContext, HARNESS_PREAMBLE, HARNESS_PREAMBLE_VISION, SERIALIZER_CONSTRAINTS } from '../prompts/skill-context.mjs';
 import { runBoundedLoop } from '../loops.mjs';
 import { readWs, readJsonWs, writeWs, writeJsonWs, judgeParams } from './helpers.mjs';
@@ -345,13 +346,21 @@ function tokensToThemeSettings(tokens = {}) {
     return settings;
 }
 
-// A tree with an item missing blockName/name would crash serialization inside
-// scaffold_block_theme and take the whole theme down with it. Exclude such
-// pages (they failed their gate anyway) instead of crashing.
-function treeIsSane(blocks) {
-    return (blocks || []).every((b) => b && typeof b === 'object'
-        && typeof (b.blockName || b.name) === 'string'
-        && treeIsSane(b.innerBlocks));
+// A tree that violates the serializer contract — an attribute no block
+// defines, a disallowed group tag, an item missing blockName — would crash
+// serialization inside scaffold_block_theme and take the whole theme down
+// with it. Such a tree always belongs to a page that already failed its gate
+// (build_page serializes the same tree; a failed repair can leave a broken
+// tree on disk), so dry-serialize each candidate and exclude the violators:
+// the theme ships with the pages that work.
+function treeSerializes(ctx, entry, tree) {
+    try {
+        serializeBlockTreeWithWordPress(tree, { workspaceRoot: ctx.workspaceRoot });
+        return true;
+    } catch (err) {
+        ctx.log.warn(`[theme] excluding page "${entry.page}" — its tree does not serialize: ${String(err?.message || err).split('\n')[0]}`);
+        return false;
+    }
 }
 
 // Repairs may return a full restructured tree — scan for the chrome, never
@@ -371,16 +380,13 @@ async function runStage2Brochure(ctx) {
     const { site } = ctx.shared.brochureAssembly;
     ctx.log.step('stage2 · blocks-to-theme (deterministic brochure assembly)');
 
-    // Only pages that produced a sane tree ship (errored pages have none;
-    // a malformed tree would crash scaffold serialization for everyone).
+    // Only pages whose tree actually serializes ship (errored pages have none
+    // or a broken one; a contract violation would crash scaffold for everyone).
     const pages = [];
     for (const entry of ctx.pages) {
         const tree = readJsonWs(ctx.workspaceRoot, entry.suggested.treePath);
         if (!tree || !Array.isArray(tree.blocks)) continue;
-        if (!treeIsSane(tree.blocks)) {
-            ctx.log.warn(`[theme] excluding page "${entry.page}" — its tree has items without blockName`);
-            continue;
-        }
+        if (!treeSerializes(ctx, entry, tree)) continue;
         pages.push({ entry, chrome: chromeIndexes(tree) });
     }
     if (!pages.length) throw new Error('no page trees available to assemble a theme from');
