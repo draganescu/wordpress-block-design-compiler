@@ -87,9 +87,14 @@ function buildOptions(args) {
             repair: noFable(str(args['model-repair'])) || model || DEFAULT_JUDGMENT_MODEL,
         },
         efforts: {
+            // Build and repair calls emit structured payloads (trees, plans,
+            // CSS fixes) whose latency is emission-bound — default-effort
+            // deliberation mostly adds thinking time on the critical path.
+            // Design steps intentionally keep the CLI's default effort: the
+            // creative judgment that sets the whole site's quality lives there.
             design: str(args['effort-design']) || effort,
-            build: str(args['effort-build']) || effort,
-            repair: str(args['effort-repair']) || effort,
+            build: str(args['effort-build']) || effort || 'medium',
+            repair: str(args['effort-repair']) || effort || 'medium',
         },
         concurrency: Math.max(1, Number(args.concurrency || (fast ? 6 : 3))),
         buildConcurrency: Math.max(1, Number(args['build-concurrency'] || 2)),
@@ -167,9 +172,9 @@ Options:
   --model-build <id>         Model for build steps (plan, author, theme plan)
   --model-repair <id>        Model for repair/fix loop steps
   --effort <level>           claude -p --effort for all judgment calls (low..max)
-  --effort-design <level>    Effort for design steps only
-  --effort-build <level>     Effort for build steps only
-  --effort-repair <level>    Effort for repair steps only
+  --effort-design <level>    Effort for design steps only (default: claude's default)
+  --effort-build <level>     Effort for build steps only (default: medium)
+  --effort-repair <level>    Effort for repair steps only (default: medium)
   --concurrency <n>          Max parallel claude sessions (default: 3; 6 with --fast)
   --build-concurrency <n>    Max parallel build_page tool calls (default: 2)
   --max-repair <n>           Repair/gate loop cap per page/theme (default: 6; 2 with --fast)

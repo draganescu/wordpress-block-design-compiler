@@ -74,8 +74,9 @@ node cli/index.mjs run --brief @brief.md --workspace ./runs/acme
 | `--model-design <id>` | `--model` | Model for design steps (`site_design`, `page_design`, `design_mockup`) |
 | `--model-build <id>` | `--model` | Model for build steps (plan, author, theme plan) |
 | `--model-repair <id>` | `--model` | Model for repair/fix loops |
-| `--effort <level>` | account default | `claude -p --effort` for all judgment calls (`low`…`max`) |
-| `--effort-design/build/repair <level>` | `--effort` | Per-role effort override |
+| `--effort <level>` | see per-role | `claude -p --effort` for all judgment calls (`low`…`max`) |
+| `--effort-design <level>` | `--effort`, else account default | Effort for design steps — kept at claude's default on purpose: the creative judgment lives there |
+| `--effort-build/repair <level>` | `--effort`, else `medium` | Build and repair calls emit structured payloads; their latency is emission-bound, so extra deliberation mostly adds thinking time |
 | `--concurrency <n>` | `3` (`6` fast) | Max parallel `claude -p` sessions (page fan-out) |
 | `--max-repair <n>` | `6` (`2` fast) | Repair/gate loop cap per page and per theme |
 | `--call-timeout <s>` | `600` | Per `claude -p` call timeout in seconds |
