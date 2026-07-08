@@ -143,12 +143,13 @@ The flow:
 
 ## What "passing" means
 
-Every gate is deterministic, so "done" is a measured state, not a judgment call.
+Almost every gate is deterministic, so "done" is a measured state, not a judgment call.
 
 - **Block markup round-trips.** The tree serializes through `@wordpress/blocks` and parses back without validation errors. `fix_block_markup` canonicalizes anything hand-edited so it byte-matches `save()`.
 - **Visual fidelity.** Full-page screenshots of the rendered frontend and the editor preview are pixel-diffed against the mockup at desktop and mobile. The default thresholds are 1% pixel mismatch and an 8px height delta; `measure_layout` localizes any miss to a specific section.
 - **Editor fidelity.** Text edits as text, images as images, repeated content as repeated blocks or inner blocks, custom blocks expose real controls, and raw HTML stays out of the tree.
 - **Theme gates.** Static validation passes with no errors, then Playground renders every page within the same pixel and height thresholds.
+- **Render QA (brochure runs).** The one deliberately non-deterministic gate. Brochure runs never pixel-gate against their generated mockup (the user never sees it), so parity can't catch a page that renders broken in real WordPress. Instead a vision judgment call per page lists anything visibly broken in the Playground screenshots — defects a visitor would name without knowing the design intent, never taste (`skills/blocks-to-theme/references/render-qa.md`) — and the standard bounded loop fixes until the list is empty, stops shrinking, or hits the cap. Detection is a judgment call; the loop, the stopping rules, the keep-best rollback, and the whitelist of files a fix may touch stay deterministic.
 
 There is no scored eval suite. Quality is enforced one run at a time by these gates. The profiling harness under `tools/profile/` measures how long tools take, not how good the output is.
 

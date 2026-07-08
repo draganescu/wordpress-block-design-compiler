@@ -7,6 +7,7 @@ import path from 'node:path';
 import { serializeBlockTreeWithWordPress } from '../../tools/lib/wp-serialize.mjs';
 import { skillContext, HARNESS_PREAMBLE, HARNESS_PREAMBLE_VISION, SERIALIZER_CONSTRAINTS } from '../prompts/skill-context.mjs';
 import { runBoundedLoop } from '../loops.mjs';
+import { renderQaLoop } from './render-qa.mjs';
 import { readWs, readJsonWs, writeWs, writeJsonWs, judgeParams } from './helpers.mjs';
 
 const THEME_PLAN_SCHEMA = {
@@ -493,29 +494,23 @@ async function runStage2Brochure(ctx) {
     }
 
     // Brochure themes are built from a generated design the user never sees,
-    // so the Playground check is a SMOKE render, not a pixel gate: every page
-    // must render in real WordPress; the mismatch numbers are informational.
+    // so the Playground check never pixel-gates against the mockup (parity is
+    // informational). It gates on RENDER QA instead: a vision judge names
+    // anything visibly broken in the real WordPress render, and a bounded fix
+    // loop repairs until the defect list is empty or stops shrinking.
     let gate = null;
     if (ctx.options.playground) {
         try {
-            const report = await ctx.client.call('playground_render', {
-                workspaceRoot: ctx.workspaceRoot, slug,
-                maxMismatchPercent: 100, maxHeightDelta: 1000000,
-            });
-            gate = {
-                status: report.passed ? 'passed' : 'failed', smoke: true, iters: 1,
-                metric: report.aggregates?.maxMismatchPercent ?? null,
-                aggregates: report.aggregates || null,
-            };
+            gate = await renderQaLoop(ctx, slug);
             (gate.status === 'passed' ? ctx.log.ok : ctx.log.warn).call(ctx.log,
-                `[theme] smoke render ${gate.status} · informational mismatch≈${gate.metric} · height Δ≈${report.aggregates?.maxHeightDelta ?? '?'}px`);
+                `[theme] render QA ${gate.status} · ${gate.metric ?? '?'} visible defect(s) after ${gate.iters} iteration(s) · informational mismatch≈${gate.aggregates?.maxMismatchPercent ?? '?'}`);
         } catch (err) {
-            gate = { status: 'failed', smoke: true, iters: 1, error: String(err?.message || err) };
-            ctx.log.error(`[theme] smoke render failed: ${gate.error}`);
+            gate = { status: 'failed', qa: true, iters: 1, error: String(err?.message || err) };
+            ctx.log.error(`[theme] render QA failed: ${gate.error}`);
         }
         await ctx.client.call('playground_stop', { workspaceRoot: ctx.workspaceRoot, slug }).catch(() => {});
     } else {
-        ctx.log.info('playground smoke render skipped (--no-playground)');
+        ctx.log.info('playground render QA skipped (--no-playground)');
     }
 
     return { slug, validation, gate, deterministic: true };
